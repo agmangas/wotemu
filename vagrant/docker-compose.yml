@@ -1,0 +1,74 @@
+version: "3.7"
+services:
+  node_3g_1:
+    image: base
+    privileged: true
+    hostname: node_3g_1
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    networks:
+      - network_3g
+  node_3g_2:
+    image: base
+    privileged: true
+    hostname: node_3g_2
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    networks:
+      - network_3g
+  gw_3g:
+    image: base
+    privileged: true
+    hostname: gw_3g
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    networks:
+      - network_3g
+    labels:
+      - "org.fundacionctic.wotsim.gw"
+  node_cable_1:
+    image: base
+    privileged: true
+    hostname: node_cable_1
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    networks:
+      - network_cable
+  node_cable_2:
+    image: base
+    privileged: true
+    hostname: node_cable_2
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    networks:
+      - network_cable
+  gw_cable:
+    image: base
+    privileged: true
+    hostname: gw_cable
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    networks:
+      - network_cable
+    labels:
+      - "org.fundacionctic.wotsim.gw"
+  node_3g_cable_1:
+    image: base
+    privileged: true
+    hostname: node_3g_cable_1
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    networks:
+      - network_3g
+      - network_cable
+networks:
+  network_3g:
+    driver: overlay
+    attachable: true
+    labels:
+      - "org.fundacionctic.wotsim.net"
+  network_cable:
+    driver: overlay
+    attachable: true
+    labels:
+      - "org.fundacionctic.wotsim.net"
