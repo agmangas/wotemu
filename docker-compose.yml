@@ -1,21 +1,40 @@
 version: "3.7"
 services:
+  docker_api_proxy:
+    image: tecnativa/docker-socket-proxy
+    hostname: docker_api_proxy
+    ports:
+      - "2375"
+    environment:
+      - CONTAINERS=1
+      - NETWORKS=1
+      - TASKS=1
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+    privileged: true
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    networks:
+      - network_3g
+      - network_cable
   node_3g_1:
     image: wotsim
     privileged: true
     hostname: node_3g_1
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock"
     networks:
       - network_3g
+    depends_on:
+      - docker_api_proxy
   node_3g_2:
     image: wotsim
     privileged: true
     hostname: node_3g_2
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock"
     networks:
       - network_3g
+    depends_on:
+      - docker_api_proxy  
   gw_3g:
     image: wotsim
     command: ["sleep", "infinity"]
@@ -28,18 +47,18 @@ services:
     image: wotsim
     privileged: true
     hostname: node_cable_1
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock"
     networks:
       - network_cable
+    depends_on:
+      - docker_api_proxy  
   node_cable_2:
     image: wotsim
     privileged: true
     hostname: node_cable_2
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock"
     networks:
       - network_cable
+    depends_on:
+      - docker_api_proxy 
   gw_cable:
     image: wotsim
     command: ["sleep", "infinity"]
@@ -52,11 +71,11 @@ services:
     image: wotsim
     privileged: true
     hostname: node_3g_cable_1
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock"
     networks:
       - network_3g
       - network_cable
+    depends_on:
+      - docker_api_proxy
 networks:
   network_3g:
     driver: overlay

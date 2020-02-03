@@ -4,9 +4,10 @@ import socket
 import subprocess
 
 import click
-import docker as dockersdk
+import docker
 import netaddr
 import netifaces
+import wotsim.constants
 
 _PATH_IPROUTE2_RT_TABLES = "/etc/iproute2/rt_tables"
 
@@ -14,65 +15,69 @@ _logger = logging.getLogger(__name__)
 _rtindex = None
 
 
-def _get_docker():
-    return dockersdk.from_env()
+def _ping_docker(docker_url):
+    docker_client = docker.DockerClient(base_url=docker_url)
+    docker_client.ping()
 
 
-def _get_docker_api():
-    return dockersdk.APIClient()
+def _get_current_container_id():
+    res = subprocess.run(
+        "head -1 /proc/self/cgroup | cut -d/ -f3",
+        shell=True, check=True, capture_output=True)
+
+    cid = res.stdout.strip().decode()
+
+    _logger.debug("Current container ID: %s", cid)
+
+    return cid
 
 
-def _get_current_container():
-    hostname = socket.gethostname()
+def _get_current_task(docker_url):
+    docker_api_client = docker.APIClient(base_url=docker_url)
 
-    _logger.debug("Current hostname: %s", hostname)
+    cid = _get_current_container_id()
 
-    docker = _get_docker()
-    docker_api = _get_docker_api()
+    task = next((
+        task for task in docker_api_client.tasks()
+        if task.get("Status", {}).get("ContainerStatus", {}).get("ContainerID", None) == cid), None)
 
-    hostnames = {
-        cont.id: docker_api.inspect_container(cont.id)["Config"]["Hostname"]
-        for cont in docker.containers.list()
-    }
+    if task is None:
+        raise Exception("Could not find task for container: {}".format(cid))
 
-    _logger.debug("Hostnames map:\n%s", pprint.pformat(hostnames))
+    _logger.debug("Current task:\n%s", pprint.pformat(task))
 
-    current_id = next(
-        (cid for cid, name in hostnames.items() if name == hostname), None)
-
-    if not current_id:
-        raise Exception(
-            "Couldn't find current container (hostname: {})".format(hostname))
-
-    _logger.debug("Found: %s", current_id)
-
-    return docker.containers.get(current_id)
+    return task
 
 
-def _get_wotsim_networks(container, label_net):
-    docker = _get_docker()
-    docker_api = _get_docker_api()
-    config = docker_api.inspect_container(container.id)
+def _get_current_wotsim_networks(docker_url):
+    docker_api_client = docker.APIClient(base_url=docker_url)
+
+    task = _get_current_task(docker_url=docker_url)
+
+    network_ids = [
+        net["Network"]["ID"]
+        for net in task["NetworksAttachments"]
+    ]
 
     networks = {
-        netid: docker_api.inspect_network(netid)
-        for netid, attrs in config["NetworkSettings"]["Networks"].items()
+        net_id: docker_api_client.inspect_network(net_id)
+        for net_id in network_ids
     }
 
     networks = {
-        netid: info for netid, info in networks.items()
-        if info.get("Labels", {}).get(label_net, None) is not None
+        net_id: net_info for net_id, net_info in networks.items()
+        if net_info.get("Labels", {}).get(wotsim.constants.LABEL_WOTSIM_NETWORK, None) is not None
     }
 
     _logger.debug("Simulator networks:\n%s", pprint.pformat(networks))
 
-    return [docker.networks.get(netid) for netid in networks.keys()]
+    return list(networks.keys())
 
 
-def _get_network_gw_task(network, label_gateway):
-    docker_api = _get_docker_api()
+def _get_network_gw_task(docker_url, network_id):
+    docker_api_client = docker.APIClient(base_url=docker_url)
 
-    network_info = docker_api.inspect_network(network.id, verbose=True)
+    network_info = docker_api_client.inspect_network(network_id, verbose=True)
 
     service_infos = {
         net_name: info
@@ -81,7 +86,7 @@ def _get_network_gw_task(network, label_gateway):
     }
 
     _logger.debug(
-        "Network %s services:\n%s", network.name,
+        "Network %s services:\n%s", network_id,
         pprint.pformat(list(service_infos.keys())))
 
     task_infos = {
@@ -91,11 +96,11 @@ def _get_network_gw_task(network, label_gateway):
     }
 
     _logger.debug(
-        "Network %s tasks:\n%s", network.name,
+        "Network %s tasks:\n%s", network_id,
         pprint.pformat(list(task_infos.keys())))
 
     task_labels = {
-        task_name: docker_api.inspect_task(
+        task_name: docker_api_client.inspect_task(
             task_name)["Spec"]["ContainerSpec"]["Labels"]
         for task_name in task_infos.keys()
     }
@@ -103,7 +108,7 @@ def _get_network_gw_task(network, label_gateway):
     return next(
         task_infos[task_name]
         for task_name, labels in task_labels.items()
-        if labels.get(label_gateway, None) is not None)
+        if labels.get(wotsim.constants.LABEL_WOTSIM_GATEWAY, None) is not None)
 
 
 def _get_task_netiface(task):
@@ -207,19 +212,15 @@ def _run_commands(cmds):
         _logger.info("%s", ret)
 
 
-def update_routing(label_net, label_gateway, port_http, port_coap, port_ws, rtable_name, rtable_mark, apply):
+def update_routing(docker_url, port_http, port_coap, port_ws, rtable_name, rtable_mark, apply):
+    _ping_docker(docker_url=docker_url)
     _raise_if_rtable_exists(rtable_name=rtable_name)
 
-    container = _get_current_container()
-    networks = _get_wotsim_networks(container, label_net)
-
-    _logger.debug(
-        "Simulator networks:\n%s",
-        pprint.pformat([(net.id, net.name) for net in networks]))
+    network_ids = _get_current_wotsim_networks(docker_url=docker_url)
 
     gw_tasks = {
-        net.id: _get_network_gw_task(network=net, label_gateway=label_gateway)
-        for net in networks
+        net_id: _get_network_gw_task(docker_url=docker_url, network_id=net_id)
+        for net_id in network_ids
     }
 
     _logger.debug(

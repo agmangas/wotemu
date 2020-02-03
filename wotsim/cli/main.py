@@ -1,16 +1,16 @@
+import functools
 import logging
-from functools import wraps
+import os
 
 import click
 import coloredlogs
-
 import wotsim.cli.route
 
 _logger = logging.getLogger(__name__)
 
 
 def _catch(func):
-    @wraps(func)
+    @functools.wraps(func)
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
@@ -35,14 +35,13 @@ def cli(log_level):
 
 
 @cli.command()
-@click.option("--label-net", default="org.fundacionctic.wotsim.net", show_default=True)
-@click.option("--label-gateway", default="org.fundacionctic.wotsim.gw", show_default=True)
+@click.option("--docker-url", default="tcp://docker_api_proxy:2375/", show_default=True)
 @click.option("--port-http", type=int, default=9191, show_default=True)
 @click.option("--port-ws", type=int, default=9292, show_default=True)
 @click.option("--port-coap", type=int, default=9393, show_default=True)
 @click.option("--rtable-name", default="wotsim", show_default=True)
 @click.option("--rtable-mark", type=int, default=1, show_default=True)
-@click.option("--apply", type=bool, default=False, show_default=True)
+@click.option("--apply", is_flag=True, show_default=True)
 @_catch
 def route(**kwargs):
     wotsim.cli.route.update_routing(**kwargs)
