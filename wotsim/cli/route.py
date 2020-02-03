@@ -202,9 +202,9 @@ def _build_routing_commands(gw_task, ports_tcp, ports_udp, rtable_name, rtable_m
 
 def _run_commands(cmds):
     for cmd in cmds:
-        _logger.debug("# %s", cmd)
+        _logger.info("# %s", cmd)
         ret = subprocess.run(cmd, shell=True, check=True)
-        _logger.debug("%s", ret)
+        _logger.info("%s", ret)
 
 
 def update_routing(label_net, label_gateway, port_http, port_coap, port_ws, rtable_name, rtable_mark, apply):
@@ -213,7 +213,7 @@ def update_routing(label_net, label_gateway, port_http, port_coap, port_ws, rtab
     container = _get_current_container()
     networks = _get_wotsim_networks(container, label_net)
 
-    _logger.info(
+    _logger.debug(
         "Simulator networks:\n%s",
         pprint.pformat([(net.id, net.name) for net in networks]))
 
@@ -222,7 +222,7 @@ def update_routing(label_net, label_gateway, port_http, port_coap, port_ws, rtab
         for net in networks
     }
 
-    _logger.info(
+    _logger.debug(
         "Gateway tasks:\n%s",
         pprint.pformat(gw_tasks))
 
@@ -244,7 +244,7 @@ def update_routing(label_net, label_gateway, port_http, port_coap, port_ws, rtab
         pprint.pformat(gw_commands))
 
     if not apply:
-        _logger.info("Dry run: Skipping configuration update")
+        _logger.warning("Dry run: Skipping configuration update")
         return
 
     for cmds in gw_commands.values():

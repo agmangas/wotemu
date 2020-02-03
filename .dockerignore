@@ -134,18 +134,9 @@ dmypy.json
 ## Vagrant
 ##########
 
-# General
 .vagrant/
-
-# Log files (if you are creating logs in debug mode, uncomment this)
-# *.log
 
 ## VSCode
 #########
 
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-*.code-workspace
+.vscode/

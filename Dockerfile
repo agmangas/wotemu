@@ -21,10 +21,13 @@ RUN git clone https://github.com/agmangas/wot-py.git
 RUN pip3 install wotpy
 RUN pip3 install -r ./wot-py/examples/benchmark/requirements.txt
 
-RUN wget -O docker.tgz https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKER_CLI_VERSION}.tgz
+RUN wget --quiet -O docker.tgz https://download.docker.com/linux/static/stable/x86_64/docker-${DOCKER_CLI_VERSION}.tgz
 RUN tar xvfz docker.tgz
 RUN mv ./docker/docker /usr/bin/docker
 RUN rm -fr docker docker.tgz
+
+COPY . /root/wotsim
+RUN pip3 install -U /root/wotsim/
 
 EXPOSE 9090
 EXPOSE 9191
