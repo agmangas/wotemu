@@ -42,6 +42,7 @@ def cli(log_level):
 @click.option("--port-coap", type=int, default=9393, show_default=True)
 @click.option("--rtable-name", default="wotsim", show_default=True)
 @click.option("--rtable-mark", type=int, default=1, show_default=True)
+@click.option("--apply", type=bool, default=False, show_default=True)
 @_catch
 def route(**kwargs):
-    wotsim.cli.route.main(**kwargs)
+    wotsim.cli.route.update_routing(**kwargs)

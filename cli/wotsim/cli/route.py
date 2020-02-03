@@ -69,7 +69,7 @@ def _get_wotsim_networks(container, label_net):
     return [docker.networks.get(netid) for netid in networks.keys()]
 
 
-def _get_network_gw_task(network, label_gw):
+def _get_network_gw_task(network, label_gateway):
     docker_api = _get_docker_api()
 
     network_info = docker_api.inspect_network(network.id, verbose=True)
@@ -103,7 +103,7 @@ def _get_network_gw_task(network, label_gw):
     return next(
         task_infos[task_name]
         for task_name, labels in task_labels.items()
-        if labels.get(label_gw, None) is not None)
+        if labels.get(label_gateway, None) is not None)
 
 
 def _get_task_netiface(task):
@@ -207,7 +207,7 @@ def _run_commands(cmds):
         _logger.debug("%s", ret)
 
 
-def main(label_net, label_gateway, port_http, port_coap, port_ws, rtable_name, rtable_mark):
+def update_routing(label_net, label_gateway, port_http, port_coap, port_ws, rtable_name, rtable_mark, apply):
     _raise_if_rtable_exists(rtable_name=rtable_name)
 
     container = _get_current_container()
@@ -218,7 +218,7 @@ def main(label_net, label_gateway, port_http, port_coap, port_ws, rtable_name, r
         pprint.pformat([(net.id, net.name) for net in networks]))
 
     gw_tasks = {
-        net.id: _get_network_gw_task(network=net, label_gw=label_gateway)
+        net.id: _get_network_gw_task(network=net, label_gateway=label_gateway)
         for net in networks
     }
 
@@ -242,6 +242,10 @@ def main(label_net, label_gateway, port_http, port_coap, port_ws, rtable_name, r
     _logger.info(
         "Routing commands:\n%s",
         pprint.pformat(gw_commands))
+
+    if not apply:
+        _logger.info("Dry run: Skipping configuration update")
+        return
 
     for cmds in gw_commands.values():
         _run_commands(cmds)
