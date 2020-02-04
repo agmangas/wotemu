@@ -20,18 +20,26 @@ def _catch(func):
     return wrapper
 
 
+def _logger_cli():
+    root_logger_name = ".".join(__name__.split(".")[:-1])
+    return logging.getLogger(root_logger_name)
+
+
 @click.group()
 @click.option(
     "--log-level",
     default="INFO",
     type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR"]),
     show_default=True)
-def cli(log_level):
-    root_logger_name = ".".join(__name__.split(".")[:-1])
+@click.option("--quiet", is_flag=True, show_default=True)
+def cli(log_level, quiet):
+    logger = _logger_cli()
 
-    coloredlogs.install(
-        level=log_level,
-        logger=logging.getLogger(root_logger_name))
+    if quiet:
+        logger.propagate = False
+        logger.addHandler(logging.NullHandler())
+    else:
+        coloredlogs.install(level=log_level, logger=logger)
 
 
 @cli.command()

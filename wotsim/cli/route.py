@@ -1,5 +1,6 @@
 import logging
 import pprint
+import re
 import socket
 import subprocess
 
@@ -21,11 +22,22 @@ def _ping_docker(docker_url):
 
 
 def _get_current_container_id():
-    res = subprocess.run(
-        "head -1 /proc/self/cgroup | cut -d/ -f3",
-        shell=True, check=True, capture_output=True)
+    cgroup_path = "/proc/self/cgroup"
 
-    cid = res.stdout.strip().decode()
+    with open(cgroup_path, "r") as fh:
+        cgroup = fh.read()
+
+    cid_regex = r"\d+:.+:\/docker\/([a-zA-Z0-9]+)"
+
+    _logger.debug("%s:\n%s", cgroup_path, cgroup)
+    _logger.debug("Applying '%s' to cgroup content", cid_regex)
+
+    result = re.search(cid_regex, cgroup)
+
+    if not result or len(result.groups()) <= 0:
+        raise Exception("Could not retrieve container ID")
+
+    cid = result.groups()[0]
 
     _logger.debug("Current container ID: %s", cid)
 
@@ -153,17 +165,14 @@ def _next_rtable_index():
     return _rtindex
 
 
-def _raise_if_rtable_exists(rtable_name):
+def _rtable_exists(rtable_name):
     route_show_res = subprocess.run(
         "ip route show table {}".format(rtable_name),
         shell=True,
         check=False,
         capture_output=True)
 
-    if route_show_res.returncode == 0:
-        raise Exception(
-            "Cannot update routing configuration - "
-            "Table {} is already defined".format(rtable_name))
+    return route_show_res.returncode == 0
 
 
 def _build_routing_commands(gw_task, ports_tcp, ports_udp, rtable_name, rtable_mark):
@@ -214,7 +223,10 @@ def _run_commands(cmds):
 
 def update_routing(docker_url, port_http, port_coap, port_ws, rtable_name, rtable_mark, apply):
     _ping_docker(docker_url=docker_url)
-    _raise_if_rtable_exists(rtable_name=rtable_name)
+
+    if _rtable_exists(rtable_name=rtable_name):
+        _logger.info("Table '%s' exists: Skip configuration", rtable_name)
+        return
 
     network_ids = _get_current_wotsim_networks(docker_url=docker_url)
 
@@ -245,7 +257,7 @@ def update_routing(docker_url, port_http, port_coap, port_ws, rtable_name, rtabl
         pprint.pformat(gw_commands))
 
     if not apply:
-        _logger.warning("Dry run: Skipping configuration update")
+        _logger.warning("Dry run: Skip configuration update")
         return
 
     for cmds in gw_commands.values():
