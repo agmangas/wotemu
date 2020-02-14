@@ -1,6 +1,7 @@
 import functools
 import logging
 import os
+import sys
 
 import click
 import coloredlogs
@@ -16,6 +17,7 @@ def _catch(func):
             return func(*args, **kwargs)
         except Exception as ex:
             _logger.error(ex)
+            sys.exit(1)
 
     return wrapper
 
@@ -44,9 +46,9 @@ def cli(log_level, quiet):
 
 @cli.command()
 @click.option("--docker-url", default="tcp://docker_api_proxy:2375/", show_default=True)
-@click.option("--port-http", type=int, default=9191, show_default=True)
-@click.option("--port-ws", type=int, default=9292, show_default=True)
-@click.option("--port-coap", type=int, default=9393, show_default=True)
+@click.option("--port-http", type=int, default=os.getenv("PORT_HTTP", 80), show_default=True)
+@click.option("--port-ws", type=int, default=os.getenv("PORT_WS", 81), show_default=True)
+@click.option("--port-coap", type=int, default=os.getenv("PORT_COAP", 5683), show_default=True)
 @click.option("--rtable-name", default="wotsim", show_default=True)
 @click.option("--rtable-mark", type=int, default=1, show_default=True)
 @click.option("--apply", is_flag=True, show_default=True)

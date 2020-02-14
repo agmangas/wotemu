@@ -21,6 +21,7 @@ services:
       - network_cable
   node_3g_1:
     image: wotsim
+    command: ["node"]
     privileged: true
     hostname: node_3g_1
     networks:
@@ -30,6 +31,7 @@ services:
       - gw_3g
   node_3g_2:
     image: wotsim
+    command: ["node"]
     privileged: true
     hostname: node_3g_2
     networks:
@@ -39,7 +41,7 @@ services:
       - gw_3g
   gw_3g:
     image: wotsim
-    command: ["sleep", "infinity"]
+    command: ["gateway"]
     hostname: gw_3g
     networks:
       - network_3g
@@ -47,6 +49,7 @@ services:
       - "org.fundacionctic.wotsim.gw"
   node_cable_1:
     image: wotsim
+    command: ["node"]
     privileged: true
     hostname: node_cable_1
     networks:
@@ -56,6 +59,7 @@ services:
       - gw_cable
   node_cable_2:
     image: wotsim
+    command: ["node"]
     privileged: true
     hostname: node_cable_2
     networks:
@@ -65,7 +69,7 @@ services:
       - gw_cable
   gw_cable:
     image: wotsim
-    command: ["sleep", "infinity"]
+    command: ["gateway"]
     hostname: gw_cable
     networks:
       - network_cable
@@ -73,6 +77,7 @@ services:
       - "org.fundacionctic.wotsim.gw"
   node_3g_cable_1:
     image: wotsim
+    command: ["node"]
     privileged: true
     hostname: node_3g_cable_1
     networks:

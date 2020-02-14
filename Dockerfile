@@ -1,5 +1,14 @@
 FROM ubuntu:19.04
 
+ENV PATH_WOTPY /root/wot-py
+ENV PATH_WOTSIM /root/wotsim
+ENV PORT_CATALOGUE 9090
+ENV PORT_HTTP 80
+ENV PORT_WS 81
+ENV PORT_COAP 5683
+
+# Install dependencies
+
 RUN apt-get update -y && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     build-essential \
     python3 \
@@ -13,25 +22,25 @@ RUN apt-get update -y && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     tcpdump \
     git
 
-WORKDIR /root
-
-RUN git clone https://github.com/agmangas/wot-py.git
 RUN pip3 install wotpy
-RUN pip3 install -r ./wot-py/examples/benchmark/requirements.txt
 
-COPY . /root/wotsim
-RUN pip3 install -U /root/wotsim/
+# Clone Wotpy repository
 
-EXPOSE 9090
-EXPOSE 9191
-EXPOSE 9292
-EXPOSE 9393/tcp
-EXPOSE 9393/udp
+RUN git clone https://github.com/agmangas/wot-py.git ${PATH_WOTPY}
+RUN pip3 install -r ${PATH_WOTPY}/examples/benchmark/requirements.txt
 
-CMD python3 /root/wot-py/examples/benchmark/server.py \
-    --mqtt-broker= \
-    --port-catalogue=9090 \
-    --port-http=9191 \
-    --port-ws=9292 \
-    --port-coap=9393 \
-    --hostname=$(hostname)
+# Copy sources and install Wotsim
+
+COPY . ${PATH_WOTSIM}
+RUN pip3 install ${PATH_WOTSIM}
+
+# Expose ports and set entrypoint
+
+EXPOSE ${PORT_CATALOGUE}
+EXPOSE ${PORT_HTTP}
+EXPOSE ${PORT_WS}
+EXPOSE ${PORT_COAP}/tcp
+EXPOSE ${PORT_COAP}/udp
+
+ENTRYPOINT ["/root/wotsim/entrypoint.sh"]
+CMD ["idle"]

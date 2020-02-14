@@ -17,8 +17,11 @@ _rtindex = None
 
 
 def _ping_docker(docker_url):
-    docker_client = docker.DockerClient(base_url=docker_url)
-    docker_client.ping()
+    try:
+        docker_client = docker.DockerClient(base_url=docker_url)
+        docker_client.ping()
+    except Exception as ex:
+        raise Exception("Could not ping Docker daemon: {}".format(ex))
 
 
 def _get_current_container_id():
@@ -219,6 +222,8 @@ def _run_commands(cmds):
         _logger.info("# %s", cmd)
         ret = subprocess.run(cmd, shell=True, check=True)
         _logger.info("%s", ret)
+
+# ToDo: Add return route iptable rules
 
 
 def update_routing(docker_url, port_http, port_coap, port_ws, rtable_name, rtable_mark, apply):
