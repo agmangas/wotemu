@@ -204,15 +204,31 @@ def _build_routing_commands(gw_task, ports_tcp, ports_udp, rtable_name, rtable_m
         hex(rtable_mark),
         rtable_name))
 
-    def iptable_entry(proto, dport):
-        return "iptables -A OUTPUT -t mangle -o {} -p {} --dport {} -j MARK --set-mark {}".format(
-            ifname,
-            proto,
-            dport,
-            rtable_mark)
+    def build_iptables_rules(proto, dport):
+        return [
+            "iptables -A OUTPUT -t mangle -o {} -p {} --dport {} -j MARK --set-mark {}".format(
+                ifname,
+                proto,
+                dport,
+                rtable_mark),
+            "iptables -A OUTPUT -t mangle -o {} -p {} --sport {} -j MARK --set-mark {}".format(
+                ifname,
+                proto,
+                dport,
+                rtable_mark)
+        ]
 
-    cmds += [iptable_entry("tcp", port) for port in ports_tcp]
-    cmds += [iptable_entry("udp", port) for port in ports_udp]
+    cmds += [
+        rule
+        for port in ports_tcp
+        for rule in build_iptables_rules("tcp", port)
+    ]
+
+    cmds += [
+        rule
+        for port in ports_udp
+        for rule in build_iptables_rules("udp", port)
+    ]
 
     return cmds
 
@@ -222,8 +238,6 @@ def _run_commands(cmds):
         _logger.info("# %s", cmd)
         ret = subprocess.run(cmd, shell=True, check=True)
         _logger.info("%s", ret)
-
-# ToDo: Add return route iptable rules
 
 
 def update_routing(docker_url, port_http, port_coap, port_ws, rtable_name, rtable_mark, apply):
