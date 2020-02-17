@@ -240,7 +240,7 @@ def _run_commands(cmds):
         _logger.info("%s", ret)
 
 
-def update_routing(docker_url, port_http, port_coap, port_ws, rtable_name, rtable_mark, apply):
+def update_routing(docker_url, port_http, port_coap, port_ws, port_mqtt, rtable_name, rtable_mark, apply):
     _ping_docker(docker_url=docker_url)
 
     if _rtable_exists(rtable_name=rtable_name):
@@ -258,7 +258,7 @@ def update_routing(docker_url, port_http, port_coap, port_ws, rtable_name, rtabl
         "Gateway tasks:\n%s",
         pprint.pformat(gw_tasks))
 
-    ports_tcp = [port_http, port_coap, port_ws]
+    ports_tcp = [port_http, port_coap, port_ws, port_mqtt]
     ports_udp = [port_coap]
 
     gw_commands = {

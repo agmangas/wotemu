@@ -49,6 +49,7 @@ def cli(log_level, quiet):
 @click.option("--port-http", type=int, default=os.getenv("PORT_HTTP", 80), show_default=True)
 @click.option("--port-ws", type=int, default=os.getenv("PORT_WS", 81), show_default=True)
 @click.option("--port-coap", type=int, default=os.getenv("PORT_COAP", 5683), show_default=True)
+@click.option("--port-mqtt", type=int, default=os.getenv("PORT_MQTT", 1883), show_default=True)
 @click.option("--rtable-name", default="wotsim", show_default=True)
 @click.option("--rtable-mark", type=int, default=1, show_default=True)
 @click.option("--apply", is_flag=True, show_default=True)

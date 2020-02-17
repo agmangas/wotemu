@@ -17,56 +17,9 @@ services:
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
     networks:
-      - network_3g
+      - network_wifi
       - network_cable
-  node_3g_1:
-    image: wotsim
-    command: ["node"]
-    privileged: true
-    hostname: node_3g_1
-    networks:
       - network_3g
-    depends_on:
-      - docker_api_proxy
-      - gw_3g
-  node_3g_2:
-    image: wotsim
-    command: ["node"]
-    privileged: true
-    hostname: node_3g_2
-    networks:
-      - network_3g
-    depends_on:
-      - docker_api_proxy  
-      - gw_3g
-  gw_3g:
-    image: wotsim
-    command: ["gateway"]
-    hostname: gw_3g
-    networks:
-      - network_3g
-    labels:
-      - "org.fundacionctic.wotsim.gw"
-  node_cable_1:
-    image: wotsim
-    command: ["node"]
-    privileged: true
-    hostname: node_cable_1
-    networks:
-      - network_cable
-    depends_on:
-      - docker_api_proxy  
-      - gw_cable
-  node_cable_2:
-    image: wotsim
-    command: ["node"]
-    privileged: true
-    hostname: node_cable_2
-    networks:
-      - network_cable
-    depends_on:
-      - docker_api_proxy
-      - gw_cable
   gw_cable:
     image: wotsim
     command: ["gateway"]
@@ -75,25 +28,108 @@ services:
       - network_cable
     labels:
       - "org.fundacionctic.wotsim.gw"
-  node_3g_cable_1:
+  gw_wifi:
+    image: wotsim
+    command: ["gateway"]
+    hostname: gw_wifi
+    networks:
+      - network_wifi
+    labels:
+      - "org.fundacionctic.wotsim.gw"
+  gw_3g:
+    image: wotsim
+    command: ["gateway"]
+    hostname: gw_3g
+    networks:
+      - network_3g
+    labels:
+      - "org.fundacionctic.wotsim.gw"
+  node_wifi_1:
     image: wotsim
     command: ["node"]
     privileged: true
-    hostname: node_3g_cable_1
+    hostname: node_wifi_1
     networks:
+      - network_wifi
       - network_3g
+    depends_on:
+      - docker_api_proxy
+      - gw_wifi
+      - gw_3g
+    environment:
+      - DEFAULT_BROKER=mqtt://broker_1
+  node_wifi_2:
+    image: wotsim
+    command: ["node"]
+    privileged: true
+    hostname: node_wifi_2
+    networks:
+      - network_wifi
+    depends_on:
+      - docker_api_proxy
+      - gw_wifi
+  node_cable_1:
+    image: wotsim
+    command: ["node"]
+    privileged: true
+    hostname: node_cable_1
+    networks:
       - network_cable
+      - network_3g
     depends_on:
       - docker_api_proxy
       - gw_cable
       - gw_3g
+    environment:
+      - DEFAULT_BROKER=mqtt://broker_1
+  node_cable_2:
+    image: wotsim
+    command: ["node"]
+    privileged: true
+    hostname: node_cable_2
+    networks:
+      - network_cable
+      - network_3g
+    depends_on:
+      - docker_api_proxy
+      - gw_cable
+      - gw_3g
+    environment:
+      - DEFAULT_BROKER=mqtt://broker_1
+  node_wifi_cable_1:
+    image: wotsim
+    command: ["node"]
+    privileged: true
+    hostname: node_wifi_cable_1
+    networks:
+      - network_wifi
+      - network_cable
+    depends_on:
+      - docker_api_proxy
+      - gw_cable
+      - gw_wifi
+  broker_1:
+    image: wotsim
+    command: ["broker"]
+    privileged: true
+    hostname: broker_1
+    networks:
+      - network_3g
+    depends_on:
+      - docker_api_proxy
+      - gw_3g
 networks:
-  network_3g:
+  network_cable:
     driver: overlay
     attachable: true
     labels:
       - "org.fundacionctic.wotsim.net"
-  network_cable:
+  network_wifi:
+    driver: overlay
+    attachable: true
+    labels:
+      - "org.fundacionctic.wotsim.net"
+  network_3g:
     driver: overlay
     attachable: true
     labels:
