@@ -16,8 +16,8 @@ print_section () {
 }
 
 wait_gateways () {
-    print_section "Waiting for gateways (10s)"
-    sleep 10
+    print_section "Waiting for gateways (20s)"
+    sleep 20
 }
 
 update_routing () {
