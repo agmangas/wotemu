@@ -25,7 +25,8 @@ setuptools.setup(
         "coloredlogs>=10.0,<11.0",
         "netaddr>=0.7.19,<0.8.0",
         "netifaces>=0.10.9,<0.11.0",
-        "Click>=7.0,<8.0"
+        "Click>=7.0,<8.0",
+        "sh>=1.12.14,<2.0"
     ],
     extras_require={
         "dev": [

@@ -8,7 +8,9 @@ import click
 import docker
 import netaddr
 import netifaces
-import wotsim.constants
+
+import wotsim.cli.utils
+import wotsim.enums
 
 _PATH_IPROUTE2_RT_TABLES = "/etc/iproute2/rt_tables"
 
@@ -16,41 +18,10 @@ _logger = logging.getLogger(__name__)
 _rtindex = None
 
 
-def _ping_docker(docker_url):
-    try:
-        docker_client = docker.DockerClient(base_url=docker_url)
-        docker_client.ping()
-    except Exception as ex:
-        raise Exception("Could not ping Docker daemon: {}".format(ex))
-
-
-def _get_current_container_id():
-    cgroup_path = "/proc/self/cgroup"
-
-    with open(cgroup_path, "r") as fh:
-        cgroup = fh.read()
-
-    cid_regex = r"\d+:.+:\/docker\/([a-zA-Z0-9]+)"
-
-    _logger.debug("%s:\n%s", cgroup_path, cgroup)
-    _logger.debug("Applying '%s' to cgroup content", cid_regex)
-
-    result = re.search(cid_regex, cgroup)
-
-    if not result or len(result.groups()) <= 0:
-        raise Exception("Could not retrieve container ID")
-
-    cid = result.groups()[0]
-
-    _logger.debug("Current container ID: %s", cid)
-
-    return cid
-
-
 def _get_current_task(docker_url):
     docker_api_client = docker.APIClient(base_url=docker_url)
 
-    cid = _get_current_container_id()
+    cid = wotsim.cli.utils.current_container_id()
 
     task = next((
         task for task in docker_api_client.tasks()
@@ -81,7 +52,7 @@ def _get_current_wotsim_networks(docker_url):
 
     networks = {
         net_id: net_info for net_id, net_info in networks.items()
-        if net_info.get("Labels", {}).get(wotsim.constants.LABEL_WOTSIM_NETWORK, None) is not None
+        if net_info.get("Labels", {}).get(wotsim.enums.Labels.WOTSIM_NETWORK.value, None) is not None
     }
 
     _logger.debug("Simulator networks:\n%s", pprint.pformat(networks))
@@ -123,7 +94,7 @@ def _get_network_gw_task(docker_url, network_id):
     return next(
         task_infos[task_name]
         for task_name, labels in task_labels.items()
-        if labels.get(wotsim.constants.LABEL_WOTSIM_GATEWAY, None) is not None)
+        if labels.get(wotsim.enums.Labels.WOTSIM_GATEWAY.value, None) is not None)
 
 
 def _get_task_netiface(task):
@@ -241,7 +212,7 @@ def _run_commands(cmds):
 
 
 def update_routing(docker_url, port_http, port_coap, port_ws, port_mqtt, rtable_name, rtable_mark, apply):
-    _ping_docker(docker_url=docker_url)
+    wotsim.cli.utils.ping_docker(docker_url=docker_url)
 
     if _rtable_exists(rtable_name=rtable_name):
         _logger.info("Table '%s' exists: Skip configuration", rtable_name)

@@ -71,7 +71,8 @@ case "$1" in
         run_mqtt_broker
     ;;
     gateway)
-        idle
+        wotsim --log-level DEBUG chaos \
+        --netem "delay --time 100 --jitter 50 --distribution normal"
     ;;
     *)
         exec "$@"

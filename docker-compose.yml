@@ -2,9 +2,6 @@ version: "3.7"
 services:
   docker_api_proxy:
     image: tecnativa/docker-socket-proxy
-    hostname: docker_api_proxy
-    ports:
-      - "2375"
     environment:
       - CONTAINERS=1
       - NETWORKS=1
@@ -23,7 +20,10 @@ services:
   gw_cable:
     image: wotsim
     command: ["gateway"]
+    privileged: true
     hostname: gw_cable
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
     networks:
       - network_cable
     labels:
@@ -31,7 +31,10 @@ services:
   gw_wifi:
     image: wotsim
     command: ["gateway"]
+    privileged: true
     hostname: gw_wifi
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
     networks:
       - network_wifi
     labels:
@@ -39,7 +42,10 @@ services:
   gw_3g:
     image: wotsim
     command: ["gateway"]
+    privileged: true
     hostname: gw_3g
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
     networks:
       - network_3g
     labels:
@@ -51,13 +57,9 @@ services:
     hostname: node_wifi_1
     networks:
       - network_wifi
-      - network_3g
     depends_on:
       - docker_api_proxy
       - gw_wifi
-      - gw_3g
-    environment:
-      - DEFAULT_BROKER=mqtt://broker_1
   node_wifi_2:
     image: wotsim
     command: ["node"]
@@ -81,7 +83,7 @@ services:
       - gw_cable
       - gw_3g
     environment:
-      - DEFAULT_BROKER=mqtt://broker_1
+      - DEFAULT_BROKER=mqtt://broker_1.network_3g
   node_cable_2:
     image: wotsim
     command: ["node"]
@@ -95,7 +97,7 @@ services:
       - gw_cable
       - gw_3g
     environment:
-      - DEFAULT_BROKER=mqtt://broker_1
+      - DEFAULT_BROKER=mqtt://broker_1.network_3g
   node_wifi_cable_1:
     image: wotsim
     command: ["node"]
@@ -121,16 +123,19 @@ services:
 networks:
   network_cable:
     driver: overlay
+    name: network_cable
     attachable: true
     labels:
       - "org.fundacionctic.wotsim.net"
   network_wifi:
     driver: overlay
+    name: network_wifi
     attachable: true
     labels:
       - "org.fundacionctic.wotsim.net"
   network_3g:
     driver: overlay
+    name: network_3g
     attachable: true
     labels:
       - "org.fundacionctic.wotsim.net"
