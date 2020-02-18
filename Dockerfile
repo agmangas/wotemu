@@ -8,8 +8,6 @@ ENV PORT_WS 81
 ENV PORT_COAP 5683
 ENV PORT_MQTT 1883
 
-# Install dependencies
-
 RUN apt-get update -y && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     build-essential \
     python3 \
@@ -25,18 +23,14 @@ RUN apt-get update -y && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     mosquitto
 
 RUN pip3 install wotpy
-
-# Clone Wotpy repository
-
 RUN git clone https://github.com/agmangas/wot-py.git ${PATH_WOTPY}
 RUN pip3 install -r ${PATH_WOTPY}/examples/benchmark/requirements.txt
 
-# Copy sources and install Wotsim
-
 COPY . ${PATH_WOTSIM}
-RUN pip3 install ${PATH_WOTSIM}
 
-# Expose ports and set entrypoint
+RUN ${PATH_WOTSIM}/scripts/install-pumba.sh
+
+RUN pip3 install ${PATH_WOTSIM}
 
 EXPOSE ${PORT_CATALOGUE}
 EXPOSE ${PORT_HTTP}
@@ -46,4 +40,3 @@ EXPOSE ${PORT_COAP}/udp
 EXPOSE ${PORT_MQTT}
 
 ENTRYPOINT ["/root/wotsim/entrypoint.sh"]
-CMD ["idle"]
