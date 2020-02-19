@@ -40,7 +40,7 @@ update_routing () {
 run_benchmark_server () {
     print_section "Running benchmark server"
     
-    python3 ${PATH_WOTPY}/examples/benchmark/server.py \
+    exec python3 ${PATH_WOTPY}/examples/benchmark/server.py \
     --mqtt-broker=${DEFAULT_BROKER} \
     --port-catalogue=${PORT_CATALOGUE} \
     --port-http=${PORT_HTTP} \
@@ -50,12 +50,23 @@ run_benchmark_server () {
 }
 
 run_mqtt_broker () {
-    mosquitto -p ${PORT_MQTT}
+    exec mosquitto -p ${PORT_MQTT}
+}
+
+run_chaos () {
+    args=()
+    
+    for var in "$@"
+    do
+        args+=(--netem "${var}")
+    done
+    
+    exec wotsim chaos "${args[@]}"
 }
 
 idle () {
     print_section "Idling indefinitely"
-    sleep infinity
+    exec sleep infinity
 }
 
 case "$1" in
@@ -71,8 +82,7 @@ case "$1" in
         run_mqtt_broker
     ;;
     gateway)
-        wotsim --log-level DEBUG chaos \
-        --netem "delay --time 100 --jitter 50 --distribution normal"
+        run_chaos "${@:2}"
     ;;
     *)
         exec "$@"
