@@ -17,8 +17,11 @@ def ping_docker(docker_url):
 def current_container_id():
     cgroup_path = "/proc/self/cgroup"
 
-    with open(cgroup_path, "r") as fh:
-        cgroup = fh.read()
+    try:
+        with open(cgroup_path, "r") as fh:
+            cgroup = fh.read()
+    except FileNotFoundError as ex:
+        raise Exception("This does not seem to be a container ({})".format(ex))
 
     cid_regex = r"\d+:.+:\/docker\/([a-zA-Z0-9]+)"
 
