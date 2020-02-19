@@ -41,6 +41,31 @@ def _find_chaos_interface():
     return candidates[0]
 
 
+def _pumba_log_level(line):
+    if line.startswith(_LEVEL_DEBUG):
+        return logging.DEBUG
+    elif line.startswith(_LEVEL_INFO):
+        return logging.INFO
+    else:
+        return logging.WARNING
+
+
+def _build_out(cmd_id):
+    def out(line):
+        line = wotsim.cli.utils.strip_ansi_codes(line.strip())
+        _logger.log(_pumba_log_level(line), "[%s]\n\t%s", cmd_id, line.strip())
+
+    return out
+
+
+def _done(cmd, success, exit_code):
+    _logger.log(
+        logging.INFO if success else logging.WARNING,
+        "[%s] Exit code: %s",
+        cmd.ran,
+        exit_code)
+
+
 def create_chaos(docker_url, netem, duration):
     wotsim.cli.utils.ping_docker(docker_url=docker_url)
 
@@ -60,34 +85,15 @@ def create_chaos(docker_url, netem, duration):
 
     _logger.info("Running Pumba commands:\n%s", pprint.pformat(cmds))
 
-    def build_out(idx):
-        def out(line):
-            line = wotsim.cli.utils.strip_ansi_codes(line.strip())
-            level = logging.WARNING
-
-            if line.startswith(_LEVEL_DEBUG):
-                level = logging.DEBUG
-            elif line.startswith(_LEVEL_INFO):
-                level = logging.INFO
-
-            _logger.log(level, "[%s]\n\t%s", netem[idx], line)
-
-        return out
-
-    def done(cmd, success, exit_code):
-        _logger.log(
-            logging.INFO if success else logging.WARNING,
-            "[%s] Exit code: %s", cmd.ran, exit_code)
-
     sh_pumba = sh.Command("pumba")
 
     procs = [
         sh_pumba(
             cmd.split(),
             _err_to_out=True,
-            _out=build_out(idx=idx),
+            _out=_build_out(cmd_id=netem[idx]),
             _bg=True,
-            _done=done)
+            _done=_done)
         for idx, cmd in enumerate(cmds)
     ]
 
