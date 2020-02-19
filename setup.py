@@ -22,7 +22,7 @@ setuptools.setup(
     python_requires='>=3.6',
     install_requires=[
         "docker>=4.1.0,<5.0",
-        "coloredlogs>=10.0,<11.0",
+        "coloredlogs>=14.0,<15.0",
         "netaddr>=0.7.19,<0.8.0",
         "netifaces>=0.10.9,<0.11.0",
         "Click>=7.0,<8.0",
