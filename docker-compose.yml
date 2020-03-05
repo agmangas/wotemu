@@ -41,7 +41,12 @@ services:
       - "org.fundacionctic.wotsim.gw"
   gw_3g:
     image: wotsim
-    command: ["gateway", "delay --time 100 --jitter 50 --distribution normal", "rate --rate 200kbit"]
+    command:
+      [
+        "gateway",
+        "delay --time 100 --jitter 50 --distribution normal",
+        "rate --rate 200kbit",
+      ]
     privileged: true
     hostname: gw_3g
     volumes:
