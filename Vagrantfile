@@ -7,7 +7,7 @@ $addrs = {
 $prov_base = <<-SCRIPT
 /vagrant/scripts/install-deps.sh
 /vagrant/scripts/install-docker.sh
-/vagrant/scripts/patch-docker.sh
+/vagrant/scripts/patch-capabilities.sh
 /vagrant/scripts/build-wotsim-image.sh
 /vagrant/scripts/install-pumba.sh
 SCRIPT

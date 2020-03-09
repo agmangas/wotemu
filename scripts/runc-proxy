@@ -1,0 +1,121 @@
+#!/usr/bin/python3
+import json
+import os
+import pathlib
+import sys
+from typing import List
+
+"""
+Workaround to enable capabilities on Swarm services.
+Injects all capabilities before passing requests to the real runtime (runc).
+Attribution to the answer found in:
+https://github.com/moby/moby/issues/25885#issuecomment-568719946
+"""
+
+# Default runc binary
+NEXT_RUNC = "/usr/bin/runc"
+
+# Name of the env var that acts as the privileged flag
+FLAG_NAME = "PATCH_PRIVILEGED"
+
+# Capabilities to add to the flagged containers
+# http://man7.org/linux/man-pages/man7/capabilities.7.html
+ADDITIONAL_CAPABILITIES = [
+    "CAP_AUDIT_CONTROL", "CAP_AUDIT_READ", "CAP_AUDIT_WRITE", "CAP_BLOCK_SUSPEND",
+    "CAP_CHOWN", "CAP_DAC_OVERRIDE", "CAP_DAC_READ_SEARCH", "CAP_FOWNER", "CAP_FSETID",
+    "CAP_IPC_LOCK", "CAP_IPC_OWNER", "CAP_KILL", "CAP_LEASE", "CAP_LINUX_IMMUTABLE",
+    "CAP_MAC_ADMIN", "CAP_MAC_OVERRIDE", "CAP_MKNOD", "CAP_NET_ADMIN",
+    "CAP_NET_BIND_SERVICE", "CAP_NET_BROADCAST", "CAP_NET_RAW", "CAP_SETGID",
+    "CAP_SETFCAP", "CAP_SETPCAP", "CAP_SETUID", "CAP_SYS_ADMIN", "CAP_SYS_BOOT",
+    "CAP_SYS_CHROOT", "CAP_SYS_MODULE", "CAP_SYS_NICE", "CAP_SYS_PACCT",
+    "CAP_SYS_PTRACE", "CAP_SYS_RAWIO", "CAP_SYS_RESOURCE", "CAP_SYS_TIME",
+    "CAP_SYS_TTY_CONFIG", "CAP_SYSLOG", "CAP_WAKE_ALARM"
+]
+
+
+def get_devices(path: pathlib.Path) -> List[pathlib.Path]:
+    """Mimics GetDevices in:
+    https://github.com/opencontainers/runc/blob/master/libcontainer/devices/devices.go"""
+
+    result = []
+    children = list(path.iterdir())
+    for c in children:
+        if c.is_dir():
+            if c.name not in ["pts", "shm", "fd", "mqueue",
+                              ".lxc", ".lxd-mounts", ".udev"]:
+                result.extend(get_devices(c))
+        elif c.name == "console" or c.name.startswith("video"):
+            continue
+        else:
+            result.append(c)
+
+    result = [
+        d for d in result
+        if d.exists() and (d.is_block_device() or d.is_char_device())
+    ]
+
+    return result
+
+
+def is_privileged_bundle(config):
+    """Returns True if the given bundle config contains the 
+    environment variable that acts as a flag to enable all capabilities."""
+
+    config_env = config.get("process", {}).get("env", [])
+    return next((True for item in config_env if FLAG_NAME in item), False)
+
+
+def add_capabilities(bundle, capabilities):
+    """Adds capabilities and devices to a bundle by extending its config.json."""
+
+    with open(bundle + "/config.json") as config_file:
+        config = json.load(config_file)
+
+    if not is_privileged_bundle(config):
+        return
+
+    config["process"]["capabilities"]["bounding"].extend(capabilities)
+    config["process"]["capabilities"]["effective"].extend(capabilities)
+    config["process"]["capabilities"]["inheritable"].extend(capabilities)
+    config["process"]["capabilities"]["permitted"].extend(capabilities)
+
+    for c in config["linux"]["resources"]["devices"]:
+        c["allow"] = True
+
+    # mimics WithDevices in
+    # https://github.com/moby/moby/blob/master/daemon/oci_linux.go
+    device_paths = get_devices(pathlib.Path("/dev/"))
+    config["linux"]["devices"] = [
+        {
+            "type": "c",
+            "path": str(d),
+            "minor": os.minor(os.stat(str(d.resolve())).st_rdev),
+            "access": "rwm",
+            "allow": True,
+            "major": os.major(os.stat(str(d.resolve())).st_rdev),
+            "uid": 0,
+            "gid": 0,
+            "filemode": 777
+        }
+        for d in device_paths
+    ]
+
+    with open(bundle + "/config.json", "w") as config_file:
+        json.dump(config, config_file)
+
+    with open("/tmp/runcdebug.json", "w") as debug_file:
+        json.dump(config, debug_file)
+
+
+def main():
+    for i in range(len(sys.argv)):
+        if sys.argv[i] == "--bundle":
+            bundle_filename = sys.argv[i + 1]
+            add_capabilities(bundle_filename, ADDITIONAL_CAPABILITIES)
+            break
+
+    os.execv(NEXT_RUNC, sys.argv)
+
+
+if __name__ == '__main__':
+    main()

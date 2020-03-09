@@ -6,6 +6,7 @@ services:
       - CONTAINERS=1
       - NETWORKS=1
       - TASKS=1
+      - PATCH_PRIVILEGED=1
     deploy:
       placement:
         constraints:
@@ -28,6 +29,8 @@ services:
       - network_cable
     labels:
       - "org.fundacionctic.wotsim.gw"
+    environment:
+      - PATCH_PRIVILEGED=1
   gw_wifi:
     image: wotsim
     command: ["gateway", "delay --time 15 --jitter 10 --distribution normal"]
@@ -39,6 +42,8 @@ services:
       - network_wifi
     labels:
       - "org.fundacionctic.wotsim.gw"
+    environment:
+      - PATCH_PRIVILEGED=1
   gw_3g:
     image: wotsim
     command:
@@ -55,6 +60,8 @@ services:
       - network_3g
     labels:
       - "org.fundacionctic.wotsim.gw"
+    environment:
+      - PATCH_PRIVILEGED=1
   node_wifi_1:
     image: wotsim
     command: ["node"]
@@ -65,6 +72,8 @@ services:
     depends_on:
       - docker_api_proxy
       - gw_wifi
+    environment:
+      - PATCH_PRIVILEGED=1
   node_wifi_2:
     image: wotsim
     command: ["node"]
@@ -75,6 +84,8 @@ services:
     depends_on:
       - docker_api_proxy
       - gw_wifi
+    environment:
+      - PATCH_PRIVILEGED=1
   node_cable_1:
     image: wotsim
     command: ["node"]
@@ -88,6 +99,7 @@ services:
       - gw_cable
       - gw_3g
     environment:
+      - PATCH_PRIVILEGED=1
       - DEFAULT_BROKER=mqtt://broker_1.network_3g
   node_cable_2:
     image: wotsim
@@ -102,6 +114,7 @@ services:
       - gw_cable
       - gw_3g
     environment:
+      - PATCH_PRIVILEGED=1
       - DEFAULT_BROKER=mqtt://broker_1.network_3g
   node_wifi_cable_1:
     image: wotsim
@@ -115,6 +128,8 @@ services:
       - docker_api_proxy
       - gw_cable
       - gw_wifi
+    environment:
+      - PATCH_PRIVILEGED=1
   broker_1:
     image: wotsim
     command: ["broker"]
@@ -125,6 +140,8 @@ services:
     depends_on:
       - docker_api_proxy
       - gw_3g
+    environment:
+      - PATCH_PRIVILEGED=1
 networks:
   network_cable:
     driver: overlay
