@@ -22,7 +22,6 @@ RUN apt-get update -y && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     git \
     mosquitto
 
-RUN pip3 install wotpy
 RUN git clone https://github.com/agmangas/wot-py.git ${PATH_WOTPY}
 RUN pip3 install -r ${PATH_WOTPY}/examples/benchmark/requirements.txt
 

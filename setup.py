@@ -26,7 +26,8 @@ setuptools.setup(
         "netaddr>=0.7.19,<0.8.0",
         "netifaces>=0.10.9,<0.11.0",
         "Click>=7.0,<8.0",
-        "sh>=1.12.14,<2.0"
+        "sh>=1.12.14,<2.0",
+        "wotpy>=0.14.0,<1.0.0"
     ],
     extras_require={
         "dev": [
