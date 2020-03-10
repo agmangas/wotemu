@@ -100,7 +100,7 @@ services:
       - gw_3g
     environment:
       - PATCH_PRIVILEGED=1
-      - DEFAULT_BROKER=mqtt://broker_1.network_3g
+      - MQTT_BROKER=mqtt://broker_1.network_3g
   node_cable_2:
     image: wotsim
     command: ["node"]
@@ -115,7 +115,7 @@ services:
       - gw_3g
     environment:
       - PATCH_PRIVILEGED=1
-      - DEFAULT_BROKER=mqtt://broker_1.network_3g
+      - MQTT_BROKER=mqtt://broker_1.network_3g
   node_wifi_cable_1:
     image: wotsim
     command: ["node"]

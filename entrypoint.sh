@@ -41,7 +41,7 @@ run_benchmark_server () {
     print_section "Running benchmark server"
     
     exec python3 ${PATH_WOTPY}/examples/benchmark/server.py \
-    --mqtt-broker=${DEFAULT_BROKER} \
+    --mqtt-broker=${MQTT_BROKER} \
     --port-catalogue=${PORT_CATALOGUE} \
     --port-http=${PORT_HTTP} \
     --port-ws=${PORT_WS} \

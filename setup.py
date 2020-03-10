@@ -27,13 +27,15 @@ setuptools.setup(
         "netifaces>=0.10.9,<0.11.0",
         "Click>=7.0,<8.0",
         "sh>=1.12.14,<2.0",
-        "wotpy>=0.14.0,<1.0.0"
+        "wotpy>=0.14.4,<0.15.0"
     ],
     extras_require={
         "dev": [
-            "autopep8",
-            "pylint",
-            "rope"
+            "autopep8>=1.5,<2.0",
+            "pylint>=2.0,<3.0",
+            "rope>=0.16.0,<1.0",
+            "pytest>=5.0,<6.0",
+            "pytest-asyncio>=0.10.0,<1.0"
         ]
     }
 )
