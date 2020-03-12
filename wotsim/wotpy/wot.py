@@ -8,8 +8,7 @@ from wotpy.protocols.http.server import HTTPServer
 from wotpy.protocols.mqtt.server import MQTTServer
 from wotpy.protocols.ws.server import WebsocketServer
 
-from wotsim.wotpy.consumed import ConsumedThing
-from wotsim.wotpy.exposed import ExposedThing
+from wotsim.wotpy.things import ConsumedThing, ExposedThing
 
 _logger = logging.getLogger(__name__)
 
@@ -17,11 +16,16 @@ _logger = logging.getLogger(__name__)
 class WoT(wotpy.wot.wot.WoT):
     def __init__(self, *args, **kwargs):
         self.exposed_cb = kwargs.pop("exposed_cb", None)
+        self.consumed_cb = kwargs.pop("consumed_cb", None)
         super().__init__(*args, **kwargs)
 
     def consume(self, td_str):
         td = wotpy.wot.td.ThingDescription(td_str)
-        return ConsumedThing(servient=self._servient, td=td)
+
+        return ConsumedThing(
+            servient=self._servient,
+            td=td,
+            deco_cb=self.consumed_cb)
 
     def produce(self, model):
         thing = self.thing_from_model(model)
@@ -80,7 +84,7 @@ def _build_mqtt_server(servient_id, broker_url=None):
 
 
 def wot_entrypoint(
-        port_catalogue=9090, hostname=None, exposed_cb=None,
+        port_catalogue=9090, hostname=None, exposed_cb=None, consumed_cb=None,
         port_http=None, port_ws=None, port_coap=None, mqtt_url=None):
     servient = wotpy.wot.servient.Servient(
         hostname=hostname,
@@ -101,4 +105,5 @@ def wot_entrypoint(
 
     return WoT(
         servient=servient,
-        exposed_cb=exposed_cb)
+        exposed_cb=exposed_cb,
+        consumed_cb=consumed_cb)

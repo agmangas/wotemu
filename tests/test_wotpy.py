@@ -6,8 +6,7 @@ import pytest
 from wotpy.protocols.enums import InteractionVerbs
 from wotpy.wot.td import ThingDescription
 
-from wotsim.wotpy.consumed import ConsumedThing
-from wotsim.wotpy.exposed import ExposedThing
+from wotsim.wotpy.things import ConsumedThing, ExposedThing
 from wotsim.wotpy.wot import wot_entrypoint
 
 TD_EXAMPLE = {
@@ -41,49 +40,62 @@ def decorated_wotpy(unused_tcp_port_factory):
     port_ws = unused_tcp_port_factory()
 
     exposed_data = []
+    consumed_data = []
 
     async def exposed_cb(data):
         await dummy_sleep()
         exposed_data.append(data)
+
+    async def consumed_cb(data):
+        await dummy_sleep()
+        consumed_data.append(data)
 
     wot = wot_entrypoint(
         port_catalogue=port_catalogue,
         port_http=port_http,
         port_ws=port_ws,
         hostname="localhost",
-        exposed_cb=exposed_cb)
+        exposed_cb=exposed_cb,
+        consumed_cb=consumed_cb)
 
     return {
         "wot": wot,
-        "exposed_data": exposed_data
+        "exposed_data": exposed_data,
+        "consumed_data": consumed_data
     }
 
 
-@pytest.mark.asyncio
-async def test_decorated_exposed(event_loop, decorated_wotpy):
-    wot = decorated_wotpy["wot"]
-    exposed_thing = wot.produce(model=json.dumps(TD_EXAMPLE))
-    assert isinstance(exposed_thing, ExposedThing)
-
-
-@pytest.mark.asyncio
-async def test_decorated_consumed(event_loop, decorated_wotpy):
-    wot = decorated_wotpy["wot"]
-    consumed_thing = wot.consume(json.dumps(TD_EXAMPLE))
-    assert isinstance(consumed_thing, ConsumedThing)
-
-
-@pytest.mark.asyncio
-async def test_read_write_property(decorated_wotpy):
-    wot = decorated_wotpy["wot"]
-    exposed_data = decorated_wotpy["exposed_data"]
-
+async def build_things(wot):
     exposed_thing = wot.produce(model=json.dumps(TD_EXAMPLE))
     exposed_thing.expose()
     await exposed_thing.servient.start()
 
     td_str = ThingDescription.from_thing(exposed_thing.thing).to_str()
     consumed_thing = wot.consume(td_str)
+
+    return exposed_thing, consumed_thing
+
+
+@pytest.mark.asyncio
+async def text_exposed_decorated(event_loop, decorated_wotpy):
+    wot = decorated_wotpy["wot"]
+    exposed_thing = wot.produce(model=json.dumps(TD_EXAMPLE))
+    assert isinstance(exposed_thing, ExposedThing)
+
+
+@pytest.mark.asyncio
+async def test_consumed_decorated(event_loop, decorated_wotpy):
+    wot = decorated_wotpy["wot"]
+    consumed_thing = wot.consume(json.dumps(TD_EXAMPLE))
+    assert isinstance(consumed_thing, ConsumedThing)
+
+
+@pytest.mark.asyncio
+async def test_exposed_rw_property(decorated_wotpy):
+    wot = decorated_wotpy["wot"]
+    exposed_data = decorated_wotpy["exposed_data"]
+
+    _, consumed_thing = await build_things(wot)
 
     assert len(exposed_data) == 0
 
@@ -105,7 +117,7 @@ async def test_read_write_property(decorated_wotpy):
 
 
 @pytest.mark.asyncio
-async def test_read_property_error(decorated_wotpy):
+async def test_exposed_error(decorated_wotpy):
     wot = decorated_wotpy["wot"]
     exposed_data = decorated_wotpy["exposed_data"]
 
@@ -114,10 +126,8 @@ async def test_read_property_error(decorated_wotpy):
     async def read_handler():
         raise handler_ex
 
-    exposed_thing = wot.produce(model=json.dumps(TD_EXAMPLE))
+    exposed_thing, _ = await build_things(wot)
     exposed_thing.set_property_read_handler("testProp", read_handler)
-    exposed_thing.expose()
-    await exposed_thing.servient.start()
 
     read_error = None
 
@@ -138,16 +148,11 @@ async def test_read_property_error(decorated_wotpy):
 
 
 @pytest.mark.asyncio
-async def test_observe_property(event_loop, decorated_wotpy):
+async def test_exposed_observe_property(event_loop, decorated_wotpy):
     wot = decorated_wotpy["wot"]
     exposed_data = decorated_wotpy["exposed_data"]
 
-    exposed_thing = wot.produce(model=json.dumps(TD_EXAMPLE))
-    exposed_thing.expose()
-    await exposed_thing.servient.start()
-
-    td_str = ThingDescription.from_thing(exposed_thing.thing).to_str()
-    consumed_thing = wot.consume(td_str)
+    exposed_thing, consumed_thing = await build_things(wot)
 
     assert len(exposed_data) == 0
 
@@ -177,7 +182,8 @@ async def test_observe_property(event_loop, decorated_wotpy):
 
     assert any(
         item.get("verb") == InteractionVerbs.OBSERVE_PROPERTY and
-        item.get("on_next")
+        item.get("action") == "on_next" and
+        item.get("item")
         for item in exposed_data)
 
     await exposed_thing.servient.shutdown()
