@@ -33,30 +33,32 @@ async def max_sleep():
     await asyncio.sleep(MAX_DUMMY_SLEEP_SECS * 2)
 
 
-@pytest.fixture
-def decorated_wotpy(unused_tcp_port_factory):
-    port_catalogue = unused_tcp_port_factory()
-    port_http = unused_tcp_port_factory()
-    port_ws = unused_tcp_port_factory()
-
+@pytest.fixture(params=["port_http", "port_ws"])
+def decorated_wotpy(request, unused_tcp_port_factory):
     exposed_data = []
-    consumed_data = []
 
     async def exposed_cb(data):
         await dummy_sleep()
         exposed_data.append(data)
 
+    consumed_data = []
+
     async def consumed_cb(data):
         await dummy_sleep()
         consumed_data.append(data)
 
+    port_catalogue = unused_tcp_port_factory()
+
+    wot_kwargs = {
+        request.param: unused_tcp_port_factory()
+    }
+
     wot = wot_entrypoint(
         port_catalogue=port_catalogue,
-        port_http=port_http,
-        port_ws=port_ws,
         hostname="localhost",
         exposed_cb=exposed_cb,
-        consumed_cb=consumed_cb)
+        consumed_cb=consumed_cb,
+        **wot_kwargs)
 
     return {
         "wot": wot,
@@ -182,7 +184,7 @@ async def test_exposed_observe_property(event_loop, decorated_wotpy):
 
     assert any(
         item.get("verb") == InteractionVerbs.OBSERVE_PROPERTY and
-        item.get("action") == "on_next" and
+        item.get("event") == "on_next" and
         item.get("item")
         for item in exposed_data)
 

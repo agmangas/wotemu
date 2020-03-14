@@ -159,31 +159,33 @@ class SubscriptionVerbCallback(VerbCallback):
 
             self.loop.create_task(self.callback(data))
 
+        event_key = "event"
+
         def on_next(item):
             callback_task({
-                "action": "on_next",
+                event_key: "on_next",
                 "item": item.data.__dict__
             })
 
         def on_error(err):
             callback_task({
-                "action": "on_error",
+                event_key: "on_error",
                 "error": self.json_ex(err)
             })
 
         def on_completed():
             callback_task({
-                "action": "on_completed"
+                event_key: "on_completed"
             })
 
         def on_subscribe():
             callback_task({
-                "action": "on_subscribe"
+                event_key: "on_subscribe"
             })
 
         def on_finally():
             callback_task({
-                "action": "on_finally"
+                event_key: "on_finally"
             })
 
         obsv = obsv.do_action(

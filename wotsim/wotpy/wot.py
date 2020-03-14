@@ -45,7 +45,7 @@ def _build_http_server(port=None):
     if not port:
         return None
 
-    _logger.debug("HTTP port: %s", port)
+    _logger.debug("Creating HTTP server on: %s", port)
     return HTTPServer(port=int(port))
 
 
@@ -55,7 +55,7 @@ def _build_ws_server(port=None):
     if not port:
         return None
 
-    _logger.debug("WebSockets port: %s", port)
+    _logger.debug("Creating WebSockets server on: %s", port)
     return WebsocketServer(port=int(port))
 
 
@@ -67,7 +67,7 @@ def _build_coap_server(port=None):
 
     try:
         from wotpy.protocols.coap.server import CoAPServer
-        _logger.debug("CoAP port: {}".format(port))
+        _logger.debug("Creating CoAP server on: %s", port)
         return CoAPServer(port=int(port))
     except NotImplementedError as ex:
         _logger.warning(ex)
@@ -79,7 +79,7 @@ def _build_mqtt_server(servient_id, broker_url=None):
     if not broker_url:
         return None
 
-    _logger.debug("MQTT broker URL: {}".format(broker_url))
+    _logger.debug("Creating MQTT server on: %s", broker_url)
     return MQTTServer(broker_url, servient_id=servient_id)
 
 
