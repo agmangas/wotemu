@@ -22,7 +22,10 @@ class VerbCallback:
 
     @classmethod
     def json_ex(cls, ex):
-        return (ex.__class__.__name__, str(ex)) if ex else None
+        return {
+            "type": ex.__class__.__name__,
+            "message": str(ex)
+        } if ex else None
 
     def __str__(self):
         return "<{}> {}".format(self.__class__.__name__, self.__dict__)
@@ -35,7 +38,7 @@ class VerbCallback:
             "name": self.interaction_name,
             "time": self.time,
             "host": self.hostname,
-            "class": self.thing.__class__.__name__
+            "class": self.thing_class
         }
 
     @property
@@ -71,6 +74,10 @@ class VerbCallback:
     @property
     def thing_id(self):
         return self.thing.id
+
+    @property
+    def thing_class(self):
+        return self.thing.__class__.__name__
 
 
 class RequestVerbCallback(VerbCallback):
