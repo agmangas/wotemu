@@ -10,6 +10,11 @@ from wotpy.protocols.ws.server import WebsocketServer
 
 from wotsim.wotpy.things import ConsumedThing, ExposedThing
 
+_ENV_PORT_HTTP = "PORT_HTTP"
+_ENV_PORT_WS = "PORT_WS"
+_ENV_PORT_COAP = "PORT_COAP"
+_ENV_MQTT_BROKER = "MQTT_BROKER"
+
 _logger = logging.getLogger(__name__)
 
 
@@ -40,9 +45,9 @@ class WoT(wotpy.wot.wot.WoT):
 
 
 def _build_http_server(port=None):
-    port = port if port else os.getenv("PORT_HTTP", None)
-
-    if not port:
+    try:
+        port = int(port if port else os.getenv(_ENV_PORT_HTTP, None))
+    except Exception:
         return None
 
     _logger.debug("Creating HTTP server on: %s", port)
@@ -50,9 +55,9 @@ def _build_http_server(port=None):
 
 
 def _build_ws_server(port=None):
-    port = port if port else os.getenv("PORT_WS", None)
-
-    if not port:
+    try:
+        port = int(port if port else os.getenv(_ENV_PORT_WS, None))
+    except Exception:
         return None
 
     _logger.debug("Creating WebSockets server on: %s", port)
@@ -60,9 +65,9 @@ def _build_ws_server(port=None):
 
 
 def _build_coap_server(port=None):
-    port = port if port else os.getenv("PORT_COAP", None)
-
-    if not port:
+    try:
+        port = int(port if port else os.getenv(_ENV_PORT_COAP, None))
+    except Exception:
         return None
 
     try:
@@ -73,14 +78,14 @@ def _build_coap_server(port=None):
         _logger.warning(ex)
 
 
-def _build_mqtt_server(servient_id, broker_url=None):
-    broker_url = broker_url if broker_url else os.getenv("MQTT_BROKER", None)
+def _build_mqtt_server(servient_id, broker=None):
+    broker = broker if broker else os.getenv(_ENV_MQTT_BROKER, None)
 
-    if not broker_url:
+    if not broker:
         return None
 
-    _logger.debug("Creating MQTT server on: %s", broker_url)
-    return MQTTServer(broker_url, servient_id=servient_id)
+    _logger.debug("Creating MQTT server on: %s", broker)
+    return MQTTServer(broker, servient_id=servient_id)
 
 
 def wot_entrypoint(
@@ -96,7 +101,7 @@ def wot_entrypoint(
 
     mqtt_server = _build_mqtt_server(
         servient_id=servient.hostname,
-        broker_url=mqtt_url)
+        broker=mqtt_url)
 
     servers = [http_server, ws_server, coap_server, mqtt_server]
     servers = [item for item in servers if item]

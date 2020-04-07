@@ -23,6 +23,7 @@ TD_EXAMPLE = {
 }
 
 MAX_DUMMY_SLEEP_SECS = 0.15
+WOT_HOSTNAME = "127.0.0.1"
 
 
 async def dummy_sleep():
@@ -33,7 +34,22 @@ async def max_sleep():
     await asyncio.sleep(MAX_DUMMY_SLEEP_SECS * 2)
 
 
-@pytest.fixture(params=["port_http", "port_ws"])
+def decorated_wotpy_params():
+    params = [
+        "port_http",
+        "port_ws"
+    ]
+
+    try:
+        from wotpy.protocols.coap.server import CoAPServer
+        params.append("port_coap")
+    except NotImplementedError:
+        pass
+
+    return params
+
+
+@pytest.fixture(params=decorated_wotpy_params())
 def decorated_wotpy(request, unused_tcp_port_factory):
     exposed_data = []
 
@@ -55,7 +71,7 @@ def decorated_wotpy(request, unused_tcp_port_factory):
 
     wot = wot_entrypoint(
         port_catalogue=port_catalogue,
-        hostname="localhost",
+        hostname=WOT_HOSTNAME,
         exposed_cb=exposed_cb,
         consumed_cb=consumed_cb,
         **wot_kwargs)
@@ -123,22 +139,14 @@ async def test_exposed_error(decorated_wotpy):
     wot = decorated_wotpy["wot"]
     exposed_data = decorated_wotpy["exposed_data"]
 
-    handler_ex = Exception()
-
     async def read_handler():
-        raise handler_ex
+        raise Exception
 
     exposed_thing, _ = await build_things(wot)
     exposed_thing.set_property_read_handler("testProp", read_handler)
 
-    read_error = None
-
-    try:
+    with pytest.raises(Exception):
         await exposed_thing.properties["testProp"].read()
-    except Exception as ex:
-        read_error = ex
-
-    assert read_error is handler_ex
 
     await max_sleep()
 
@@ -152,11 +160,11 @@ async def test_exposed_error(decorated_wotpy):
 @pytest.mark.asyncio
 async def test_exposed_observe_property(event_loop, decorated_wotpy):
     wot = decorated_wotpy["wot"]
-    exposed_data = decorated_wotpy["exposed_data"]
+    consumed_data = decorated_wotpy["consumed_data"]
 
     exposed_thing, consumed_thing = await build_things(wot)
 
-    assert len(exposed_data) == 0
+    assert len(consumed_data) == 0
 
     val = int(random.random() * 100)
 
@@ -174,7 +182,7 @@ async def test_exposed_observe_property(event_loop, decorated_wotpy):
         if not sub_future.done():
             sub_future.set_result(item.data.value)
 
-    consumed_thing.properties["testProp"].subscribe(on_next=on_next)
+    sub = consumed_thing.properties["testProp"].subscribe(on_next=on_next)
     write_task = event_loop.create_task(write_loop())
     sub_value = await sub_future
     assert sub_value == val
@@ -186,6 +194,8 @@ async def test_exposed_observe_property(event_loop, decorated_wotpy):
         item.get("verb") == InteractionVerbs.OBSERVE_PROPERTY and
         item.get("event") == "on_next" and
         item.get("item")
-        for item in exposed_data)
+        for item in consumed_data)
 
+    sub.dispose()
     await exposed_thing.servient.shutdown()
+    await max_sleep()
