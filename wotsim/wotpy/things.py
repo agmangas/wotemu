@@ -18,7 +18,6 @@ class VerbCallback:
         self.func = func
         self.call_args = call_args
         self.call_kwargs = call_kwargs
-        self.time = time.time()
 
     @classmethod
     def json_ex(cls, ex):
@@ -36,7 +35,7 @@ class VerbCallback:
             "thing": self.thing_id,
             "verb": self.verb,
             "name": self.interaction_name,
-            "time": self.time,
+            "time": time.time(),
             "host": self.hostname,
             "class": self.thing_class
         }
@@ -85,6 +84,7 @@ class RequestVerbCallback(VerbCallback):
         super().__init__(*args, **kwargs)
         self._result = None
         self._error = None
+        self._init_time = time.time()
         self.latency = None
 
     @property
@@ -121,19 +121,21 @@ class RequestVerbCallback(VerbCallback):
         self._error = err
 
     def update_latency(self):
-        self.latency = time.time() - self.time
+        self.latency = time.time() - self._init_time
 
     def create_callback_task(self):
         if not self.callback:
             return
 
+        data = self.data
+
         _logger.log(
             logging.WARNING if self.error else logging.DEBUG,
             "<%s>\n%s",
             self.__class__.__name__,
-            pprint.pformat(self.data))
+            pprint.pformat(data))
 
-        self.loop.create_task(self.callback(self.data))
+        self.loop.create_task(self.callback(data))
 
 
 class SubscriptionVerbCallback(VerbCallback):
