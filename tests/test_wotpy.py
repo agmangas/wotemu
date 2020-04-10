@@ -3,24 +3,12 @@ import json
 import random
 
 import pytest
+from tests.conftest import TD_EXAMPLE
 from wotpy.protocols.enums import InteractionVerbs
 from wotpy.wot.td import ThingDescription
 
 from wotsim.wotpy.things import ConsumedThing, ExposedThing
 from wotsim.wotpy.wot import wot_entrypoint
-
-TD_EXAMPLE = {
-    "id": "urn:org:fundacionctic:thing:testthing",
-    "name": "Test Thing",
-    "properties": {
-        "testProp": {
-            "description": "Test property",
-            "type": "number",
-            "readOnly": False,
-            "observable": True
-        }
-    }
-}
 
 MAX_DUMMY_SLEEP_SECS = 0.15
 WOT_HOSTNAME = "127.0.0.1"

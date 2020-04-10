@@ -22,7 +22,10 @@ async def redis_thing_callback(data, client=None):
     try:
         redis = None
         redis = client if client else await redis_from_env()
-        await redis.zadd(key=data["host"], score=data["time"], member=json.dumps(data))
+        key = data["host"]
+        score = data["time"]
+        member = json.dumps(data)
+        await redis.zadd(key=key, score=score, member=member)
     except Exception as ex:
         _logger.warning("Error in Redis callback: %s", ex)
     finally:

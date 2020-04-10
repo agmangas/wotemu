@@ -11,7 +11,9 @@ setuptools.setup(
     description="Real time fog layer simulator based on the W3C Web of Things",
     packages=setuptools.find_packages(),
     classifiers=[
-        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
         "License :: OSI Approved :: MIT License"
     ],
     entry_points={
@@ -36,7 +38,8 @@ setuptools.setup(
             "pylint>=2.0,<3.0",
             "rope>=0.16.0,<1.0",
             "pytest>=5.0,<6.0",
-            "pytest-asyncio>=0.10.0,<1.0"
+            "pytest-asyncio>=0.10.0,<1.0",
+            "docker>=4.0,<5.0"
         ]
     }
 )
