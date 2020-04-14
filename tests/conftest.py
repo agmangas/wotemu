@@ -33,22 +33,6 @@ RedisService = namedtuple(
 _logger = logging.getLogger(__name__)
 
 
-def redis_enabled():
-    if os.getenv(_ENV_REDIS_TEST, None):
-        return True
-
-    try:
-        client = docker.from_env()
-        assert client.ping()
-        return True
-    except:
-        _logger.warning(
-            "Cannot use Redis: $%s undefined and Docker unavailable",
-            _ENV_REDIS_TEST)
-
-        return False
-
-
 def start_redis_container():
     client = docker.from_env()
     assert client.ping(), "Error on Docker ping"
@@ -101,8 +85,9 @@ async def wait_redis(redis_service, timeout=10.0):
             _logger.debug("Error on Redis ping: %s", ex)
 
             if (time.time() - ini) > timeout:
-                _logger.warning("Redis service timeout")
-                raise Exception
+                msg = "Redis service timeout ({} s)".format(timeout)
+                _logger.warning(msg)
+                raise Exception(msg)
         finally:
             try:
                 redis.close()
@@ -122,6 +107,10 @@ async def redis():
         await redis.flushdb()
         redis.close()
         await redis.wait_closed()
+    except Exception as ex:
+        msg = "Error initiliazing Redis fixture: {}".format(ex)
+        _logger.warning(msg)
+        pytest.skip(msg)
     finally:
         try:
             redis_service.container.remove(force=True, v=True)

@@ -3,17 +3,15 @@ import json
 import random
 
 import pytest
-from tests.conftest import TD_EXAMPLE, redis_enabled
+from tests.conftest import TD_EXAMPLE
 from wotpy.wot.td import ThingDescription
 
 from wotsim.wotpy.redis import redis_thing_callback
 from wotsim.wotpy.wot import wot_entrypoint
 
-REDIS_SKIP = "Unavailable Redis"
 WOT_HOSTNAME = "127.0.0.1"
 
 
-@pytest.mark.skipif(not redis_enabled(), reason=REDIS_SKIP)
 @pytest.mark.asyncio
 async def test_redis_callback(redis, unused_tcp_port_factory):
     redis_cb = functools.partial(redis_thing_callback, client=redis)
