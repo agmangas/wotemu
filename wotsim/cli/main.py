@@ -27,8 +27,8 @@ def _catch(func):
     return wrapper
 
 
-def _logger_cli():
-    root_logger_name = ".".join(__name__.split(".")[:-1])
+def _logger_root():
+    root_logger_name = __name__.split(".")[0]
     return logging.getLogger(root_logger_name)
 
 
@@ -38,13 +38,8 @@ def _logger_cli():
 def cli(log_level, quiet):
     """Root CLI command."""
 
-    logger = _logger_cli()
-
-    if quiet:
-        logger.propagate = False
-        logger.addHandler(logging.NullHandler())
-    else:
-        coloredlogs.install(level=log_level, logger=logger)
+    if not quiet:
+        coloredlogs.install(level=log_level, logger=_logger_root())
 
 
 @cli.command()
