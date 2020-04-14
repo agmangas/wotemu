@@ -4,18 +4,18 @@ import os
 
 import aioredis
 
-_ENV_REDIS_URL = "REDIS_URL"
+import wotsim.config
 
 _logger = logging.getLogger(__name__)
 
 
 async def redis_from_env():
-    redis_url = os.getenv(_ENV_REDIS_URL, None)
+    env_config = wotsim.config.get_env_config()
 
-    if not redis_url:
-        raise Exception("Undefined Redis URL (${})".format(_ENV_REDIS_URL))
+    if not env_config.redis_url:
+        raise Exception("Undefined Redis URL")
 
-    return await aioredis.create_redis_pool(redis_url)
+    return await aioredis.create_redis_pool(env_config.redis_url)
 
 
 async def redis_thing_callback(data, client=None):

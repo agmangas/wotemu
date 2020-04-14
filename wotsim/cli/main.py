@@ -6,10 +6,13 @@ import sys
 import click
 import coloredlogs
 
+import wotsim.cli.app
 import wotsim.cli.chaos
 import wotsim.cli.routes
+import wotsim.config
 
 _logger = logging.getLogger(__name__)
+_env_config = wotsim.config.get_env_config()
 
 
 def _catch(func):
@@ -46,10 +49,10 @@ def cli(log_level, quiet):
 
 @cli.command()
 @click.option("--docker-url", default="tcp://docker_api_proxy:2375/")
-@click.option("--port-http", type=int, default=os.getenv("PORT_HTTP", 80))
-@click.option("--port-ws", type=int, default=os.getenv("PORT_WS", 81))
-@click.option("--port-coap", type=int, default=os.getenv("PORT_COAP", 5683))
-@click.option("--port-mqtt", type=int, default=os.getenv("PORT_MQTT", 1883))
+@click.option("--port-http", type=int, default=_env_config.port_http)
+@click.option("--port-ws", type=int, default=_env_config.port_ws)
+@click.option("--port-coap", type=int, default=_env_config.port_coap)
+@click.option("--port-mqtt", type=int, default=_env_config.port_mqtt)
 @click.option("--rtable-name", default="wotsim")
 @click.option("--rtable-mark", type=int, default=1)
 @click.option("--apply", is_flag=True)
@@ -73,3 +76,19 @@ def chaos(**kwargs):
     to simulate real-life network conditions."""
 
     wotsim.cli.chaos.create_chaos(**kwargs)
+
+
+@cli.command()
+@click.option("--path", required=True, type=click.Path(exists=True))
+@click.option("--func", type=str, default="app")
+@click.option("--port-catalogue", type=int, default=_env_config.port_catalogue)
+@click.option("--port-http", type=int, default=_env_config.port_http)
+@click.option("--port-ws", type=int, default=_env_config.port_ws)
+@click.option("--port-coap", type=int, default=_env_config.port_coap)
+@click.option("--mqtt-url", type=str, default=_env_config.mqtt_url)
+@click.option("--redis-url", type=str, default=_env_config.redis_url)
+@_catch
+def app(**kwargs):
+    """Runs an user-defined WoT application injected with a decorated WoTPy entrypoint."""
+
+    wotsim.cli.app.run_app(**kwargs)
