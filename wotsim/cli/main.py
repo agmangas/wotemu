@@ -27,7 +27,6 @@ def _catch(func):
     return wrapper
 
 
-
 @click.group()
 @click.option("--log-level", default="DEBUG")
 @click.option("--quiet", is_flag=True)
@@ -78,6 +77,7 @@ def chaos(**kwargs):
 @click.option("--port-coap", type=int, default=_env_config.port_coap)
 @click.option("--mqtt-url", type=str, default=_env_config.mqtt_url)
 @click.option("--redis-url", type=str, default=_env_config.redis_url)
+@click.option("--hostname", type=str, default=None)
 @_catch
 def app(**kwargs):
     """Runs an user-defined WoT application injected with a decorated WoTPy entrypoint."""
