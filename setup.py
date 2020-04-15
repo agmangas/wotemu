@@ -29,7 +29,7 @@ setuptools.setup(
         "netifaces>=0.10.9,<0.11.0",
         "Click>=7.0,<8.0",
         "sh>=1.12.14,<2.0",
-        "wotpy>=0.14.4,<0.15.0",
+        "wotpy>=0.14.5,<0.15.0",
         "aioredis>=1.3,<2.0"
     ],
     extras_require={
