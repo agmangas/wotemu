@@ -27,10 +27,6 @@ def _catch(func):
     return wrapper
 
 
-def _logger_root():
-    root_logger_name = __name__.split(".")[0]
-    return logging.getLogger(root_logger_name)
-
 
 @click.group()
 @click.option("--log-level", default="DEBUG")
@@ -39,7 +35,7 @@ def cli(log_level, quiet):
     """Root CLI command."""
 
     if not quiet:
-        coloredlogs.install(level=log_level, logger=_logger_root())
+        coloredlogs.install(level=log_level)
 
 
 @cli.command()
