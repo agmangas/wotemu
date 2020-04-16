@@ -76,4 +76,7 @@ async def app(wot, loop):
         "Exposed Thing:\n%s",
         pprint.pformat(ThingDescription.from_thing(exposed_thing.thing).to_dict()))
 
-    await asyncio.gather(time_emitter(), date_emitter())
+    time_task = asyncio.ensure_future(time_emitter())
+    date_task = asyncio.ensure_future(date_emitter())
+
+    await asyncio.gather(time_task, date_task)
