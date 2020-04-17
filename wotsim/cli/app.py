@@ -74,16 +74,20 @@ def _exception_handler(loop, context):
 
 
 async def _start_servient(wot):
-    _logger.debug("Starting Servient: %s", wot.servient)
-    await wot.servient.start()
+    try:
+        _logger.debug("Starting Servient: %s", wot.servient)
+        await wot.servient.start()
+    except Exception:
+        _logger.error("Error in Servient startup", exc_info=True)
+        sys.exit(1)
 
 
 async def _stop_servient(wot):
     try:
         _logger.debug("Shutting down Servient: %s", wot.servient)
         await wot.servient.shutdown()
-    except Exception as ex:
-        _logger.warning("Error in Servient shutdown: %s", ex)
+    except Exception:
+        _logger.warning("Error in Servient shutdown", exc_info=True)
 
 
 async def _stop_redis(redis_pool):
@@ -94,8 +98,37 @@ async def _stop_redis(redis_pool):
         _logger.debug("Closing Redis")
         redis_pool.close()
         await redis_pool.wait_closed()
-    except Exception as ex:
-        _logger.warning("Error in Redis shutdown: %s", ex)
+    except Exception:
+        _logger.warning("Error in Redis shutdown", exc_info=True)
+
+
+async def _stop(loop, app_task, wot, redis_pool, lock):
+    if lock.locked():
+        _logger.debug("Another stop task is already in progress")
+        return
+
+    async with lock:
+        try:
+            _logger.info("Cancelling WoT app task: %s", app_task)
+            app_task.cancel()
+            await asyncio.wait_for(app_task, _TIMEOUT)
+        except Exception:
+            _logger.warning("Error during WoT app cancelation", exc_info=True)
+
+        await _stop_servient(wot=wot)
+        await _stop_redis(redis_pool=redis_pool)
+
+        _logger.debug("Stopping loop")
+        loop.stop()
+
+
+def _app_done_cb(fut, stop):
+    if fut.cancelled() or not fut.exception():
+        return
+
+    err = repr(fut.exception())
+    _logger.error("Stopping due to WoT app error: %s", err)
+    asyncio.ensure_future(stop())
 
 
 def run_app(path, func, port_catalogue, port_http, port_coap, port_ws, mqtt_url, redis_url, hostname):
@@ -126,21 +159,19 @@ def run_app(path, func, port_catalogue, port_http, port_coap, port_ws, mqtt_url,
     wot = wotsim.wotpy.wot.wot_entrypoint(**wot_kwargs)
 
     asyncio.ensure_future(_start_servient(wot))
+
+    _logger.info("Scheduling task for WoT app: %s", app_func)
     app_task = asyncio.ensure_future(app_func(wot, loop))
 
-    async def stop():
-        try:
-            _logger.debug("Cancelling WoT app task: %s", app_task)
-            app_task.cancel()
-            await asyncio.wait_for(app_task, _TIMEOUT)
-        except Exception:
-            _logger.warning("Error on WoT app cancelation", exc_info=True)
+    stop = functools.partial(
+        _stop,
+        loop=loop,
+        app_task=app_task,
+        wot=wot,
+        redis_pool=redis_pool,
+        lock=asyncio.Lock())
 
-        await _stop_servient(wot)
-        await _stop_redis(redis_pool)
-
-        _logger.debug("Stopping loop")
-        loop.stop()
+    app_task.add_done_callback(functools.partial(_app_done_cb, stop=stop))
 
     def sig_handler():
         _logger.debug("Received stop signal")
