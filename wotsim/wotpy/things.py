@@ -171,9 +171,14 @@ class SubscriptionVerbCallback(VerbCallback):
         event_key = "event"
 
         def on_next(item):
+            try:
+                item_data = item.data.__dict__
+            except:
+                item_data = item.data
+
             callback_task({
                 event_key: "on_next",
-                "item": item.data.__dict__
+                "item": item_data
             })
 
         def on_error(err):
