@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import functools
 import json
 import logging
 import pprint
@@ -33,6 +34,7 @@ _DESCRIPTION = {
 }
 
 _EVENT_MEAN_WAIT = 5
+_TIMEOUT = 10
 
 _logger = logging.getLogger(__name__)
 
@@ -50,33 +52,48 @@ async def _event_wait():
     await asyncio.sleep(random.expovariate(lambd))
 
 
+def _emit_time(exposed_thing):
+    payload = _time_millis()
+    _logger.debug("Emitting timeEvent: %s", payload)
+    exposed_thing.emit_event("timeEvent", payload)
+
+
+def _emit_date(exposed_thing):
+    payload = datetime.datetime.utcnow().isoformat()
+    _logger.debug("Emitting dateEvent: %s", payload)
+    exposed_thing.emit_event("dateEvent", payload)
+
+
+async def _emitter(emit_func):
+    try:
+        while True:
+            emit_func()
+            await _event_wait()
+    except asyncio.CancelledError:
+        _logger.debug("One last event before cancelling: %s", emit_func)
+        emit_func()
+
+
 async def app(wot, loop):
-    _logger.debug("Producing Thing:\n%s", pprint.pformat(_DESCRIPTION))
+    _logger.info(
+        "Producing Thing:\n%s",
+        pprint.pformat(_DESCRIPTION))
 
     exposed_thing = wot.produce(json.dumps(_DESCRIPTION))
     exposed_thing.set_property_read_handler("time", _time_handler)
-
-    async def time_emitter():
-        while True:
-            payload = _time_millis()
-            _logger.debug("Emitting timeEvent: %s", payload)
-            exposed_thing.emit_event("timeEvent", payload)
-            await _event_wait()
-
-    async def date_emitter():
-        while True:
-            payload = datetime.datetime.utcnow().isoformat()
-            _logger.debug("Emitting dateEvent: %s", payload)
-            exposed_thing.emit_event("dateEvent", payload)
-            await _event_wait()
-
     exposed_thing.expose()
 
     _logger.debug(
         "Exposed Thing:\n%s",
         pprint.pformat(ThingDescription.from_thing(exposed_thing.thing).to_dict()))
 
-    time_task = asyncio.ensure_future(time_emitter())
-    date_task = asyncio.ensure_future(date_emitter())
+    emit_time = functools.partial(_emit_time, exposed_thing)
+    emit_date = functools.partial(_emit_date, exposed_thing)
 
-    await asyncio.gather(time_task, date_task)
+    time_task = asyncio.ensure_future(_emitter(emit_time))
+    date_task = asyncio.ensure_future(_emitter(emit_date))
+
+    try:
+        await asyncio.gather(time_task, date_task)
+    except asyncio.CancelledError:
+        await asyncio.wait_for(asyncio.gather(time_task, date_task), _TIMEOUT)

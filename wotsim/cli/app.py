@@ -127,7 +127,7 @@ def _app_done_cb(fut, stop):
         return
 
     err = repr(fut.exception())
-    _logger.error("Stopping due to WoT app error: %s", err)
+    _logger.error("WoT app error: %s", err)
     asyncio.ensure_future(stop())
 
 
