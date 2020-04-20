@@ -132,13 +132,16 @@ def _app_done_cb(fut, stop):
     asyncio.ensure_future(stop())
 
 
-def run_app(path, func, hostname, no_http, no_mqtt, no_coap, no_ws):
+def run_app(path, func, func_param, hostname, enable_http, enable_mqtt, enable_coap, enable_ws):
     conf = wotsim.config.get_env_config()
 
-    port_http = None if no_http else conf.port_http
-    port_ws = None if no_ws else conf.port_ws
-    port_coap = None if no_coap else conf.port_coap
-    mqtt_url = None if no_mqtt else conf.mqtt_url
+    if not enable_http and not enable_mqtt and not enable_coap and not enable_ws:
+        _logger.warning("No protocol bindings have been enabled")
+
+    port_http = conf.port_http if enable_http else None
+    port_ws = conf.port_ws if enable_ws else None
+    port_coap = conf.port_coap if enable_coap else None
+    mqtt_url = conf.mqtt_url if enable_mqtt else None
 
     app_func = _import_app_func(module_path=path, func_name=func)
 
@@ -163,8 +166,16 @@ def run_app(path, func, hostname, no_http, no_mqtt, no_coap, no_ws):
 
     asyncio.ensure_future(_start_servient(wot))
 
+    app_args = (wot, conf, loop)
+    app_kwargs = {key: val for key, val in func_param}
+
+    _logger.debug(
+        "WoT app call signature (positional and keyword):\n%s\n%s",
+        pprint.pformat(app_args),
+        pprint.pformat(app_kwargs))
+
     _logger.info("Scheduling task for WoT app: %s", app_func)
-    app_task = asyncio.ensure_future(app_func(wot, conf, loop))
+    app_task = asyncio.ensure_future(app_func(*app_args, **app_kwargs))
 
     stop = functools.partial(
         _stop,

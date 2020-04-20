@@ -79,11 +79,12 @@ def chaos(**kwargs):
 @cli.command(**_COMMAND_KWARGS)
 @click.option("--path", required=True, type=click.Path(exists=True))
 @click.option("--func", type=str, default="app")
+@click.option('--func-param', multiple=True, type=(str, str))
 @click.option("--hostname", type=str, default=None)
-@click.option("--no-http", is_flag=True)
-@click.option("--no-coap", is_flag=True)
-@click.option("--no-mqtt", is_flag=True)
-@click.option("--no-ws", is_flag=True)
+@click.option("--enable-http", is_flag=True)
+@click.option("--enable-coap", is_flag=True)
+@click.option("--enable-mqtt", is_flag=True)
+@click.option("--enable-ws", is_flag=True)
 @_catch
 def app(**kwargs):
     """Runs an user-defined WoT application injected with a decorated WoTPy entrypoint."""
