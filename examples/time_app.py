@@ -11,7 +11,7 @@ from wotpy.wot.enums import DataType
 from wotpy.wot.td import ThingDescription
 
 _DESCRIPTION = {
-    "id": "urn:org:fundacionctic:thing:dummy",
+    "id": "urn:org:fundacionctic:thing:time",
     "name": "Benchmark Thing",
     "properties": {
         "time": {
