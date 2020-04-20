@@ -211,7 +211,7 @@ def _run_commands(cmds):
         _logger.info("%s", ret)
 
 
-def update_routing(docker_url, port_http, port_coap, port_ws, port_mqtt, rtable_name, rtable_mark, apply):
+def update_routing(docker_url, tcp, udp, rtable_name, rtable_mark, apply):
     wotsim.cli.utils.ping_docker(docker_url=docker_url)
 
     if _rtable_exists(rtable_name=rtable_name):
@@ -229,14 +229,11 @@ def update_routing(docker_url, port_http, port_coap, port_ws, port_mqtt, rtable_
         "Gateway tasks:\n%s",
         pprint.pformat(gw_tasks))
 
-    ports_tcp = [port_http, port_coap, port_ws, port_mqtt]
-    ports_udp = [port_coap]
-
     gw_commands = {
         net_id: _build_routing_commands(
             gw_task=task,
-            ports_tcp=ports_tcp,
-            ports_udp=ports_udp,
+            ports_tcp=tcp,
+            ports_udp=udp,
             rtable_name=rtable_name,
             rtable_mark=rtable_mark)
         for net_id, task in gw_tasks.items()

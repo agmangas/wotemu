@@ -11,8 +11,14 @@ import wotsim.cli.chaos
 import wotsim.cli.routes
 import wotsim.config
 
+_COMMAND_KWARGS = {
+    "context_settings": {
+        "show_default": True
+    }
+}
+
 _logger = logging.getLogger(__name__)
-_env_config = wotsim.config.get_env_config()
+_conf = wotsim.config.get_env_config()
 
 
 def _catch(func):
@@ -37,12 +43,14 @@ def cli(log_level, quiet):
         coloredlogs.install(level=log_level)
 
 
-@cli.command()
+@cli.command(**_COMMAND_KWARGS)
 @click.option("--docker-url", default="tcp://docker_api_proxy:2375/")
-@click.option("--port-http", type=int, default=_env_config.port_http)
-@click.option("--port-ws", type=int, default=_env_config.port_ws)
-@click.option("--port-coap", type=int, default=_env_config.port_coap)
-@click.option("--port-mqtt", type=int, default=_env_config.port_mqtt)
+@click.option(
+    "--tcp",
+    type=int,
+    multiple=True,
+    default=[_conf.port_http, _conf.port_ws, _conf.port_mqtt, _conf.port_coap])
+@click.option("--udp", type=int, multiple=True, default=[_conf.port_coap])
 @click.option("--rtable-name", default="wotsim")
 @click.option("--rtable-mark", type=int, default=1)
 @click.option("--apply", is_flag=True)
@@ -55,7 +63,7 @@ def route(**kwargs):
     wotsim.cli.routes.update_routing(**kwargs)
 
 
-@cli.command()
+@cli.command(**_COMMAND_KWARGS)
 @click.option("--docker-url", default="unix:///var/run/docker.sock")
 @click.option("--netem", type=str, multiple=True)
 @click.option("--duration", type=str, default="72h")
@@ -68,16 +76,14 @@ def chaos(**kwargs):
     wotsim.cli.chaos.create_chaos(**kwargs)
 
 
-@cli.command()
+@cli.command(**_COMMAND_KWARGS)
 @click.option("--path", required=True, type=click.Path(exists=True))
 @click.option("--func", type=str, default="app")
-@click.option("--port-catalogue", type=int, default=_env_config.port_catalogue)
-@click.option("--port-http", type=int, default=_env_config.port_http)
-@click.option("--port-ws", type=int, default=_env_config.port_ws)
-@click.option("--port-coap", type=int, default=_env_config.port_coap)
-@click.option("--mqtt-url", type=str, default=_env_config.mqtt_url)
-@click.option("--redis-url", type=str, default=_env_config.redis_url)
 @click.option("--hostname", type=str, default=None)
+@click.option("--no-http", is_flag=True)
+@click.option("--no-coap", is_flag=True)
+@click.option("--no-mqtt", is_flag=True)
+@click.option("--no-ws", is_flag=True)
 @_catch
 def app(**kwargs):
     """Runs an user-defined WoT application injected with a decorated WoTPy entrypoint."""

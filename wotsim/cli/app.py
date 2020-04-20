@@ -10,6 +10,7 @@ import sys
 
 import aioredis
 
+import wotsim.config
 import wotsim.wotpy.redis
 import wotsim.wotpy.wot
 
@@ -131,21 +132,23 @@ def _app_done_cb(fut, stop):
     asyncio.ensure_future(stop())
 
 
-def run_app(path, func, port_catalogue, port_http, port_coap, port_ws, mqtt_url, redis_url, hostname):
-    port_http = port_http if port_http else None
-    port_ws = port_ws if port_ws else None
-    port_coap = port_coap if port_coap else None
-    mqtt_url = mqtt_url if mqtt_url else None
+def run_app(path, func, hostname, no_http, no_mqtt, no_coap, no_ws):
+    conf = wotsim.config.get_env_config()
+
+    port_http = None if no_http else conf.port_http
+    port_ws = None if no_ws else conf.port_ws
+    port_coap = None if no_coap else conf.port_coap
+    mqtt_url = None if no_mqtt else conf.mqtt_url
 
     app_func = _import_app_func(module_path=path, func_name=func)
 
     loop = asyncio.get_event_loop()
     loop.set_exception_handler(_exception_handler)
 
-    thing_cb, redis_pool = _build_thing_cb(redis_url=redis_url, loop=loop)
+    thing_cb, redis_pool = _build_thing_cb(redis_url=conf.redis_url, loop=loop)
 
     wot_kwargs = {
-        "port_catalogue": port_catalogue,
+        "port_catalogue": conf.port_catalogue,
         "exposed_cb": thing_cb,
         "consumed_cb": thing_cb,
         "port_http": port_http,
@@ -161,7 +164,7 @@ def run_app(path, func, port_catalogue, port_http, port_coap, port_ws, mqtt_url,
     asyncio.ensure_future(_start_servient(wot))
 
     _logger.info("Scheduling task for WoT app: %s", app_func)
-    app_task = asyncio.ensure_future(app_func(wot, loop))
+    app_task = asyncio.ensure_future(app_func(wot, conf, loop))
 
     stop = functools.partial(
         _stop,

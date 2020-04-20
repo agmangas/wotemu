@@ -74,7 +74,7 @@ async def _emitter(emit_func):
         emit_func()
 
 
-async def app(wot, loop):
+async def app(wot, conf, loop):
     _logger.info(
         "Producing Thing:\n%s",
         pprint.pformat(_DESCRIPTION))
