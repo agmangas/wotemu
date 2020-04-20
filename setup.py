@@ -30,7 +30,8 @@ setuptools.setup(
         "Click>=7.0,<8.0",
         "sh>=1.12.14,<2.0",
         "wotpy>=0.14.5,<0.15.0",
-        "aioredis>=1.3,<2.0"
+        "aioredis>=1.3,<2.0",
+        "tornado>=5.1,<6.0'"
     ],
     extras_require={
         "dev": [
