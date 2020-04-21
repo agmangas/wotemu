@@ -22,7 +22,7 @@ services:
     image: wotsim
     command: ["gateway", "delay --time 5 --jitter 1 --distribution normal"]
     privileged: true
-    hostname: gw_cable
+    hostname: "{{.Task.Name}}"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
     networks:
@@ -35,7 +35,7 @@ services:
     image: wotsim
     command: ["gateway", "delay --time 15 --jitter 10 --distribution normal"]
     privileged: true
-    hostname: gw_wifi
+    hostname: "{{.Task.Name}}"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
     networks:
@@ -53,7 +53,7 @@ services:
         "rate --rate 200kbit",
       ]
     privileged: true
-    hostname: gw_3g
+    hostname: "{{.Task.Name}}"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
     networks:
@@ -66,7 +66,7 @@ services:
     image: wotsim
     command: ["node"]
     privileged: true
-    hostname: node_wifi_1
+    hostname: "{{.Task.Name}}"
     networks:
       - network_wifi
     depends_on:
@@ -78,7 +78,7 @@ services:
     image: wotsim
     command: ["node"]
     privileged: true
-    hostname: node_wifi_2
+    hostname: "{{.Task.Name}}"
     networks:
       - network_wifi
     depends_on:
@@ -90,7 +90,7 @@ services:
     image: wotsim
     command: ["node"]
     privileged: true
-    hostname: node_cable_1
+    hostname: "{{.Task.Name}}"
     networks:
       - network_cable
       - network_3g
@@ -105,7 +105,7 @@ services:
     image: wotsim
     command: ["node"]
     privileged: true
-    hostname: node_cable_2
+    hostname: "{{.Task.Name}}"
     networks:
       - network_cable
       - network_3g
@@ -120,7 +120,7 @@ services:
     image: wotsim
     command: ["node"]
     privileged: true
-    hostname: node_wifi_cable_1
+    hostname: "{{.Task.Name}}"
     networks:
       - network_wifi
       - network_cable
@@ -134,7 +134,7 @@ services:
     image: wotsim
     command: ["broker"]
     privileged: true
-    hostname: broker_1
+    hostname: "{{.Task.Name}}"
     networks:
       - network_3g
     depends_on:
