@@ -40,6 +40,8 @@ def _catch(func):
 def cli(log_level, quiet, root_logger):
     """Root CLI command."""
 
+    logging.getLogger().addHandler(logging.NullHandler())
+
     if not quiet:
         pkg_name = __name__.split(".")[0]
         cli_logger_name = None if root_logger else pkg_name
