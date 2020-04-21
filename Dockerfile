@@ -1,4 +1,4 @@
-FROM ubuntu:19.04
+FROM ubuntu:19.10
 
 ENV PATH_WOTPY /root/wot-py
 ENV PATH_WOTSIM /root/wotsim
