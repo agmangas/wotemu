@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 
 set -e
+set -x
 
-: "${PATH_WOTPY:?}"
-: "${PATH_WOTSIM:?}"
 : "${PORT_CATALOGUE:?}"
 : "${PORT_HTTP:?}"
 : "${PORT_WS:?}"
 : "${PORT_COAP:?}"
 : "${PORT_MQTT:?}"
+: "${REDIS_URL:?}"
 
 print_section () {
     echo
@@ -38,16 +38,8 @@ update_routing () {
     --apply
 }
 
-run_benchmark_server () {
-    print_section "Running benchmark server"
-    
-    exec python3 ${PATH_WOTPY}/examples/benchmark/server.py \
-    --mqtt-broker=${MQTT_BROKER} \
-    --port-catalogue=${PORT_CATALOGUE} \
-    --port-http=${PORT_HTTP} \
-    --port-ws=${PORT_WS} \
-    --port-coap=${PORT_COAP} \
-    --hostname=$(hostname)
+run_app () {
+    exec wotsim app "$@"
 }
 
 run_mqtt_broker () {
@@ -71,11 +63,11 @@ idle () {
 }
 
 case "$1" in
-    node)
+    app)
         wait_gateways
         update_routing
         wait_brokers
-        run_benchmark_server
+        run_app "${@:2}"
     ;;
     broker)
         wait_gateways

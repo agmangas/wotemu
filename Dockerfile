@@ -1,12 +1,12 @@
 FROM ubuntu:19.10
 
-ENV PATH_WOTPY /root/wot-py
 ENV PATH_WOTSIM /root/wotsim
 ENV PORT_CATALOGUE 9090
 ENV PORT_HTTP 80
 ENV PORT_WS 81
 ENV PORT_COAP 5683
 ENV PORT_MQTT 1883
+ENV REDIS_URL redis://redis
 
 RUN apt-get update -y && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     build-essential \
@@ -22,13 +22,8 @@ RUN apt-get update -y && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     git \
     mosquitto
 
-RUN git clone https://github.com/agmangas/wot-py.git ${PATH_WOTPY}
-RUN pip3 install -r ${PATH_WOTPY}/examples/benchmark/requirements.txt
-
 COPY . ${PATH_WOTSIM}
-
 RUN ${PATH_WOTSIM}/scripts/install-pumba.sh
-
 RUN pip3 install ${PATH_WOTSIM}
 
 EXPOSE ${PORT_CATALOGUE}
