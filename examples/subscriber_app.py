@@ -38,15 +38,15 @@ async def _consume_from_catalogue(wot, port_catalogue, servient_host, thing_id):
 
 
 def _on_next(item, interaction):
-    _logger.info("%s :: Next :: %s", interaction, item)
+    _logger.info("%s: Next\n%s", interaction, item)
 
 
 def _on_completed(interaction):
-    _logger.info("%s :: Completed", interaction)
+    _logger.info("%s: Completed", interaction)
 
 
 def _on_error(err, interaction):
-    _logger.warning("%s :: Error :: %s", interaction, err)
+    _logger.warning("%s: Error\n%s", interaction, err)
 
 
 def _subscribe(interaction):
