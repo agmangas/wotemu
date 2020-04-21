@@ -83,11 +83,10 @@ def chaos(**kwargs):
 
 
 @cli.command(**_COMMAND_KWARGS)
-@click.option("--path", required=True, type=click.Path(exists=True))
+@click.option("--path", required=True, type=str)
 @click.option("--func", type=str, default="app")
 @click.option('--func-param', multiple=True, type=(str, str))
 @click.option("--hostname", type=str, default=None)
-@click.option("--no-logger", is_flag=True)
 @click.option("--enable-http", is_flag=True)
 @click.option("--enable-coap", is_flag=True)
 @click.option("--enable-mqtt", is_flag=True)
@@ -95,10 +94,5 @@ def chaos(**kwargs):
 @_catch
 def app(**kwargs):
     """Runs an user-defined WoT application injected with a decorated WoTPy entrypoint."""
-
-    pparams = click.get_current_context().parent.params
-    app_log_disabled = kwargs.pop("no_logger", False) or pparams["quiet"]
-    app_logger_level = None if app_log_disabled else pparams["log_level"]
-    kwargs["app_logger_level"] = app_logger_level
 
     wotsim.cli.app.run_app(**kwargs)

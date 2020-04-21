@@ -9,7 +9,7 @@ import tornado.httpclient
 
 _CANCEL_SLEEP = 3
 
-_logger = logging.getLogger(__name__)
+_logger = logging.getLogger("wotsim.subscriber.app")
 
 
 async def _consume_from_catalogue(wot, port_catalogue, servient_host, thing_id):

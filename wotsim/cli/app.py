@@ -5,23 +5,45 @@ import inspect
 import logging
 import os
 import pprint
+import re
 import signal
 import sys
+import tempfile
 
 import aioredis
 import coloredlogs
+import tornado.httpclient
 
 import wotsim.config
 import wotsim.wotpy.redis
 import wotsim.wotpy.wot
 
 _TIMEOUT = 15
+_HTTP_REGEX = r"^https?:\/\/.*"
 
 _logger = logging.getLogger(__name__)
 
 
+def _get_http_app_func(url):
+    _logger.info("Fetching WoT app from: %s", url)
+
+    http_client = tornado.httpclient.HTTPClient()
+    res = http_client.fetch(url)
+    _os_fh, abs_path = tempfile.mkstemp(suffix=".py")
+
+    _logger.debug("Writing WoT app to: %s", abs_path)
+
+    with open(abs_path, "w") as fh:
+        fh.write(res.body.decode())
+
+    return abs_path
+
+
 def _import_app_func(module_path, func_name):
     _logger.debug("Attempting to import from: %s", module_path)
+
+    if re.match(_HTTP_REGEX, module_path):
+        module_path = _get_http_app_func(module_path)
 
     path_root, path_base = os.path.split(module_path)
 
@@ -134,7 +156,7 @@ def _app_done_cb(fut, stop):
 
 
 def run_app(
-        path, func, func_param, hostname, app_logger_level,
+        path, func, func_param, hostname,
         enable_http, enable_mqtt, enable_coap, enable_ws):
     conf = wotsim.config.get_env_config()
 
@@ -147,11 +169,6 @@ def run_app(
     mqtt_url = conf.mqtt_url if enable_mqtt else None
 
     app_func = _import_app_func(module_path=path, func_name=func)
-
-    if app_logger_level:
-        app_logger = logging.getLogger(app_func.__module__)
-        coloredlogs.install(level=app_logger_level, logger=app_logger)
-        _logger.debug("Installed WoT app logger: %s", app_logger)
 
     loop = asyncio.get_event_loop()
     loop.set_exception_handler(_exception_handler)
