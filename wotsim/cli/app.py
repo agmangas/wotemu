@@ -24,7 +24,7 @@ _HTTP_REGEX = r"^https?:\/\/.*"
 _logger = logging.getLogger(__name__)
 
 
-def _get_http_app_func(url):
+def _fetch_app_file(url):
     _logger.info("Fetching WoT app from: %s", url)
 
     http_client = tornado.httpclient.HTTPClient()
@@ -39,38 +39,52 @@ def _get_http_app_func(url):
     return abs_path
 
 
+def _remove_tempfile(fpath):
+    if not fpath or not fpath.startswith(tempfile.gettempdir()):
+        return
+
+    try:
+        _logger.debug("Removing tempfile: %s", fpath)
+        os.remove(fpath)
+    except:
+        _logger.warning("Error removing tempfile", exc_info=True)
+
+
 def _import_app_func(module_path, func_name):
     _logger.debug("Attempting to import from: %s", module_path)
 
     if re.match(_HTTP_REGEX, module_path):
-        module_path = _get_http_app_func(module_path)
+        module_path = _fetch_app_file(module_path)
 
-    path_root, path_base = os.path.split(module_path)
+    try:
+        path_root, path_base = os.path.split(module_path)
 
-    if path_root not in sys.path:
-        sys.path.insert(0, path_root)
+        if path_root not in sys.path:
+            sys.path.insert(0, path_root)
 
-    mod_name, _ext = os.path.splitext(path_base)
-    mod_import = importlib.import_module(mod_name)
-    mod_dir = dir(mod_import)
+        mod_name, _ext = os.path.splitext(path_base)
+        mod_import = importlib.import_module(mod_name)
+        mod_dir = dir(mod_import)
 
-    _logger.info("Imported: %s", mod_import)
-    _logger.debug("dir(%s): %s", mod_import, mod_dir)
+        _logger.info("Imported: %s", mod_import)
+        _logger.debug("dir(%s): %s", mod_import, mod_dir)
 
-    if func_name not in mod_dir:
-        raise Exception(
-            "Module {} does not contain function '{}'".format(mod_import, func_name))
+        if func_name not in mod_dir:
+            raise Exception(
+                "Module {} does not contain function '{}'".format(mod_import, func_name))
 
-    app_func = getattr(mod_import, func_name)
-    app_func_sig = inspect.signature(app_func)
+        app_func = getattr(mod_import, func_name)
+        app_func_sig = inspect.signature(app_func)
 
-    _logger.debug("Function (%s) signature: %s", app_func, app_func_sig)
+        _logger.debug("Function (%s) signature: %s", app_func, app_func_sig)
 
-    if len(app_func_sig.parameters) < 2:
-        raise Exception(
-            "Function {} should take at least two parameters".format(app_func))
+        if len(app_func_sig.parameters) < 2:
+            raise Exception(
+                "Function {} should take at least two parameters".format(app_func))
 
-    return app_func
+        return app_func
+    finally:
+        _remove_tempfile(module_path)
 
 
 def _build_thing_cb(redis_url, loop):
