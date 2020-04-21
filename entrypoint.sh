@@ -30,10 +30,11 @@ update_routing () {
     print_section "Updating routing configuration"
     
     wotsim route \
-    --port-http ${PORT_HTTP} \
-    --port-ws ${PORT_WS} \
-    --port-coap ${PORT_COAP} \
-    --port-mqtt ${PORT_MQTT} \
+    --tcp ${PORT_HTTP} \
+    --tcp ${PORT_WS} \
+    --tcp ${PORT_COAP} \
+    --tcp ${PORT_MQTT} \
+    --udp ${PORT_COAP} \
     --apply
 }
 
