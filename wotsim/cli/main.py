@@ -36,11 +36,15 @@ def _catch(func):
 @click.group()
 @click.option("--log-level", default="DEBUG")
 @click.option("--quiet", is_flag=True)
-def cli(log_level, quiet):
+@click.option("--root-logger", is_flag=True)
+def cli(log_level, quiet, root_logger):
     """Root CLI command."""
 
     if not quiet:
-        coloredlogs.install(level=log_level)
+        pkg_name = __name__.split(".")[0]
+        cli_logger_name = None if root_logger else pkg_name
+        cli_logger = logging.getLogger(cli_logger_name)
+        coloredlogs.install(level=log_level, logger=cli_logger)
 
 
 @cli.command(**_COMMAND_KWARGS)
@@ -81,6 +85,7 @@ def chaos(**kwargs):
 @click.option("--func", type=str, default="app")
 @click.option('--func-param', multiple=True, type=(str, str))
 @click.option("--hostname", type=str, default=None)
+@click.option("--no-logger", is_flag=True)
 @click.option("--enable-http", is_flag=True)
 @click.option("--enable-coap", is_flag=True)
 @click.option("--enable-mqtt", is_flag=True)
@@ -88,5 +93,10 @@ def chaos(**kwargs):
 @_catch
 def app(**kwargs):
     """Runs an user-defined WoT application injected with a decorated WoTPy entrypoint."""
+
+    pparams = click.get_current_context().parent.params
+    app_log_disabled = kwargs.pop("no_logger", False) or pparams["quiet"]
+    app_logger_level = None if app_log_disabled else pparams["log_level"]
+    kwargs["app_logger_level"] = app_logger_level
 
     wotsim.cli.app.run_app(**kwargs)

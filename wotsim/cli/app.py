@@ -9,6 +9,7 @@ import signal
 import sys
 
 import aioredis
+import coloredlogs
 
 import wotsim.config
 import wotsim.wotpy.redis
@@ -132,7 +133,9 @@ def _app_done_cb(fut, stop):
     asyncio.ensure_future(stop())
 
 
-def run_app(path, func, func_param, hostname, enable_http, enable_mqtt, enable_coap, enable_ws):
+def run_app(
+        path, func, func_param, hostname, app_logger_level,
+        enable_http, enable_mqtt, enable_coap, enable_ws):
     conf = wotsim.config.get_env_config()
 
     if not enable_http and not enable_mqtt and not enable_coap and not enable_ws:
@@ -144,6 +147,11 @@ def run_app(path, func, func_param, hostname, enable_http, enable_mqtt, enable_c
     mqtt_url = conf.mqtt_url if enable_mqtt else None
 
     app_func = _import_app_func(module_path=path, func_name=func)
+
+    if app_logger_level:
+        app_logger = logging.getLogger(app_func.__module__)
+        coloredlogs.install(level=app_logger_level, logger=app_logger)
+        _logger.debug("Installed WoT app logger: %s", app_logger)
 
     loop = asyncio.get_event_loop()
     loop.set_exception_handler(_exception_handler)
