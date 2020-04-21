@@ -33,8 +33,8 @@ def _get_http_app_func(url):
 
     _logger.debug("Writing WoT app to: %s", abs_path)
 
-    with open(abs_path, "w") as fh:
-        fh.write(res.body.decode())
+    with open(abs_path, "wb") as fh:
+        fh.write(res.body)
 
     return abs_path
 
