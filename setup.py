@@ -31,7 +31,9 @@ setuptools.setup(
         "sh>=1.12.14,<2.0",
         "wotpy>=0.14.5,<0.15.0",
         "aioredis>=1.3,<2.0",
-        "tornado>=5.1,<6.0'"
+        "tornado>=5.1,<6.0",
+        "PyYAML>=5.3,<6.0",
+        "inflection>=0.4.0,<0.5.0"
     ],
     extras_require={
         "dev": [
