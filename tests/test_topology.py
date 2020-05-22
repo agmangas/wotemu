@@ -1,4 +1,8 @@
+import os
+import tempfile
+
 import pytest
+import sh
 
 from wotsim.topology.models import (Broker, Network, Node, NodeApp,
                                     NodeResources, Topology)
@@ -64,7 +68,26 @@ def test_topology_compose(topology):
 
 
 def test_topology_compose_yaml(topology):
-    assert topology.to_compose_yaml()
+    try:
+        sh_compose = sh.Command("docker-compose")
+    except sh.CommandNotFound:
+        pytest.skip("Compose CLI is not available")
+        return
+
+    try:
+        temp_fh, temp_path = tempfile.mkstemp(suffix=".yml")
+
+        with open(temp_path, "w") as fh:
+            fh.write(topology.to_compose_yaml())
+
+        cmd_config = ["-f", temp_path, "config"]
+        assert sh_compose(cmd_config, _err_to_out=True)
+    finally:
+        try:
+            os.close(temp_fh)
+            os.remove(temp_path)
+        except:
+            pass
 
 
 def test_node_compose(topology):

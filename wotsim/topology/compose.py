@@ -176,10 +176,9 @@ def get_node_definition(topology, node):
 def get_topology_definition(topology):
     definition = {"version": COMPOSE_VERSION}
 
-    services = {
-        topology.name_docker_proxy: get_docker_proxy_definition(topology),
-        topology.name_redis: get_redis_definition(topology)
-    }
+    services = {}
+    services.update(get_docker_proxy_definition(topology))
+    services.update(get_redis_definition(topology))
 
     for net in topology.networks:
         services.update(net.to_gateway_compose_dict(topology))
