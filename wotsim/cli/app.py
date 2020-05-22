@@ -182,6 +182,9 @@ def run_app(
     port_coap = conf.port_coap if enable_coap else None
     mqtt_url = conf.mqtt_url if enable_mqtt else None
 
+    if enable_mqtt and not mqtt_url:
+        _logger.warning("MQTT is enabled but broker is undefined")
+
     app_func = _import_app_func(module_path=path, func_name=func)
 
     loop = asyncio.get_event_loop()
