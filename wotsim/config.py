@@ -38,6 +38,22 @@ class ConfigVars(enum.Enum):
     REDIS_URL = "REDIS_URL"
 
 
+def get_default_env():
+    ret = {
+        ConfigVars.PORT_CATALOGUE.value: _DEFAULT_PORT_CATALOGUE,
+        ConfigVars.PORT_HTTP.value: _DEFAULT_PORT_HTTP,
+        ConfigVars.PORT_WS.value: _DEFAULT_PORT_WS,
+        ConfigVars.PORT_COAP.value: _DEFAULT_PORT_COAP,
+        ConfigVars.PORT_MQTT.value: _DEFAULT_PORT_MQTT,
+        ConfigVars.REDIS_URL.value: _DEFAULT_REDIS_URL
+    }
+
+    enum_values = [enum_item.value for enum_item in ConfigVars]
+    assert all(key in enum_values for key in ret.keys())
+
+    return ret
+
+
 def _get_env_int(name, default):
     try:
         return int(os.getenv(name, default))
