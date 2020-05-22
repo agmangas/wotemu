@@ -4,6 +4,7 @@ import logging
 import inflection
 import yaml
 
+from wotsim.config import ConfigVars, get_default_env
 from wotsim.enums import NetworkConditions, NodePlatforms
 from wotsim.topology.compose import (BASE_IMAGE, DEFAULT_NAME_DOCKER_PROXY,
                                      DEFAULT_NAME_REDIS, get_broker_definition,
@@ -17,9 +18,6 @@ _logger = logging.getLogger(__name__)
 
 class NodeResources:
     """Represents the hardware constraints and resources of a node."""
-
-    CPUS = "cpus"
-    MEMORY = "memory"
 
     def __init__(self, cpu_limit, mem_limit, cpu_reservation=None, mem_reservation=None):
         if cpu_reservation is not None:
@@ -49,7 +47,7 @@ class NodeApp:
             raise ValueError("At least one protocol should be enabled")
 
         self.path = path
-        self.params = params
+        self.params = params if params else {}
         self._http = http
         self._ws = ws
         self._mqtt = mqtt
@@ -160,7 +158,7 @@ class Node(BaseNamedModel):
         if not self.broker:
             return None
 
-        return "{}.{}".format(self.broker.name, self.broker_network)
+        return "{}.{}".format(self.broker.name, self.broker_network.name)
 
     @property
     def cmd_app(self):
@@ -197,7 +195,7 @@ class Network(BaseNamedModel):
 
         raise NotImplementedError
 
-    def __init__(self, name, netem, args_compose_net=None, args_compose_gw=None):
+    def __init__(self, name, netem=None, args_compose_net=None, args_compose_gw=None):
         self._netem = netem
         self.args_compose_net = args_compose_net
         self.args_compose_gw = args_compose_gw
@@ -209,7 +207,7 @@ class Network(BaseNamedModel):
 
     @property
     def netem_args(self):
-        return self._netem
+        return self._netem if self._netem else []
 
     @property
     def cmd_gateway(self):
@@ -226,10 +224,27 @@ class Topology:
     """Represents a topology consisting of a set of 
     Nodes and Brokers iterconnected by Networks."""
 
+    @classmethod
+    def _clean_config(cls, config):
+        config = config if config else {}
+
+        config = {
+            key: val for key, val in config.items()
+            if key in [enum_item.value for enum_item in ConfigVars]
+        }
+
+        ret = get_default_env()
+        ret.update(config)
+        ret = {key: str(val) for key, val in ret.items()}
+
+        return ret
+
     def __init__(
-            self, nodes, brokers=None,
-            name_docker_proxy=DEFAULT_NAME_DOCKER_PROXY, name_redis=DEFAULT_NAME_REDIS):
+            self, nodes, config=None, brokers=None,
+            name_docker_proxy=DEFAULT_NAME_DOCKER_PROXY,
+            name_redis=DEFAULT_NAME_REDIS):
         self.nodes = nodes
+        self.config = self._clean_config(config)
         self._brokers = brokers
         self.name_docker_proxy = name_docker_proxy
         self.name_redis = name_redis

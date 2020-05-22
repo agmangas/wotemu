@@ -1,11 +1,16 @@
+import logging
 import os
+import random
 import tempfile
 
 import pytest
 import sh
 
+from wotsim.config import ConfigVars
 from wotsim.topology.models import (Broker, Network, Node, NodeApp,
                                     NodeResources, Topology)
+
+_logger = logging.getLogger(__name__)
 
 
 @pytest.fixture
@@ -81,13 +86,40 @@ def test_topology_compose_yaml(topology):
             fh.write(topology.to_compose_yaml())
 
         cmd_config = ["-f", temp_path, "config"]
-        assert sh_compose(cmd_config, _err_to_out=True)
+        compose_res = sh_compose(cmd_config, _err_to_out=True)
+        assert compose_res
+        _logger.debug("Compose validation result: \n%s", compose_res)
     finally:
         try:
             os.close(temp_fh)
             os.remove(temp_path)
         except:
             pass
+
+
+def test_topology_config():
+    network = Network(name="my_net")
+    node_app = NodeApp(path="/root/app.py", http=True)
+    node_one = Node(name="node_one", app=node_app, networks=[network])
+    node_two = Node(name="node_two", app=node_app, networks=[network])
+    port_http = random.randint(10500, 20000)
+
+    topology = Topology(
+        nodes=[node_one, node_two],
+        config={ConfigVars.PORT_HTTP.value: port_http, "unknownDummy": 100})
+
+    compose = topology.to_compose_dict()
+    services = compose.get("services")
+    env_one = services.get(node_one.name).get("environment")
+    env_two = services.get(node_two.name).get("environment")
+
+    assert env_one == env_two
+
+    if isinstance(env_one, dict):
+        assert env_one[ConfigVars.PORT_HTTP.value] == str(port_http)
+    else:
+        http_item = "{}={}".format(ConfigVars.PORT_HTTP.value, str(port_http))
+        assert http_item in env_one
 
 
 def test_node_compose(topology):

@@ -3,12 +3,10 @@
 set -e
 set -x
 
-: "${PORT_CATALOGUE:?}"
 : "${PORT_HTTP:?}"
 : "${PORT_WS:?}"
 : "${PORT_COAP:?}"
 : "${PORT_MQTT:?}"
-: "${REDIS_URL:?}"
 
 print_section () {
     echo

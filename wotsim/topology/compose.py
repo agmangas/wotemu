@@ -61,6 +61,18 @@ NETWORK_BASE = {
 }
 
 
+def _merge_topology_config(service, topology):
+    envr = service.get("environment", [])
+
+    if isinstance(envr, dict):
+        envr.update(topology.config)
+    else:
+        conf = ["{}={}".format(k, v) for k, v in topology.config.items()]
+        envr = list(set([*envr, *conf]))
+
+    service["environment"] = envr
+
+
 def get_docker_proxy_definition(topology):
     service = copy.deepcopy(SERVICE_BASE_DOCKER_PROXY)
 
@@ -92,6 +104,8 @@ def get_network_gateway_definition(topology, network):
     if network.args_compose_gw:
         service.update(network.args_compose_gw)
 
+    _merge_topology_config(service, topology)
+
     return {network.name_gateway: service}
 
 
@@ -114,6 +128,8 @@ def get_broker_definition(topology, broker):
 
     if broker.args_compose:
         service.update(broker.args_compose)
+
+    _merge_topology_config(service, topology)
 
     return {broker.name: service}
 
@@ -170,6 +186,8 @@ def get_node_definition(topology, node):
 
     if node.args_compose:
         service.update(node.args_compose)
+
+    _merge_topology_config(service, topology)
 
     return {node.name: service}
 
