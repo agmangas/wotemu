@@ -26,7 +26,7 @@ def topology():
 
     broker = Broker(
         name="the_broker",
-        network=network_broker)
+        networks=[network_broker])
 
     node_resources = NodeResources(
         cpu_limit=0.5,

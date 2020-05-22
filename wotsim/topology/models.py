@@ -125,14 +125,19 @@ class Node(BaseNamedModel):
         raise NotImplementedError
 
     def __init__(
-            self, name, app, networks, broker=None, image=BASE_IMAGE,
-            resources=None, scale=None, args_compose=None):
+            self, name, app, networks, broker=None, broker_network=None,
+            image=BASE_IMAGE, resources=None, scale=None, args_compose=None):
         if app.enabled_mqtt and not broker:
             raise ValueError("A broker should be defined when MQTT is enabled")
+
+        if broker and broker_network and broker_network not in broker.networks:
+            raise ValueError("Broker network {} is not linked to broker {}".format(
+                broker_network, broker))
 
         self.app = app
         self.networks = networks
         self.broker = broker
+        self._broker_network = broker_network
         self.image = image
         self.resources = resources
         self.scale = scale
@@ -140,11 +145,22 @@ class Node(BaseNamedModel):
         super().__init__(name)
 
     @property
+    def broker_network(self):
+        if not self.broker:
+            return None
+
+        if self._broker_network:
+            assert self._broker_network in self.broker.networks
+            return self._broker_network
+
+        return self.broker.networks[0]
+
+    @property
     def broker_host(self):
         if not self.broker:
             return None
 
-        return "{}.{}".format(self.broker.name, self.broker.network.name)
+        return "{}.{}".format(self.broker.name, self.broker_network)
 
     @property
     def cmd_app(self):
@@ -157,8 +173,8 @@ class Node(BaseNamedModel):
 class Broker(BaseNamedModel):
     """Represents a MQTT broker."""
 
-    def __init__(self, name, network, args_compose=None):
-        self.network = network
+    def __init__(self, name, networks, args_compose=None):
+        self.networks = networks
         self.args_compose = args_compose
         super().__init__(name)
 
@@ -227,8 +243,8 @@ class Topology:
     @property
     def networks(self):
         nets_node = set([net for node in self.nodes for net in node.networks])
-        nets_broker = set([broker.network for broker in self.brokers])
-        return list(nets_node.union(nets_broker))
+        nets_brkr = set([net for brk in self.brokers for net in brk.networks])
+        return list(nets_node.union(nets_brkr))
 
     def to_compose_dict(self):
         return get_topology_definition(self)

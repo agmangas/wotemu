@@ -104,12 +104,12 @@ def get_network_definition(topology, network):
 def get_broker_definition(topology, broker):
     service = copy.deepcopy(SERVICE_BASE_BROKER)
 
+    depends_on = [topology.name_docker_proxy]
+    depends_on += [net.name_gateway for net in broker.networks]
+
     service.update({
-        "networks": [broker.network.name],
-        "depends_on": [
-            topology.name_docker_proxy,
-            broker.network.name_gateway
-        ]
+        "networks": [net.name for net in broker.networks],
+        "depends_on": depends_on
     })
 
     if broker.args_compose:
@@ -149,8 +149,9 @@ def get_node_definition(topology, node):
     envr = service.get("environment", [])
 
     if node.broker:
-        networks.append(node.broker.network.name)
-        depends_on.append(node.broker.network.name_gateway)
+        assert node.broker_network
+        networks.append(node.broker_network.name)
+        depends_on.append(node.broker_network.name_gateway)
         envr.append("{}={}".format(ENV_KEY_BROKER, node.broker_host))
 
     service.update({
