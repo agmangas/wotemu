@@ -1,6 +1,7 @@
 import pytest
 
-from wotsim.topology.models import Broker, Network, Node, NodeApp, Topology
+from wotsim.topology.models import (Broker, Network, Node, NodeApp,
+                                    NodeResources, Topology)
 
 
 @pytest.fixture
@@ -23,11 +24,17 @@ def topology():
         name="the_broker",
         network=network_broker)
 
+    node_resources = NodeResources(
+        cpu_limit=0.5,
+        mem_limit="100M",
+        mem_reservation="50M")
+
     node = Node(
         name="the_node",
         app=node_app,
         networks=[network],
-        broker=broker)
+        broker=broker,
+        resources=node_resources)
 
     return Topology(nodes=[node])
 
@@ -52,6 +59,14 @@ def test_names_underscore(topology):
     assert node_ok.name == name_ok
 
 
+def test_topology_compose(topology):
+    assert topology.to_compose_dict()
+
+
+def test_topology_compose_yaml(topology):
+    assert topology.to_compose_yaml()
+
+
 def test_node_compose(topology):
     node = topology.nodes[0]
     assert node.to_compose_dict(topology)
@@ -60,6 +75,11 @@ def test_node_compose(topology):
 def test_broker_compose(topology):
     broker = topology.brokers[0]
     assert broker.to_compose_dict(topology)
+
+
+def test_network_compose(topology):
+    network = topology.networks[0]
+    assert network.to_compose_dict(topology)
 
 
 def test_network_gateway_compose(topology):

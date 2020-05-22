@@ -5,10 +5,12 @@ import inflection
 import yaml
 
 from wotsim.enums import NetworkConditions, NodePlatforms
-from wotsim.topology.compose import (BASE_IMAGE, NAME_DOCKER_PROXY, NAME_REDIS,
-                                     get_broker_definition,
+from wotsim.topology.compose import (BASE_IMAGE, DEFAULT_NAME_DOCKER_PROXY,
+                                     DEFAULT_NAME_REDIS, get_broker_definition,
+                                     get_network_definition,
                                      get_network_gateway_definition,
-                                     get_node_definition)
+                                     get_node_definition,
+                                     get_topology_definition)
 
 _logger = logging.getLogger(__name__)
 
@@ -16,9 +18,18 @@ _logger = logging.getLogger(__name__)
 class NodeResources:
     """Represents the hardware constraints and resources of a node."""
 
+    CPUS = "cpus"
+    MEMORY = "memory"
+
     def __init__(self, cpu_limit, mem_limit, cpu_reservation=None, mem_reservation=None):
-        self.cpu_limit = cpu_limit
-        self.mem_limit = mem_limit
+        if cpu_reservation is not None:
+            cpu_reservation = str(cpu_reservation)
+
+        if mem_reservation is not None:
+            mem_reservation = str(mem_reservation)
+
+        self.cpu_limit = str(cpu_limit)
+        self.mem_limit = str(mem_limit)
         self.cpu_reservation = cpu_reservation
         self.mem_reservation = mem_reservation
 
@@ -46,10 +57,7 @@ class NodeApp:
 
     @property
     def app_args(self):
-        parts = [
-            self.ARG_PATH,
-            self.path
-        ]
+        parts = [self.ARG_PATH, self.path]
 
         for key, val in self.params.items():
             parts += [self.ARG_PARAM, str(key), str(val)]
@@ -89,7 +97,7 @@ class BaseNamedModel:
         name_clean = inflection.underscore(name)
 
         if name != name_clean:
-            _logger.warning("Transformed name: '%s' to '%s'", name, name_clean)
+            _logger.warning("Converted name '%s' to '%s'", name, name_clean)
 
         self._name = name_clean
 
@@ -106,6 +114,8 @@ class BaseNamedModel:
 
 class Node(BaseNamedModel):
     """Represents an independent node that runs any given user-defined WoT application."""
+
+    ENTRY_APP = "app"
 
     @classmethod
     def to_resources(cls, platform):
@@ -136,6 +146,10 @@ class Node(BaseNamedModel):
 
         return "{}.{}".format(self.broker.name, self.broker.network.name)
 
+    @property
+    def cmd_app(self):
+        return [self.ENTRY_APP] + list(self.app.app_args)
+
     def to_compose_dict(self, topology):
         return get_node_definition(topology, self)
 
@@ -158,6 +172,7 @@ class Network(BaseNamedModel):
 
     GATEWAY_PREFIX = "gw"
     assert inflection.underscore(GATEWAY_PREFIX) == GATEWAY_PREFIX
+    ENTRY_GATEWAY = "gateway"
 
     @classmethod
     def to_netem(cls, condition):
@@ -180,6 +195,13 @@ class Network(BaseNamedModel):
     def netem_args(self):
         return self._netem
 
+    @property
+    def cmd_gateway(self):
+        return [self.ENTRY_GATEWAY] + list(self.netem_args)
+
+    def to_compose_dict(self, topology):
+        return get_network_definition(topology, self)
+
     def to_gateway_compose_dict(self, topology):
         return get_network_gateway_definition(topology, self)
 
@@ -190,7 +212,7 @@ class Topology:
 
     def __init__(
             self, nodes, brokers=None,
-            name_docker_proxy=NAME_DOCKER_PROXY, name_redis=NAME_REDIS):
+            name_docker_proxy=DEFAULT_NAME_DOCKER_PROXY, name_redis=DEFAULT_NAME_REDIS):
         self.nodes = nodes
         self._brokers = brokers
         self.name_docker_proxy = name_docker_proxy
@@ -209,7 +231,7 @@ class Topology:
         return list(nets_node.union(nets_broker))
 
     def to_compose_dict(self):
-        raise NotImplementedError
+        return get_topology_definition(self)
 
     def to_compose_yaml(self):
         return yaml.dump(self.to_compose_dict())
