@@ -5,12 +5,12 @@ from wotsim.enums import Labels
 COMPOSE_VERSION = "3.7"
 BASE_IMAGE = "wotsim"
 TASK_NAME_HOSTNAME = "{{.Task.Name}}"
-ENV_KEY_PRIVILEGED = "PATCH_PRIVILEGED"
+ENV_KEY_PATCH_PRIVILEGED = "PATCH_PRIVILEGED"
 ENV_KEY_BROKER = "MQTT_BROKER_HOST"
 ENV_VAL_FLAG = "1"
 VOL_DOCKER_SOCK = "/var/run/docker.sock:/var/run/docker.sock"
-DEFAULT_NAME_DOCKER_PROXY = "docker_api_proxy"
-DEFAULT_NAME_REDIS = "redis"
+NAME_DOCKER_PROXY = "docker_api_proxy"
+NAME_REDIS = "redis"
 
 SERVICE_BASE_DOCKER_PROXY = {
     "image": "tecnativa/docker-socket-proxy",
@@ -18,7 +18,7 @@ SERVICE_BASE_DOCKER_PROXY = {
         "CONTAINERS": ENV_VAL_FLAG,
         "NETWORKS": ENV_VAL_FLAG,
         "TASKS": ENV_VAL_FLAG,
-        ENV_KEY_PRIVILEGED: ENV_VAL_FLAG
+        ENV_KEY_PATCH_PRIVILEGED: ENV_VAL_FLAG
     },
     "deploy": {
         "placement": {
@@ -39,20 +39,20 @@ SERVICE_BASE_GATEWAY = {
     "hostname": TASK_NAME_HOSTNAME,
     "volumes": [VOL_DOCKER_SOCK],
     "labels": {Labels.WOTSIM_GATEWAY.value: ""},
-    "environment": {ENV_KEY_PRIVILEGED: ENV_VAL_FLAG}
+    "environment": {ENV_KEY_PATCH_PRIVILEGED: ENV_VAL_FLAG}
 }
 
 SERVICE_BASE_BROKER = {
     "image": BASE_IMAGE,
     "privileged": True,
     "hostname": TASK_NAME_HOSTNAME,
-    "environment": {ENV_KEY_PRIVILEGED: ENV_VAL_FLAG}
+    "environment": {ENV_KEY_PATCH_PRIVILEGED: ENV_VAL_FLAG}
 }
 
 SERVICE_BASE_NODE = {
     "privileged": True,
     "hostname": TASK_NAME_HOSTNAME,
-    "environment": {ENV_KEY_PRIVILEGED: ENV_VAL_FLAG}
+    "environment": {ENV_KEY_PATCH_PRIVILEGED: ENV_VAL_FLAG}
 }
 
 NETWORK_BASE = {
@@ -81,7 +81,7 @@ def get_docker_proxy_definition(topology):
         "networks": [net.name for net in topology.networks]
     })
 
-    return {topology.name_docker_proxy: service}
+    return {NAME_DOCKER_PROXY: service}
 
 
 def get_redis_definition(topology):
@@ -91,7 +91,7 @@ def get_redis_definition(topology):
         "networks": [net.name for net in topology.networks]
     })
 
-    return {topology.name_redis: service}
+    return {NAME_REDIS: service}
 
 
 def get_network_gateway_definition(topology, network):
@@ -119,7 +119,7 @@ def get_network_definition(topology, network):
 def get_broker_definition(topology, broker):
     service = copy.deepcopy(SERVICE_BASE_BROKER)
 
-    depends_on = [topology.name_docker_proxy]
+    depends_on = [NAME_DOCKER_PROXY]
     depends_on += [net.name_gateway for net in broker.networks]
 
     service.update({
@@ -161,7 +161,7 @@ def get_node_definition(topology, node):
     service = copy.deepcopy(SERVICE_BASE_NODE)
 
     networks = [net.name for net in node.networks]
-    depends_on = [topology.name_docker_proxy]
+    depends_on = [NAME_DOCKER_PROXY]
     depends_on += [net.name_gateway for net in node.networks]
     envr = service.get("environment", {})
 

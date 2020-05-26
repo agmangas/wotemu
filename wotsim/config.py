@@ -4,12 +4,15 @@ import logging
 import os
 import pprint
 
+from wotsim.topology.compose import NAME_DOCKER_PROXY, NAME_REDIS
+
 _DEFAULT_PORT_CATALOGUE = 9090
 _DEFAULT_PORT_HTTP = 80
 _DEFAULT_PORT_WS = 81
 _DEFAULT_PORT_COAP = 5683
 _DEFAULT_PORT_MQTT = 1883
-_DEFAULT_REDIS_URL = "redis://redis"
+_DEFAULT_REDIS_URL = "redis://{}".format(NAME_REDIS)
+_DEFAULT_DOCKER_URL = "tcp://{}:2375/".format(NAME_DOCKER_PROXY)
 
 _logger = logging.getLogger(__name__)
 
@@ -24,7 +27,8 @@ EnvConfig = collections.namedtuple(
         "port_mqtt",
         "mqtt_broker_host",
         "mqtt_url",
-        "redis_url"
+        "redis_url",
+        "docker_url"
     ])
 
 
@@ -36,6 +40,7 @@ class ConfigVars(enum.Enum):
     PORT_MQTT = "PORT_MQTT"
     MQTT_BROKER_HOST = "MQTT_BROKER_HOST"
     REDIS_URL = "REDIS_URL"
+    DOCKER_URL = "DOCKER_URL"
 
 
 DEFAULT_CONFIG_VARS = {
@@ -45,7 +50,8 @@ DEFAULT_CONFIG_VARS = {
     ConfigVars.PORT_COAP: _DEFAULT_PORT_COAP,
     ConfigVars.PORT_MQTT: _DEFAULT_PORT_MQTT,
     ConfigVars.MQTT_BROKER_HOST: None,
-    ConfigVars.REDIS_URL: _DEFAULT_REDIS_URL
+    ConfigVars.REDIS_URL: _DEFAULT_REDIS_URL,
+    ConfigVars.DOCKER_URL: _DEFAULT_DOCKER_URL
 }
 
 
@@ -89,6 +95,10 @@ def get_env_config():
         ConfigVars.REDIS_URL.value,
         DEFAULT_CONFIG_VARS.get(ConfigVars.REDIS_URL))
 
+    docker_url = os.getenv(
+        ConfigVars.DOCKER_URL.value,
+        DEFAULT_CONFIG_VARS.get(ConfigVars.DOCKER_URL))
+
     mqtt_url = None
 
     if port_mqtt and mqtt_broker_host:
@@ -102,7 +112,8 @@ def get_env_config():
         port_mqtt=port_mqtt,
         mqtt_broker_host=mqtt_broker_host,
         mqtt_url=mqtt_url,
-        redis_url=redis_url)
+        redis_url=redis_url,
+        docker_url=docker_url)
 
     _logger.debug("Current configuration: %s", config)
 

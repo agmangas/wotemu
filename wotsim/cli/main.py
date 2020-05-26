@@ -10,7 +10,7 @@ import wotsim.cli.app
 import wotsim.cli.chaos
 import wotsim.cli.routes
 import wotsim.config
-from wotsim.topology.compose import DEFAULT_NAME_DOCKER_PROXY
+from wotsim.topology.compose import NAME_DOCKER_PROXY
 
 _COMMAND_KWARGS = {
     "context_settings": {
@@ -51,7 +51,7 @@ def cli(log_level, quiet, root_logger):
 
 
 @cli.command(**_COMMAND_KWARGS)
-@click.option("--docker-url", default="tcp://{}:2375/".format(DEFAULT_NAME_DOCKER_PROXY))
+@click.option("--docker-url", default=_conf.docker_url)
 @click.option(
     "--tcp",
     type=int,

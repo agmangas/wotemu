@@ -1,13 +1,13 @@
 import collections
 import logging
+import warnings
 
 import inflection
 import yaml
 
 from wotsim.config import DEFAULT_CONFIG_VARS, ConfigVars
 from wotsim.enums import NetworkConditions, NodePlatforms
-from wotsim.topology.compose import (BASE_IMAGE, DEFAULT_NAME_DOCKER_PROXY,
-                                     DEFAULT_NAME_REDIS, get_broker_definition,
+from wotsim.topology.compose import (BASE_IMAGE, get_broker_definition,
                                      get_network_definition,
                                      get_network_gateway_definition,
                                      get_node_definition,
@@ -224,6 +224,9 @@ class Topology:
     """Represents a topology consisting of a set of 
     Nodes and Brokers iterconnected by Networks."""
 
+    WARN_REDIS = "Redefined Redis URL"
+    WARN_DOCKER = "Redefined Docker API URL"
+
     @classmethod
     def _clean_config(cls, config):
         config = config if config else {}
@@ -232,15 +235,16 @@ class Topology:
         ret.update(config)
         return ret
 
-    def __init__(
-            self, nodes, config=None, brokers=None,
-            name_docker_proxy=DEFAULT_NAME_DOCKER_PROXY,
-            name_redis=DEFAULT_NAME_REDIS):
+    def __init__(self, nodes, config=None, brokers=None):
+        if config and ConfigVars.REDIS_URL in config:
+            warnings.warn(self.WARN_REDIS, Warning)
+
+        if config and ConfigVars.DOCKER_URL in config:
+            warnings.warn(self.WARN_DOCKER, Warning)
+
         self.nodes = nodes
         self.config = self._clean_config(config)
         self._brokers = brokers
-        self.name_docker_proxy = name_docker_proxy
-        self.name_redis = name_redis
 
     @property
     def brokers(self):
