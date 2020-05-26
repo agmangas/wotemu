@@ -114,9 +114,8 @@ def test_topology_config():
     env_two = services.get(node_two.name).get("environment")
 
     assert env_one == env_two
-
-    http_item = "{}={}".format(ConfigVars.PORT_HTTP.value, str(port_http))
-    assert http_item in env_one
+    assert env_one[ConfigVars.PORT_HTTP.value] == str(port_http)
+    assert env_one[ConfigVars.PORT_MQTT.value]
 
 
 def test_node_compose(topology):

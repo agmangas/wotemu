@@ -5,27 +5,28 @@ from wotsim.enums import Labels
 COMPOSE_VERSION = "3.7"
 BASE_IMAGE = "wotsim"
 TASK_NAME_HOSTNAME = "{{.Task.Name}}"
-ENV_PATCH_PRIVILEGED = "PATCH_PRIVILEGED=1"
+ENV_KEY_PRIVILEGED = "PATCH_PRIVILEGED"
 ENV_KEY_BROKER = "MQTT_BROKER_HOST"
-DOCKER_SOCK_VOLUME = "/var/run/docker.sock:/var/run/docker.sock"
+ENV_VAL_FLAG = "1"
+VOL_DOCKER_SOCK = "/var/run/docker.sock:/var/run/docker.sock"
 DEFAULT_NAME_DOCKER_PROXY = "docker_api_proxy"
 DEFAULT_NAME_REDIS = "redis"
 
 SERVICE_BASE_DOCKER_PROXY = {
     "image": "tecnativa/docker-socket-proxy",
-    "environment": [
-        "CONTAINERS=1",
-        "NETWORKS=1",
-        "TASKS=1",
-        ENV_PATCH_PRIVILEGED
-    ],
+    "environment": {
+        "CONTAINERS": ENV_VAL_FLAG,
+        "NETWORKS": ENV_VAL_FLAG,
+        "TASKS": ENV_VAL_FLAG,
+        ENV_KEY_PRIVILEGED: ENV_VAL_FLAG
+    },
     "deploy": {
         "placement": {
             "constraints": ["node.role == manager"]
         }
     },
     "privileged": True,
-    "volumes": [DOCKER_SOCK_VOLUME]
+    "volumes": [VOL_DOCKER_SOCK]
 }
 
 SERVICE_BASE_REDIS = {
@@ -36,22 +37,22 @@ SERVICE_BASE_GATEWAY = {
     "image": BASE_IMAGE,
     "privileged": True,
     "hostname": TASK_NAME_HOSTNAME,
-    "volumes": [DOCKER_SOCK_VOLUME],
+    "volumes": [VOL_DOCKER_SOCK],
     "labels": {Labels.WOTSIM_GATEWAY.value: ""},
-    "environment": [ENV_PATCH_PRIVILEGED]
+    "environment": {ENV_KEY_PRIVILEGED: ENV_VAL_FLAG}
 }
 
 SERVICE_BASE_BROKER = {
     "image": BASE_IMAGE,
     "privileged": True,
     "hostname": TASK_NAME_HOSTNAME,
-    "environment": [ENV_PATCH_PRIVILEGED]
+    "environment": {ENV_KEY_PRIVILEGED: ENV_VAL_FLAG}
 }
 
 SERVICE_BASE_NODE = {
     "privileged": True,
     "hostname": TASK_NAME_HOSTNAME,
-    "environment": [ENV_PATCH_PRIVILEGED]
+    "environment": {ENV_KEY_PRIVILEGED: ENV_VAL_FLAG}
 }
 
 NETWORK_BASE = {
@@ -62,15 +63,14 @@ NETWORK_BASE = {
 
 
 def _merge_topology_config(service, topology):
-    envr = service.get("environment", [])
+    envr = service.get("environment", {})
 
-    conf = [
-        "{}={}".format(key.value, val)
+    envr.update({
+        key.value: str(val)
         for key, val in topology.config.items()
         if val is not None
-    ]
+    })
 
-    envr = list(set([*envr, *conf]))
     service["environment"] = envr
 
 
@@ -163,13 +163,13 @@ def get_node_definition(topology, node):
     networks = [net.name for net in node.networks]
     depends_on = [topology.name_docker_proxy]
     depends_on += [net.name_gateway for net in node.networks]
-    envr = service.get("environment", [])
+    envr = service.get("environment", {})
 
     if node.broker:
         assert node.broker_network
         networks.append(node.broker_network.name)
         depends_on.append(node.broker_network.name_gateway)
-        envr.append("{}={}".format(ENV_KEY_BROKER, node.broker_host))
+        envr.update({ENV_KEY_BROKER: node.broker_host})
 
     service.update({
         "image": node.image,
