@@ -37,7 +37,7 @@ SERVICE_BASE_GATEWAY = {
     "privileged": True,
     "hostname": TASK_NAME_HOSTNAME,
     "volumes": [DOCKER_SOCK_VOLUME],
-    "labels": [Labels.WOTSIM_GATEWAY.value],
+    "labels": {Labels.WOTSIM_GATEWAY.value: ""},
     "environment": [ENV_PATCH_PRIVILEGED]
 }
 
@@ -57,19 +57,20 @@ SERVICE_BASE_NODE = {
 NETWORK_BASE = {
     "driver": "overlay",
     "attachable": True,
-    "labels": [Labels.WOTSIM_NETWORK.value]
+    "labels": {Labels.WOTSIM_NETWORK.value: ""}
 }
 
 
 def _merge_topology_config(service, topology):
     envr = service.get("environment", [])
 
-    if isinstance(envr, dict):
-        envr.update(topology.config)
-    else:
-        conf = ["{}={}".format(k, v) for k, v in topology.config.items()]
-        envr = list(set([*envr, *conf]))
+    conf = [
+        "{}={}".format(key.value, val)
+        for key, val in topology.config.items()
+        if val is not None
+    ]
 
+    envr = list(set([*envr, *conf]))
     service["environment"] = envr
 
 

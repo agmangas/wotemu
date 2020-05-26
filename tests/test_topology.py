@@ -106,7 +106,7 @@ def test_topology_config():
 
     topology = Topology(
         nodes=[node_one, node_two],
-        config={ConfigVars.PORT_HTTP.value: port_http, "unknownDummy": 100})
+        config={ConfigVars.PORT_HTTP: port_http, "UNKNOWN": 100})
 
     compose = topology.to_compose_dict()
     services = compose.get("services")
@@ -115,11 +115,8 @@ def test_topology_config():
 
     assert env_one == env_two
 
-    if isinstance(env_one, dict):
-        assert env_one[ConfigVars.PORT_HTTP.value] == str(port_http)
-    else:
-        http_item = "{}={}".format(ConfigVars.PORT_HTTP.value, str(port_http))
-        assert http_item in env_one
+    http_item = "{}={}".format(ConfigVars.PORT_HTTP.value, str(port_http))
+    assert http_item in env_one
 
 
 def test_node_compose(topology):

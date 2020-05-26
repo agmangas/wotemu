@@ -38,23 +38,18 @@ class ConfigVars(enum.Enum):
     REDIS_URL = "REDIS_URL"
 
 
-def get_default_env():
-    ret = {
-        ConfigVars.PORT_CATALOGUE.value: _DEFAULT_PORT_CATALOGUE,
-        ConfigVars.PORT_HTTP.value: _DEFAULT_PORT_HTTP,
-        ConfigVars.PORT_WS.value: _DEFAULT_PORT_WS,
-        ConfigVars.PORT_COAP.value: _DEFAULT_PORT_COAP,
-        ConfigVars.PORT_MQTT.value: _DEFAULT_PORT_MQTT,
-        ConfigVars.REDIS_URL.value: _DEFAULT_REDIS_URL
-    }
-
-    enum_values = [enum_item.value for enum_item in ConfigVars]
-    assert all(key in enum_values for key in ret.keys())
-
-    return ret
+DEFAULT_CONFIG_VARS = {
+    ConfigVars.PORT_CATALOGUE: _DEFAULT_PORT_CATALOGUE,
+    ConfigVars.PORT_HTTP: _DEFAULT_PORT_HTTP,
+    ConfigVars.PORT_WS: _DEFAULT_PORT_WS,
+    ConfigVars.PORT_COAP: _DEFAULT_PORT_COAP,
+    ConfigVars.PORT_MQTT: _DEFAULT_PORT_MQTT,
+    ConfigVars.MQTT_BROKER_HOST: None,
+    ConfigVars.REDIS_URL: _DEFAULT_REDIS_URL
+}
 
 
-def _get_env_int(name, default):
+def _getenv_int(name, default):
     try:
         return int(os.getenv(name, default))
     except:
@@ -66,16 +61,33 @@ def _get_env_int(name, default):
 
 
 def get_env_config():
-    port_catalogue = _get_env_int(
+    port_catalogue = _getenv_int(
         ConfigVars.PORT_CATALOGUE.value,
-        _DEFAULT_PORT_CATALOGUE)
+        DEFAULT_CONFIG_VARS.get(ConfigVars.PORT_CATALOGUE))
 
-    port_http = _get_env_int(ConfigVars.PORT_HTTP.value, _DEFAULT_PORT_HTTP)
-    port_ws = _get_env_int(ConfigVars.PORT_WS.value, _DEFAULT_PORT_WS)
-    port_coap = _get_env_int(ConfigVars.PORT_COAP.value, _DEFAULT_PORT_COAP)
-    port_mqtt = _get_env_int(ConfigVars.PORT_MQTT.value, _DEFAULT_PORT_MQTT)
-    mqtt_broker_host = os.getenv(ConfigVars.MQTT_BROKER_HOST.value, None)
-    redis_url = os.getenv(ConfigVars.REDIS_URL.value, _DEFAULT_REDIS_URL)
+    port_http = _getenv_int(
+        ConfigVars.PORT_HTTP.value,
+        DEFAULT_CONFIG_VARS.get(ConfigVars.PORT_HTTP))
+
+    port_ws = _getenv_int(
+        ConfigVars.PORT_WS.value,
+        DEFAULT_CONFIG_VARS.get(ConfigVars.PORT_WS))
+
+    port_coap = _getenv_int(
+        ConfigVars.PORT_COAP.value,
+        DEFAULT_CONFIG_VARS.get(ConfigVars.PORT_COAP))
+
+    port_mqtt = _getenv_int(
+        ConfigVars.PORT_MQTT.value,
+        DEFAULT_CONFIG_VARS.get(ConfigVars.PORT_MQTT))
+
+    mqtt_broker_host = os.getenv(
+        ConfigVars.MQTT_BROKER_HOST.value,
+        DEFAULT_CONFIG_VARS.get(ConfigVars.MQTT_BROKER_HOST))
+
+    redis_url = os.getenv(
+        ConfigVars.REDIS_URL.value,
+        DEFAULT_CONFIG_VARS.get(ConfigVars.REDIS_URL))
 
     mqtt_url = None
 

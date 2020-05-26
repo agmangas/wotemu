@@ -4,7 +4,7 @@ import logging
 import inflection
 import yaml
 
-from wotsim.config import ConfigVars, get_default_env
+from wotsim.config import DEFAULT_CONFIG_VARS, ConfigVars
 from wotsim.enums import NetworkConditions, NodePlatforms
 from wotsim.topology.compose import (BASE_IMAGE, DEFAULT_NAME_DOCKER_PROXY,
                                      DEFAULT_NAME_REDIS, get_broker_definition,
@@ -227,16 +227,9 @@ class Topology:
     @classmethod
     def _clean_config(cls, config):
         config = config if config else {}
-
-        config = {
-            key: val for key, val in config.items()
-            if key in [enum_item.value for enum_item in ConfigVars]
-        }
-
-        ret = get_default_env()
+        config = {key: val for key, val in config.items() if key in ConfigVars}
+        ret = {**DEFAULT_CONFIG_VARS}
         ret.update(config)
-        ret = {key: str(val) for key, val in ret.items()}
-
         return ret
 
     def __init__(
