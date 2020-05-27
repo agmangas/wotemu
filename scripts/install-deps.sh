@@ -3,4 +3,4 @@
 set -e
 
 apt-get update -y
-apt-get install -y sshpass jq
+apt-get install -y sshpass jq python3-pip
