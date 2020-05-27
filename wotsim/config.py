@@ -4,15 +4,16 @@ import logging
 import os
 import pprint
 
-from wotsim.topology.compose import NAME_DOCKER_PROXY, NAME_REDIS
+DEFAULT_HOST_REDIS = "redis"
+DEFAULT_HOST_DOCKER = "docker_api_proxy"
 
 _DEFAULT_PORT_CATALOGUE = 9090
 _DEFAULT_PORT_HTTP = 80
 _DEFAULT_PORT_WS = 81
 _DEFAULT_PORT_COAP = 5683
 _DEFAULT_PORT_MQTT = 1883
-_DEFAULT_REDIS_URL = "redis://{}".format(NAME_REDIS)
-_DEFAULT_DOCKER_URL = "tcp://{}:2375/".format(NAME_DOCKER_PROXY)
+_DEFAULT_REDIS_URL = "redis://{}".format(DEFAULT_HOST_REDIS)
+_DEFAULT_DOCKER_URL = "tcp://{}:2375/".format(DEFAULT_HOST_DOCKER)
 
 _logger = logging.getLogger(__name__)
 

@@ -5,13 +5,21 @@ import warnings
 import inflection
 import yaml
 
-from wotsim.config import DEFAULT_CONFIG_VARS, ConfigVars
+from wotsim.config import (DEFAULT_CONFIG_VARS, DEFAULT_HOST_DOCKER,
+                           DEFAULT_HOST_REDIS, ConfigVars)
 from wotsim.enums import NetworkConditions, NodePlatforms
 from wotsim.topology.compose import (BASE_IMAGE, get_broker_definition,
+                                     get_docker_proxy_definition,
                                      get_network_definition,
                                      get_network_gateway_definition,
-                                     get_node_definition,
+                                     get_node_definition, get_redis_definition,
                                      get_topology_definition)
+
+_DEFAULT_CATALOGUE = DEFAULT_CONFIG_VARS[ConfigVars.PORT_CATALOGUE]
+_DEFAULT_HTTP = DEFAULT_CONFIG_VARS[ConfigVars.PORT_HTTP]
+_DEFAULT_WS = DEFAULT_CONFIG_VARS[ConfigVars.PORT_WS]
+_DEFAULT_MQTT = DEFAULT_CONFIG_VARS[ConfigVars.PORT_MQTT]
+_DEFAULT_COAP = DEFAULT_CONFIG_VARS[ConfigVars.PORT_COAP]
 
 _logger = logging.getLogger(__name__)
 
@@ -220,31 +228,91 @@ class Network(BaseNamedModel):
         return get_network_gateway_definition(topology, self)
 
 
+class TopologyPorts:
+    def __init__(
+            self, catalogue=_DEFAULT_CATALOGUE, http=_DEFAULT_HTTP,
+            ws=_DEFAULT_WS, mqtt=_DEFAULT_MQTT, coap=_DEFAULT_COAP):
+        self.catalogue = catalogue
+        self.http = http
+        self.ws = ws
+        self.mqtt = mqtt
+        self.coap = coap
+
+    @property
+    def config(self):
+        return {
+            ConfigVars.PORT_CATALOGUE.value: self.catalogue,
+            ConfigVars.PORT_HTTP.value: self.http,
+            ConfigVars.PORT_WS.value: self.ws,
+            ConfigVars.PORT_MQTT.value: self.mqtt,
+            ConfigVars.PORT_COAP.value: self.coap
+        }
+
+
+class TopologyRedis:
+    WARN_MSG = "Disabled built-in topology Redis service"
+
+    def __init__(self, enabled=True, host=DEFAULT_HOST_REDIS):
+        self.enabled = bool(enabled)
+        self.host = host
+
+        if not self.enabled:
+            warnings.warn(self.WARN_MSG, Warning)
+
+    @property
+    def config(self):
+        redis_url = "redis://{}".format(self.host)
+        return {ConfigVars.REDIS_URL.value: redis_url}
+
+    def to_compose_dict(self, topology):
+        return get_redis_definition(topology)
+
+
+class TopologyDockerProxy:
+    WARN_MSG = "Disabled built-in topology Docker API Proxy service"
+
+    def __init__(self, enabled=True, host=DEFAULT_HOST_DOCKER):
+        self.enabled = bool(enabled)
+        self.host = host
+
+        if not self.enabled:
+            warnings.warn(self.WARN_MSG, Warning)
+
+    @property
+    def config(self):
+        docker_url = "tcp://{}:2375/".format(self.host)
+        return {ConfigVars.DOCKER_URL.value: docker_url}
+
+    def to_compose_dict(self, topology):
+        return get_docker_proxy_definition(topology)
+
+
 class Topology:
     """Represents a topology consisting of a set of 
     Nodes and Brokers iterconnected by Networks."""
 
-    WARN_REDIS = "Redefined Redis URL"
-    WARN_DOCKER = "Redefined Docker API URL"
-
-    @classmethod
-    def _clean_config(cls, config):
-        config = config if config else {}
-        config = {key: val for key, val in config.items() if key in ConfigVars}
-        ret = {**DEFAULT_CONFIG_VARS}
-        ret.update(config)
-        return ret
-
-    def __init__(self, nodes, config=None, brokers=None):
-        if config and ConfigVars.REDIS_URL in config:
-            warnings.warn(self.WARN_REDIS, Warning)
-
-        if config and ConfigVars.DOCKER_URL in config:
-            warnings.warn(self.WARN_DOCKER, Warning)
-
+    def __init__(self, nodes, ports=None, redis=None, docker_proxy=None, brokers=None):
         self.nodes = nodes
-        self.config = self._clean_config(config)
+        self.ports = ports if ports else TopologyPorts()
+        self.redis = redis if redis else TopologyRedis()
+        self.docker_proxy = docker_proxy if docker_proxy else TopologyDockerProxy()
         self._brokers = brokers
+
+    @property
+    def config(self):
+        return {
+            **self.ports.config,
+            **self.redis.config,
+            **self.docker_proxy.config
+        }
+
+    @property
+    def redis_compose_dict(self):
+        return self.redis.to_compose_dict(self)
+
+    @property
+    def docker_proxy_compose_dict(self):
+        return self.docker_proxy.to_compose_dict(self)
 
     @property
     def brokers(self):

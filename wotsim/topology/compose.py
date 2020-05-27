@@ -1,16 +1,14 @@
 import copy
 
+from wotsim.config import ConfigVars
 from wotsim.enums import Labels
 
 COMPOSE_VERSION = "3.7"
 BASE_IMAGE = "wotsim"
 TASK_NAME_HOSTNAME = "{{.Task.Name}}"
 ENV_KEY_PATCH_PRIVILEGED = "PATCH_PRIVILEGED"
-ENV_KEY_BROKER = "MQTT_BROKER_HOST"
 ENV_VAL_FLAG = "1"
 VOL_DOCKER_SOCK = "/var/run/docker.sock:/var/run/docker.sock"
-NAME_DOCKER_PROXY = "docker_api_proxy"
-NAME_REDIS = "redis"
 
 SERVICE_BASE_DOCKER_PROXY = {
     "image": "tecnativa/docker-socket-proxy",
@@ -66,7 +64,7 @@ def _merge_topology_config(service, topology):
     envr = service.get("environment", {})
 
     envr.update({
-        key.value: str(val)
+        key: str(val)
         for key, val in topology.config.items()
         if val is not None
     })
@@ -81,7 +79,7 @@ def get_docker_proxy_definition(topology):
         "networks": [net.name for net in topology.networks]
     })
 
-    return {NAME_DOCKER_PROXY: service}
+    return {topology.docker_proxy.host: service}
 
 
 def get_redis_definition(topology):
@@ -91,7 +89,7 @@ def get_redis_definition(topology):
         "networks": [net.name for net in topology.networks]
     })
 
-    return {NAME_REDIS: service}
+    return {topology.redis.host: service}
 
 
 def get_network_gateway_definition(topology, network):
@@ -119,8 +117,10 @@ def get_network_definition(topology, network):
 def get_broker_definition(topology, broker):
     service = copy.deepcopy(SERVICE_BASE_BROKER)
 
-    depends_on = [NAME_DOCKER_PROXY]
-    depends_on += [net.name_gateway for net in broker.networks]
+    depends_on = [
+        topology.docker_proxy.host,
+        *[net.name_gateway for net in broker.networks]
+    ]
 
     service.update({
         "networks": [net.name for net in broker.networks],
@@ -161,15 +161,19 @@ def get_node_definition(topology, node):
     service = copy.deepcopy(SERVICE_BASE_NODE)
 
     networks = [net.name for net in node.networks]
-    depends_on = [NAME_DOCKER_PROXY]
-    depends_on += [net.name_gateway for net in node.networks]
+
+    depends_on = [
+        topology.docker_proxy.host,
+        *[net.name_gateway for net in node.networks]
+    ]
+
     envr = service.get("environment", {})
 
     if node.broker:
         assert node.broker_network
         networks.append(node.broker_network.name)
         depends_on.append(node.broker_network.name_gateway)
-        envr.update({ENV_KEY_BROKER: node.broker_host})
+        envr.update({ConfigVars.MQTT_BROKER_HOST.value: node.broker_host})
 
     service.update({
         "image": node.image,
@@ -197,8 +201,12 @@ def get_topology_definition(topology):
     definition = {"version": COMPOSE_VERSION}
 
     services = {}
-    services.update(get_docker_proxy_definition(topology))
-    services.update(get_redis_definition(topology))
+
+    if topology.docker_proxy.enabled:
+        services.update(topology.docker_proxy_compose_dict)
+
+    if topology.redis.enabled:
+        services.update(topology.redis_compose_dict)
 
     for net in topology.networks:
         services.update(net.to_gateway_compose_dict(topology))

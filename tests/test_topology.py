@@ -2,13 +2,15 @@ import logging
 import os
 import random
 import tempfile
+import uuid
 
 import pytest
 import sh
 
 from wotsim.config import ConfigVars
 from wotsim.topology.models import (Broker, Network, Node, NodeApp,
-                                    NodeResources, Topology)
+                                    NodeResources, Topology, TopologyPorts,
+                                    TopologyRedis)
 
 _logger = logging.getLogger(__name__)
 
@@ -97,16 +99,18 @@ def test_topology_compose_yaml(topology):
             pass
 
 
-def test_topology_config():
+def test_topology_ports():
     network = Network(name="my_net")
     node_app = NodeApp(path="/root/app.py", http=True)
     node_one = Node(name="node_one", app=node_app, networks=[network])
     node_two = Node(name="node_two", app=node_app, networks=[network])
+
     port_http = random.randint(10500, 20000)
+    topology_ports = TopologyPorts(http=port_http)
 
     topology = Topology(
         nodes=[node_one, node_two],
-        config={ConfigVars.PORT_HTTP: port_http, "UNKNOWN": 100})
+        ports=topology_ports)
 
     compose = topology.to_compose_dict()
     services = compose.get("services")
@@ -116,6 +120,33 @@ def test_topology_config():
     assert env_one == env_two
     assert env_one[ConfigVars.PORT_HTTP.value] == str(port_http)
     assert env_one[ConfigVars.PORT_MQTT.value]
+
+
+def test_topology_redis():
+    network = Network(name="my_net")
+    node_app = NodeApp(path="/root/app.py", http=True)
+    node = Node(name="node", app=node_app, networks=[network])
+
+    redis_host = uuid.uuid4().hex
+    redis_url = "redis://{}".format(redis_host)
+
+    top_redis = TopologyRedis(host=redis_host)
+    top = Topology(nodes=[node], redis=top_redis)
+    compose = top.to_compose_dict()
+    services = compose.get("services")
+    node_env = services.get(node.name).get("environment")
+
+    assert redis_host in services
+    assert node_env[ConfigVars.REDIS_URL.value] == redis_url
+
+    top_redis_disabled = TopologyRedis(host=redis_host, enabled=False)
+    top_disabled = Topology(nodes=[node], redis=top_redis_disabled)
+    compose_disabled = top_disabled.to_compose_dict()
+    services_disabled = compose_disabled.get("services")
+    node_env_disabled = services_disabled.get(node.name).get("environment")
+
+    assert redis_host not in services_disabled
+    assert node_env_disabled[ConfigVars.REDIS_URL.value] == redis_url
 
 
 def test_node_compose(topology):
