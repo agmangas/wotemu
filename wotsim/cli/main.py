@@ -10,7 +10,6 @@ import wotsim.cli.app
 import wotsim.cli.chaos
 import wotsim.cli.routes
 import wotsim.config
-from wotsim.topology.compose import NAME_DOCKER_PROXY
 
 _COMMAND_KWARGS = {
     "context_settings": {
@@ -19,7 +18,6 @@ _COMMAND_KWARGS = {
 }
 
 _logger = logging.getLogger(__name__)
-_conf = wotsim.config.get_env_config()
 
 
 def _catch(func):
@@ -49,15 +47,10 @@ def cli(log_level, quiet, root_logger):
         cli_logger = logging.getLogger(cli_logger_name)
         coloredlogs.install(level=log_level, logger=cli_logger)
 
+    wotsim.config.log_config()
+
 
 @cli.command(**_COMMAND_KWARGS)
-@click.option("--docker-url", default=_conf.docker_url)
-@click.option(
-    "--tcp",
-    type=int,
-    multiple=True,
-    default=[_conf.port_http, _conf.port_ws, _conf.port_mqtt, _conf.port_coap])
-@click.option("--udp", type=int, multiple=True, default=[_conf.port_coap])
 @click.option("--rtable-name", default="wotsim")
 @click.option("--rtable-mark", type=int, default=1)
 @click.option("--apply", is_flag=True)
@@ -71,7 +64,7 @@ def route(**kwargs):
 
 
 @cli.command(**_COMMAND_KWARGS)
-@click.option("--docker-url", default="unix:///var/run/docker.sock")
+@click.option("--docker-url", default="unix://{}".format(wotsim.config.DEFAULT_DOCKER_SOCKET))
 @click.option("--netem", type=str, multiple=True)
 @click.option("--duration", type=str, default="72h")
 @_catch

@@ -3,11 +3,6 @@
 set -e
 set -x
 
-: "${PORT_HTTP:?}"
-: "${PORT_WS:?}"
-: "${PORT_COAP:?}"
-: "${PORT_MQTT:?}"
-
 print_section () {
     echo
     echo "###" $1
@@ -26,14 +21,7 @@ wait_brokers () {
 
 update_routing () {
     print_section "Updating routing configuration"
-    
-    wotsim route \
-    --tcp ${PORT_HTTP} \
-    --tcp ${PORT_WS} \
-    --tcp ${PORT_COAP} \
-    --tcp ${PORT_MQTT} \
-    --udp ${PORT_COAP} \
-    --apply
+    wotsim route --apply
 }
 
 run_app () {
@@ -41,7 +29,8 @@ run_app () {
 }
 
 run_mqtt_broker () {
-    exec mosquitto -p ${PORT_MQTT}
+    port_mqtt=${PORT_MQTT:-1883}
+    exec mosquitto -p ${port_mqtt}
 }
 
 run_chaos () {
@@ -53,11 +42,6 @@ run_chaos () {
     done
     
     exec wotsim chaos "${args[@]}"
-}
-
-idle () {
-    print_section "Idling indefinitely"
-    exec sleep infinity
 }
 
 case "$1" in

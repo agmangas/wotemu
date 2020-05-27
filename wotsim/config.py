@@ -4,8 +4,9 @@ import logging
 import os
 import pprint
 
+DEFAULT_DOCKER_SOCKET = "/var/run/docker.sock"
 DEFAULT_HOST_REDIS = "redis"
-DEFAULT_HOST_DOCKER = "docker_api_proxy"
+DEFAULT_HOST_DOCKER_PROXY = "docker_api_proxy"
 
 _DEFAULT_PORT_CATALOGUE = 9090
 _DEFAULT_PORT_HTTP = 80
@@ -13,7 +14,7 @@ _DEFAULT_PORT_WS = 81
 _DEFAULT_PORT_COAP = 5683
 _DEFAULT_PORT_MQTT = 1883
 _DEFAULT_REDIS_URL = "redis://{}".format(DEFAULT_HOST_REDIS)
-_DEFAULT_DOCKER_URL = "tcp://{}:2375/".format(DEFAULT_HOST_DOCKER)
+_DEFAULT_DOCKER_PROXY_URL = "tcp://{}:2375/".format(DEFAULT_HOST_DOCKER_PROXY)
 
 _logger = logging.getLogger(__name__)
 
@@ -29,7 +30,7 @@ EnvConfig = collections.namedtuple(
         "mqtt_broker_host",
         "mqtt_url",
         "redis_url",
-        "docker_url"
+        "docker_proxy_url"
     ])
 
 
@@ -41,7 +42,7 @@ class ConfigVars(enum.Enum):
     PORT_MQTT = "PORT_MQTT"
     MQTT_BROKER_HOST = "MQTT_BROKER_HOST"
     REDIS_URL = "REDIS_URL"
-    DOCKER_URL = "DOCKER_URL"
+    DOCKER_PROXY_URL = "DOCKER_PROXY_URL"
 
 
 DEFAULT_CONFIG_VARS = {
@@ -52,7 +53,7 @@ DEFAULT_CONFIG_VARS = {
     ConfigVars.PORT_MQTT: _DEFAULT_PORT_MQTT,
     ConfigVars.MQTT_BROKER_HOST: None,
     ConfigVars.REDIS_URL: _DEFAULT_REDIS_URL,
-    ConfigVars.DOCKER_URL: _DEFAULT_DOCKER_URL
+    ConfigVars.DOCKER_PROXY_URL: _DEFAULT_DOCKER_PROXY_URL
 }
 
 
@@ -96,9 +97,9 @@ def get_env_config():
         ConfigVars.REDIS_URL.value,
         DEFAULT_CONFIG_VARS.get(ConfigVars.REDIS_URL))
 
-    docker_url = os.getenv(
-        ConfigVars.DOCKER_URL.value,
-        DEFAULT_CONFIG_VARS.get(ConfigVars.DOCKER_URL))
+    docker_proxy_url = os.getenv(
+        ConfigVars.DOCKER_PROXY_URL.value,
+        DEFAULT_CONFIG_VARS.get(ConfigVars.DOCKER_PROXY_URL))
 
     mqtt_url = None
 
@@ -114,8 +115,12 @@ def get_env_config():
         mqtt_broker_host=mqtt_broker_host,
         mqtt_url=mqtt_url,
         redis_url=redis_url,
-        docker_url=docker_url)
-
-    _logger.debug("Current configuration: %s", config)
+        docker_proxy_url=docker_proxy_url)
 
     return config
+
+
+def log_config():
+    conf_env = {key.value: os.getenv(key.value, None) for key in ConfigVars}
+    _logger.debug("Configuration environment:\n%s", pprint.pformat(conf_env))
+    _logger.info("Current configuration: %s", get_env_config())

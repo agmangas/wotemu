@@ -5,7 +5,7 @@ import warnings
 import inflection
 import yaml
 
-from wotsim.config import (DEFAULT_CONFIG_VARS, DEFAULT_HOST_DOCKER,
+from wotsim.config import (DEFAULT_CONFIG_VARS, DEFAULT_HOST_DOCKER_PROXY,
                            DEFAULT_HOST_REDIS, ConfigVars)
 from wotsim.enums import NetworkConditions, NodePlatforms
 from wotsim.topology.compose import (BASE_IMAGE, get_broker_definition,
@@ -271,7 +271,7 @@ class TopologyRedis:
 class TopologyDockerProxy:
     WARN_MSG = "Disabled built-in topology Docker API Proxy service"
 
-    def __init__(self, enabled=True, host=DEFAULT_HOST_DOCKER):
+    def __init__(self, enabled=True, host=DEFAULT_HOST_DOCKER_PROXY):
         self.enabled = bool(enabled)
         self.host = host
 
@@ -281,7 +281,7 @@ class TopologyDockerProxy:
     @property
     def config(self):
         docker_url = "tcp://{}:2375/".format(self.host)
-        return {ConfigVars.DOCKER_URL.value: docker_url}
+        return {ConfigVars.DOCKER_PROXY_URL.value: docker_url}
 
     def to_compose_dict(self, topology):
         return get_docker_proxy_definition(topology)

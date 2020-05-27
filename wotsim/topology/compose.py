@@ -1,14 +1,14 @@
 import copy
 
-from wotsim.config import ConfigVars
+from wotsim.config import DEFAULT_DOCKER_SOCKET, ConfigVars
 from wotsim.enums import Labels
 
 COMPOSE_VERSION = "3.7"
 BASE_IMAGE = "wotsim"
-TASK_NAME_HOSTNAME = "{{.Task.Name}}"
-ENV_KEY_PATCH_PRIVILEGED = "PATCH_PRIVILEGED"
+HOSTNAME_TASK = "{{.Task.Name}}"
+ENV_KEY_PRIVILEGED = "PATCH_PRIVILEGED"
 ENV_VAL_FLAG = "1"
-VOL_DOCKER_SOCK = "/var/run/docker.sock:/var/run/docker.sock"
+VOL_DOCKER_SOCK = "{}:{}".format(DEFAULT_DOCKER_SOCKET, DEFAULT_DOCKER_SOCKET)
 
 SERVICE_BASE_DOCKER_PROXY = {
     "image": "tecnativa/docker-socket-proxy",
@@ -16,7 +16,7 @@ SERVICE_BASE_DOCKER_PROXY = {
         "CONTAINERS": ENV_VAL_FLAG,
         "NETWORKS": ENV_VAL_FLAG,
         "TASKS": ENV_VAL_FLAG,
-        ENV_KEY_PATCH_PRIVILEGED: ENV_VAL_FLAG
+        ENV_KEY_PRIVILEGED: ENV_VAL_FLAG
     },
     "deploy": {
         "placement": {
@@ -34,23 +34,23 @@ SERVICE_BASE_REDIS = {
 SERVICE_BASE_GATEWAY = {
     "image": BASE_IMAGE,
     "privileged": True,
-    "hostname": TASK_NAME_HOSTNAME,
+    "hostname": HOSTNAME_TASK,
     "volumes": [VOL_DOCKER_SOCK],
     "labels": {Labels.WOTSIM_GATEWAY.value: ""},
-    "environment": {ENV_KEY_PATCH_PRIVILEGED: ENV_VAL_FLAG}
+    "environment": {ENV_KEY_PRIVILEGED: ENV_VAL_FLAG}
 }
 
 SERVICE_BASE_BROKER = {
     "image": BASE_IMAGE,
     "privileged": True,
-    "hostname": TASK_NAME_HOSTNAME,
-    "environment": {ENV_KEY_PATCH_PRIVILEGED: ENV_VAL_FLAG}
+    "hostname": HOSTNAME_TASK,
+    "environment": {ENV_KEY_PRIVILEGED: ENV_VAL_FLAG}
 }
 
 SERVICE_BASE_NODE = {
     "privileged": True,
-    "hostname": TASK_NAME_HOSTNAME,
-    "environment": {ENV_KEY_PATCH_PRIVILEGED: ENV_VAL_FLAG}
+    "hostname": HOSTNAME_TASK,
+    "environment": {ENV_KEY_PRIVILEGED: ENV_VAL_FLAG}
 }
 
 NETWORK_BASE = {

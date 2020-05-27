@@ -10,6 +10,7 @@ import netaddr
 import netifaces
 
 import wotsim.cli.utils
+import wotsim.config
 import wotsim.enums
 
 _PATH_IPROUTE2_RT_TABLES = "/etc/iproute2/rt_tables"
@@ -211,7 +212,19 @@ def _run_commands(cmds):
         _logger.info("%s", ret)
 
 
-def update_routing(docker_url, tcp, udp, rtable_name, rtable_mark, apply):
+def update_routing(rtable_name, rtable_mark, apply):
+    conf = wotsim.config.get_env_config()
+
+    ports_tcp = [conf.port_http, conf.port_ws, conf.port_mqtt, conf.port_coap]
+    ports_udp = [conf.port_coap]
+
+    _logger.debug("TCP ports: %s", ports_tcp)
+    _logger.debug("UDP ports: %s", ports_udp)
+
+    docker_url = conf.docker_proxy_url
+
+    _logger.debug("Using Docker API proxy: %s", docker_url)
+
     wotsim.cli.utils.ping_docker(docker_url=docker_url)
 
     if _rtable_exists(rtable_name=rtable_name):
@@ -232,8 +245,8 @@ def update_routing(docker_url, tcp, udp, rtable_name, rtable_mark, apply):
     gw_commands = {
         net_id: _build_routing_commands(
             gw_task=task,
-            ports_tcp=tcp,
-            ports_udp=udp,
+            ports_tcp=ports_tcp,
+            ports_udp=ports_udp,
             rtable_name=rtable_name,
             rtable_mark=rtable_mark)
         for net_id, task in gw_tasks.items()
