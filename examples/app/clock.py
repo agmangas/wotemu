@@ -11,7 +11,7 @@ from wotpy.wot.enums import DataType
 from wotpy.wot.td import ThingDescription
 
 _DESCRIPTION = {
-    "id": "urn:org:fundacionctic:thing:time",
+    "id": "urn:org:fundacionctic:thing:clock",
     "name": "Benchmark Thing",
     "properties": {
         "time": {
@@ -36,7 +36,7 @@ _DESCRIPTION = {
 _EVENT_MEAN_WAIT = 5
 _TIMEOUT = 10
 
-_logger = logging.getLogger("wotsim.time.app")
+_logger = logging.getLogger("wotsim.clock.app")
 
 
 def _time_millis():

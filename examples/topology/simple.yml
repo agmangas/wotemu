@@ -1,0 +1,237 @@
+networks:
+  cable:
+    attachable: true
+    driver: overlay
+    labels:
+      org.fundacionctic.wotsim.net: ''
+    name: cable
+  mobile_3g:
+    attachable: true
+    driver: overlay
+    labels:
+      org.fundacionctic.wotsim.net: ''
+    name: mobile_3g
+  wifi:
+    attachable: true
+    driver: overlay
+    labels:
+      org.fundacionctic.wotsim.net: ''
+    name: wifi
+services:
+  broker:
+    command:
+    - broker
+    depends_on:
+    - docker_api_proxy
+    - gw_mobile_3g
+    environment:
+      DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
+      PATCH_PRIVILEGED: '1'
+      PORT_CATALOGUE: '9090'
+      PORT_COAP: '5683'
+      PORT_HTTP: '80'
+      PORT_MQTT: '1883'
+      PORT_WS: '81'
+      REDIS_URL: redis://redis
+    hostname: '{{.Task.Name}}'
+    image: wotsim
+    networks:
+    - mobile_3g
+    privileged: true
+  docker_api_proxy:
+    deploy:
+      placement:
+        constraints:
+        - node.role == manager
+    environment:
+      CONTAINERS: '1'
+      NETWORKS: '1'
+      PATCH_PRIVILEGED: '1'
+      TASKS: '1'
+    image: tecnativa/docker-socket-proxy
+    networks:
+    - wifi
+    - mobile_3g
+    - cable
+    privileged: true
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+  gw_cable:
+    command:
+    - gateway
+    - delay --time 5 --jitter 1 --distribution normal
+    environment:
+      DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
+      PATCH_PRIVILEGED: '1'
+      PORT_CATALOGUE: '9090'
+      PORT_COAP: '5683'
+      PORT_HTTP: '80'
+      PORT_MQTT: '1883'
+      PORT_WS: '81'
+      REDIS_URL: redis://redis
+    hostname: '{{.Task.Name}}'
+    image: wotsim
+    labels:
+      org.fundacionctic.wotsim.gw: ''
+    networks:
+    - cable
+    privileged: true
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+  gw_mobile_3g:
+    command:
+    - gateway
+    - delay --time 100 --jitter 50 --distribution normal
+    - rate --rate 200kbit
+    environment:
+      DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
+      PATCH_PRIVILEGED: '1'
+      PORT_CATALOGUE: '9090'
+      PORT_COAP: '5683'
+      PORT_HTTP: '80'
+      PORT_MQTT: '1883'
+      PORT_WS: '81'
+      REDIS_URL: redis://redis
+    hostname: '{{.Task.Name}}'
+    image: wotsim
+    labels:
+      org.fundacionctic.wotsim.gw: ''
+    networks:
+    - mobile_3g
+    privileged: true
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+  gw_wifi:
+    command:
+    - gateway
+    - delay --time 15 --jitter 10 --distribution normal
+    environment:
+      DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
+      PATCH_PRIVILEGED: '1'
+      PORT_CATALOGUE: '9090'
+      PORT_COAP: '5683'
+      PORT_HTTP: '80'
+      PORT_MQTT: '1883'
+      PORT_WS: '81'
+      REDIS_URL: redis://redis
+    hostname: '{{.Task.Name}}'
+    image: wotsim
+    labels:
+      org.fundacionctic.wotsim.gw: ''
+    networks:
+    - wifi
+    privileged: true
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+  node_cable:
+    command:
+    - app
+    - --path
+    - /root/wotsim/examples/app/clock.py
+    - --enable-ws
+    depends_on:
+    - gw_cable
+    - docker_api_proxy
+    environment:
+      DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
+      PATCH_PRIVILEGED: '1'
+      PORT_CATALOGUE: '9090'
+      PORT_COAP: '5683'
+      PORT_HTTP: '80'
+      PORT_MQTT: '1883'
+      PORT_WS: '81'
+      REDIS_URL: redis://redis
+    hostname: '{{.Task.Name}}'
+    image: wotsim
+    networks:
+    - cable
+    privileged: true
+  node_wifi_1:
+    command:
+    - app
+    - --path
+    - /root/wotsim/examples/app/clock.py
+    - --enable-http
+    - --enable-coap
+    depends_on:
+    - gw_wifi
+    - docker_api_proxy
+    environment:
+      DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
+      PATCH_PRIVILEGED: '1'
+      PORT_CATALOGUE: '9090'
+      PORT_COAP: '5683'
+      PORT_HTTP: '80'
+      PORT_MQTT: '1883'
+      PORT_WS: '81'
+      REDIS_URL: redis://redis
+    hostname: '{{.Task.Name}}'
+    image: wotsim
+    networks:
+    - wifi
+    privileged: true
+  node_wifi_2:
+    command:
+    - app
+    - --path
+    - /root/wotsim/examples/app/subscriber.py
+    - --func-param
+    - servient_host
+    - node_wifi_cable.wifi
+    - --func-param
+    - thing_id
+    - urn:org:fundacionctic:thing:clock
+    depends_on:
+    - gw_wifi
+    - docker_api_proxy
+    - gw_mobile_3g
+    environment:
+      DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
+      PATCH_PRIVILEGED: '1'
+      PORT_CATALOGUE: '9090'
+      PORT_COAP: '5683'
+      PORT_HTTP: '80'
+      PORT_MQTT: '1883'
+      PORT_WS: '81'
+      REDIS_URL: redis://redis
+    hostname: '{{.Task.Name}}'
+    image: wotsim
+    networks:
+    - wifi
+    - mobile_3g
+    privileged: true
+  node_wifi_cable:
+    command:
+    - app
+    - --path
+    - /root/wotsim/examples/app/clock.py
+    - --enable-mqtt
+    depends_on:
+    - gw_wifi
+    - docker_api_proxy
+    - gw_cable
+    - gw_mobile_3g
+    environment:
+      DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
+      MQTT_BROKER_HOST: broker.mobile_3g
+      PATCH_PRIVILEGED: '1'
+      PORT_CATALOGUE: '9090'
+      PORT_COAP: '5683'
+      PORT_HTTP: '80'
+      PORT_MQTT: '1883'
+      PORT_WS: '81'
+      REDIS_URL: redis://redis
+    hostname: '{{.Task.Name}}'
+    image: wotsim
+    networks:
+    - wifi
+    - mobile_3g
+    - cable
+    privileged: true
+  redis:
+    image: redis:5
+    networks:
+    - wifi
+    - mobile_3g
+    - cable
+version: '3.7'
