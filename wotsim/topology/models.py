@@ -176,10 +176,16 @@ class Node(BaseNamedModel):
 class Broker(BaseNamedModel):
     """Represents a MQTT broker."""
 
+    ENTRY_BROKER = "broker"
+
     def __init__(self, name, networks, args_compose=None):
         self.networks = networks
         self.args_compose = args_compose
         super().__init__(name)
+
+    @property
+    def cmd(self):
+        return [self.ENTRY_BROKER]
 
     def to_compose_dict(self, topology):
         return get_broker_definition(topology, self)

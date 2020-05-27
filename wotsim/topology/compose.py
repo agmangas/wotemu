@@ -123,6 +123,7 @@ def get_broker_definition(topology, broker):
     ]
 
     service.update({
+        "command": broker.cmd,
         "networks": [net.name for net in broker.networks],
         "depends_on": depends_on
     })
