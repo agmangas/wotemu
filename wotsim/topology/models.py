@@ -51,9 +51,6 @@ class NodeApp:
     ARG_COAP = "--enable-coap"
 
     def __init__(self, path, http=False, ws=False, mqtt=False, coap=False, params=None):
-        if not any((http, ws, coap, mqtt)):
-            raise ValueError("At least one protocol should be enabled")
-
         self.path = path
         self.params = params if params else {}
         self._http = http
