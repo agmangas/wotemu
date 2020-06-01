@@ -27,9 +27,8 @@ def build_topology():
     node_clock = Node(
         name="clock",
         app=NodeApp(path=APP_CLOCK, http=True, mqtt=True),
-        networks=[network_wifi, network_3g],
-        broker=broker,
-        broker_network=network_3g)
+        networks=[network_wifi],
+        broker=broker)
 
     host_clock = "{}.{}".format(
         node_clock.name,

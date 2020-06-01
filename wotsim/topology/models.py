@@ -110,6 +110,9 @@ class BaseNamedModel:
     def __hash__(self):
         return hash(self.name)
 
+    def __str__(self):
+        return self.name
+
     @property
     def name(self):
         return self._name
@@ -129,6 +132,19 @@ class Node(BaseNamedModel):
         if broker and broker_network and broker_network not in broker.networks:
             raise ValueError("Broker network {} is not linked to broker {}".format(
                 broker_network, broker))
+
+        if broker and not broker_network and len(broker.networks) > 1:
+            warnings.warn((
+                "Broker '{}' is linked to multiple "
+                "networks but broker network "
+                "has not been explicitly defined"
+            ).format(broker), Warning)
+
+        if broker and not app.enabled_mqtt:
+            warnings.warn((
+                "There is no need to set the node broker ({}) "
+                "if MQTT is disabled in the node app ({})"
+            ).format(broker, app), Warning)
 
         self.app = app
         self.networks = networks
