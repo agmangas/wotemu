@@ -136,7 +136,7 @@ def get_broker_definition(topology, broker):
     return {broker.name: service}
 
 
-def get_node_resources_deploy_dict(node_resources):
+def get_node_resources_definition(node_resources):
     limits = {
         "cpus": node_resources.cpu_limit,
         "memory": node_resources.mem_limit
@@ -184,10 +184,16 @@ def get_node_definition(topology, node):
         "environment": envr
     })
 
+    deploy = service.get("deploy", {})
+
     if node.resources:
-        deploy = service.get("deploy", {})
-        resources_dict = get_node_resources_deploy_dict(node.resources)
+        resources_dict = get_node_resources_definition(node.resources)
         deploy.update({"resources": resources_dict})
+
+    if node.scale:
+        deploy.update({"replicas": node.scale})
+
+    if len(deploy) > 0:
         service.update({"deploy": deploy})
 
     if node.args_compose:

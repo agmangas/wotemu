@@ -120,13 +120,6 @@ class Node(BaseNamedModel):
 
     ENTRY_APP = "app"
 
-    @classmethod
-    def to_resources(cls, platform):
-        if platform not in NodePlatforms:
-            raise ValueError("Unknown node platform")
-
-        raise NotImplementedError
-
     def __init__(
             self, name, app, networks, broker=None, broker_network=None,
             image=BASE_IMAGE, resources=None, scale=None, args_compose=None):
@@ -198,13 +191,6 @@ class Network(BaseNamedModel):
     GATEWAY_PREFIX = "gw"
     assert inflection.underscore(GATEWAY_PREFIX) == GATEWAY_PREFIX
     ENTRY_GATEWAY = "gateway"
-
-    @classmethod
-    def to_netem(cls, condition):
-        if condition not in NetworkConditions:
-            raise ValueError("Unknown network condition")
-
-        raise NotImplementedError
 
     def __init__(self, name, netem=None, args_compose_net=None, args_compose_gw=None):
         self._netem = netem
