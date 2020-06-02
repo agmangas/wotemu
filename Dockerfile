@@ -1,6 +1,9 @@
 FROM ubuntu:19.10
 
 ENV PATH_WOTSIM /root/wotsim
+ENV WAIT_INIT 20
+ENV WAIT_GATEWAYS 20
+ENV WAIT_BROKERS 20
 
 RUN apt-get update -y && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     build-essential \
