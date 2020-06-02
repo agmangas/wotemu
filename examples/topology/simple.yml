@@ -16,8 +16,9 @@ services:
     command:
     - broker
     depends_on:
-    - docker_api_proxy
     - gw_mobile_3g
+    - docker_api_proxy
+    - redis
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       PATCH_PRIVILEGED: '1'
@@ -42,9 +43,10 @@ services:
     - --enable-http
     - --enable-mqtt
     depends_on:
-    - gw_wifi
-    - gw_mobile_3g
     - docker_api_proxy
+    - gw_mobile_3g
+    - redis
+    - gw_wifi
     deploy:
       replicas: 2
     environment:
@@ -77,11 +79,12 @@ services:
     - thing_id
     - urn:org:fundacionctic:thing:clock
     depends_on:
-    - gw_wifi
-    - gw_mobile_3g
+    - redis
     - docker_api_proxy
+    - gw_mobile_3g
+    - gw_wifi
     deploy:
-      replicas: 6
+      replicas: 4
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       PATCH_PRIVILEGED: '1'
@@ -121,6 +124,9 @@ services:
     - gateway
     - delay --time 100 --jitter 50 --distribution normal
     - rate --rate 200kbit
+    depends_on:
+    - docker_api_proxy
+    - redis
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       PATCH_PRIVILEGED: '1'
@@ -143,6 +149,9 @@ services:
     command:
     - gateway
     - delay --time 15 --jitter 10 --distribution normal
+    depends_on:
+    - docker_api_proxy
+    - redis
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       PATCH_PRIVILEGED: '1'

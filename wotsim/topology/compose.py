@@ -97,9 +97,18 @@ def get_redis_definition(topology):
 def get_network_gateway_definition(topology, network):
     service = copy.deepcopy(SERVICE_BASE_GATEWAY)
 
+    depends_on = []
+
+    if topology.docker_proxy.enabled:
+        depends_on.append(topology.docker_proxy.host)
+
+    if topology.redis.enabled:
+        depends_on.append(topology.redis.host)
+
     service.update({
         "command": network.cmd_gateway,
-        "networks": [network.name]
+        "networks": [network.name],
+        "depends_on": depends_on
     })
 
     if network.args_compose_gw:
@@ -120,9 +129,14 @@ def get_broker_definition(topology, broker):
     service = copy.deepcopy(SERVICE_BASE_BROKER)
 
     depends_on = [
-        topology.docker_proxy.host,
         *[net.name_gateway for net in broker.networks]
     ]
+
+    if topology.docker_proxy.enabled:
+        depends_on.append(topology.docker_proxy.host)
+
+    if topology.redis.enabled:
+        depends_on.append(topology.redis.host)
 
     service.update({
         "command": broker.cmd,
@@ -166,9 +180,14 @@ def get_node_definition(topology, node):
     networks = [net.name for net in node.networks]
 
     depends_on = [
-        topology.docker_proxy.host,
         *[net.name_gateway for net in node.networks]
     ]
+
+    if topology.docker_proxy.enabled:
+        depends_on.append(topology.docker_proxy.host)
+
+    if topology.redis.enabled:
+        depends_on.append(topology.redis.host)
 
     envr = service.get("environment", {})
 

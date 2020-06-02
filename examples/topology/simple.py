@@ -46,7 +46,7 @@ def build_topology():
         name="clock_sub",
         app=app_sub,
         networks=[network_wifi, network_3g],
-        scale=6)
+        scale=4)
 
     topology = Topology(nodes=[node_clock, node_sub])
 
