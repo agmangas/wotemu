@@ -170,10 +170,8 @@ def _app_done_cb(fut, stop):
 
 
 def run_app(
-        path, func, func_param, hostname,
+        conf, path, func, func_param, hostname,
         enable_http, enable_mqtt, enable_coap, enable_ws):
-    conf = wotsim.config.get_env_config()
-
     if not enable_http and not enable_mqtt and not enable_coap and not enable_ws:
         _logger.warning("No protocol bindings have been enabled")
 
@@ -190,7 +188,9 @@ def run_app(
     loop = asyncio.get_event_loop()
     loop.set_exception_handler(_exception_handler)
 
-    thing_cb, redis_pool = _build_thing_cb(redis_url=conf.redis_url, loop=loop)
+    thing_cb, redis_pool = _build_thing_cb(
+        redis_url=conf.redis_url,
+        loop=loop)
 
     wot_kwargs = {
         "port_catalogue": conf.port_catalogue,

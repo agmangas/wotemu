@@ -36,7 +36,8 @@ def _catch(func):
 @click.option("--log-level", default="DEBUG")
 @click.option("--quiet", is_flag=True)
 @click.option("--root-logger", is_flag=True)
-def cli(log_level, quiet, root_logger):
+@click.pass_context
+def cli(ctx, log_level, quiet, root_logger):
     """Root CLI command."""
 
     logging.getLogger().addHandler(logging.NullHandler())
@@ -48,32 +49,35 @@ def cli(log_level, quiet, root_logger):
         coloredlogs.install(level=log_level, logger=cli_logger)
 
     wotsim.config.log_config()
+    ctx.obj = wotsim.config.get_env_config()
 
 
 @cli.command(**_COMMAND_KWARGS)
 @click.option("--rtable-name", default="wotsim")
 @click.option("--rtable-mark", type=int, default=1)
 @click.option("--apply", is_flag=True)
+@click.pass_obj
 @_catch
-def route(**kwargs):
+def route(conf, **kwargs):
     """This command should be called in the initialization phase of all WoTsim nodes. 
     Updates the routing configuration of this container to force WoT communications to go through 
     the network gateway container. Requires access to the Docker daemon of a manager node."""
 
-    wotsim.cli.routes.update_routing(**kwargs)
+    wotsim.cli.routes.update_routing(conf, **kwargs)
 
 
 @cli.command(**_COMMAND_KWARGS)
 @click.option("--docker-url", default="unix://{}".format(wotsim.config.DEFAULT_DOCKER_SOCKET))
 @click.option("--netem", type=str, multiple=True)
 @click.option("--duration", type=str, default="72h")
+@click.pass_obj
 @_catch
-def chaos(**kwargs):
+def chaos(conf, **kwargs):
     """This is the main command of network gateway containers. Runs and controls 
     a set of Pumba subprocesses that degrade the network stack of this container 
     to simulate real-life network conditions."""
 
-    wotsim.cli.chaos.create_chaos(**kwargs)
+    wotsim.cli.chaos.create_chaos(conf, **kwargs)
 
 
 @cli.command(**_COMMAND_KWARGS)
@@ -85,8 +89,9 @@ def chaos(**kwargs):
 @click.option("--enable-coap", is_flag=True)
 @click.option("--enable-mqtt", is_flag=True)
 @click.option("--enable-ws", is_flag=True)
+@click.pass_obj
 @_catch
-def app(**kwargs):
+def app(conf, **kwargs):
     """Runs an user-defined WoT application injected with a decorated WoTPy entrypoint."""
 
-    wotsim.cli.app.run_app(**kwargs)
+    wotsim.cli.app.run_app(conf, **kwargs)

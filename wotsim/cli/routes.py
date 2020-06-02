@@ -212,10 +212,14 @@ def _run_commands(cmds):
         _logger.info("%s", ret)
 
 
-def update_routing(rtable_name, rtable_mark, apply):
-    conf = wotsim.config.get_env_config()
+def update_routing(conf, rtable_name, rtable_mark, apply):
+    ports_tcp = [
+        conf.port_http,
+        conf.port_ws,
+        conf.port_mqtt,
+        conf.port_coap
+    ]
 
-    ports_tcp = [conf.port_http, conf.port_ws, conf.port_mqtt, conf.port_coap]
     ports_udp = [conf.port_coap]
 
     _logger.debug("TCP ports: %s", ports_tcp)

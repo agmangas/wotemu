@@ -66,7 +66,7 @@ def _done(cmd, success, exit_code):
         exit_code)
 
 
-def create_chaos(docker_url, netem, duration):
+def create_chaos(conf, docker_url, netem, duration):
     wotsim.cli.utils.ping_docker(docker_url=docker_url)
 
     docker_client = docker.DockerClient(base_url=docker_url)
