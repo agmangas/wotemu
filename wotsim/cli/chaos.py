@@ -70,7 +70,7 @@ def create_chaos(conf, docker_url, netem, duration):
     wotsim.cli.utils.ping_docker(docker_url=docker_url)
 
     docker_client = docker.DockerClient(base_url=docker_url)
-    cid = wotsim.cli.utils.current_container_id()
+    cid = wotsim.cli.utils.get_current_container_id()
     container = docker_client.containers.get(cid)
 
     cmd_base = "--host {} --log-level debug netem --duration {} --interface {}".format(

@@ -9,9 +9,10 @@ import docker
 import netaddr
 import netifaces
 
-import wotsim.cli.utils
 import wotsim.config
 import wotsim.enums
+from wotsim.cli.utils import (get_current_task, get_network_gateway_task,
+                              get_task_networks, ping_docker)
 
 _PATH_IPROUTE2_RT_TABLES = "/etc/iproute2/rt_tables"
 
@@ -19,86 +20,7 @@ _logger = logging.getLogger(__name__)
 _rtindex = None
 
 
-def _get_current_task(docker_url):
-    docker_api_client = docker.APIClient(base_url=docker_url)
-
-    cid = wotsim.cli.utils.current_container_id()
-
-    task = next((
-        task for task in docker_api_client.tasks()
-        if task.get("Status", {}).get("ContainerStatus", {}).get("ContainerID", None) == cid), None)
-
-    if task is None:
-        raise Exception("Could not find task for container: {}".format(cid))
-
-    _logger.debug("Current task:\n%s", pprint.pformat(task))
-
-    return task
-
-
-def _get_current_wotsim_networks(docker_url):
-    docker_api_client = docker.APIClient(base_url=docker_url)
-
-    task = _get_current_task(docker_url=docker_url)
-
-    network_ids = [
-        net["Network"]["ID"]
-        for net in task["NetworksAttachments"]
-    ]
-
-    networks = {
-        net_id: docker_api_client.inspect_network(net_id)
-        for net_id in network_ids
-    }
-
-    networks = {
-        net_id: net_info for net_id, net_info in networks.items()
-        if net_info.get("Labels", {}).get(wotsim.enums.Labels.WOTSIM_NETWORK.value, None) is not None
-    }
-
-    _logger.debug("Simulator networks:\n%s", pprint.pformat(networks))
-
-    return list(networks.keys())
-
-
-def _get_network_gw_task(docker_url, network_id):
-    docker_api_client = docker.APIClient(base_url=docker_url)
-
-    network_info = docker_api_client.inspect_network(network_id, verbose=True)
-
-    service_infos = {
-        net_name: info
-        for net_name, info in network_info["Services"].items()
-        if len(net_name) > 0
-    }
-
-    _logger.debug(
-        "Network %s services:\n%s", network_id,
-        pprint.pformat(list(service_infos.keys())))
-
-    task_infos = {
-        task_info["Name"]: task_info
-        for net_name, serv_info in service_infos.items()
-        for task_info in serv_info["Tasks"]
-    }
-
-    _logger.debug(
-        "Network %s tasks:\n%s", network_id,
-        pprint.pformat(list(task_infos.keys())))
-
-    task_labels = {
-        task_name: docker_api_client.inspect_task(
-            task_name)["Spec"]["ContainerSpec"]["Labels"]
-        for task_name in task_infos.keys()
-    }
-
-    return next(
-        task_infos[task_name]
-        for task_name, labels in task_labels.items()
-        if labels.get(wotsim.enums.Labels.WOTSIM_GATEWAY.value, None) is not None)
-
-
-def _get_task_netiface(task):
+def _get_gw_task_output_iface(task):
     task_name = task["Name"]
     task_addr = netaddr.IPAddress(task["EndpointIP"])
 
@@ -160,7 +82,7 @@ def _build_routing_commands(gw_task, ports_tcp, ports_udp, rtable_name, rtable_m
         name=rtable_name,
         path=_PATH_IPROUTE2_RT_TABLES))
 
-    ifname, ifaddr = _get_task_netiface(gw_task)
+    ifname, ifaddr = _get_gw_task_output_iface(gw_task)
 
     ifcidr = netaddr.IPNetwork("{}/{}".format(
         ifaddr["addr"], ifaddr["netmask"])).cidr
@@ -226,19 +148,18 @@ def update_routing(conf, rtable_name, rtable_mark, apply):
     _logger.debug("UDP ports: %s", ports_udp)
 
     docker_url = conf.docker_proxy_url
-
-    _logger.debug("Using Docker API proxy: %s", docker_url)
-
-    wotsim.cli.utils.ping_docker(docker_url=docker_url)
+    ping_docker(docker_url=docker_url)
 
     if _rtable_exists(rtable_name=rtable_name):
         _logger.info("Table '%s' exists: Skip configuration", rtable_name)
         return
 
-    network_ids = _get_current_wotsim_networks(docker_url=docker_url)
+    task = get_current_task(docker_url=docker_url)
+    network_ids = get_task_networks(docker_url=docker_url, task=task)
 
     gw_tasks = {
-        net_id: _get_network_gw_task(docker_url=docker_url, network_id=net_id)
+        net_id: get_network_gateway_task(
+            docker_url=docker_url, network_id=net_id)
         for net_id in network_ids
     }
 
