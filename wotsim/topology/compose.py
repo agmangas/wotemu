@@ -44,12 +44,14 @@ SERVICE_BASE_BROKER = {
     "image": BASE_IMAGE,
     "privileged": True,
     "hostname": HOSTNAME_TASK,
+    "labels": {Labels.WOTSIM_BROKER.value: ""},
     "environment": {ENV_KEY_PRIVILEGED: ENV_VAL_FLAG}
 }
 
 SERVICE_BASE_NODE = {
     "privileged": True,
     "hostname": HOSTNAME_TASK,
+    "labels": {Labels.WOTSIM_NODE.value: ""},
     "environment": {ENV_KEY_PRIVILEGED: ENV_VAL_FLAG}
 }
 

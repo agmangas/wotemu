@@ -4,6 +4,8 @@ import enum
 class Labels(enum.Enum):
     WOTSIM_NETWORK = "org.fundacionctic.wotsim.net"
     WOTSIM_GATEWAY = "org.fundacionctic.wotsim.gw"
+    WOTSIM_NODE = "org.fundacionctic.wotsim.node"
+    WOTSIM_BROKER = "org.fundacionctic.wotsim.broker"
 
 
 class NetworkConditions(enum.Enum):

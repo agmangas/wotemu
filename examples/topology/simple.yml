@@ -29,6 +29,8 @@ services:
       REDIS_URL: redis://redis
     hostname: '{{.Task.Name}}'
     image: wotsim
+    labels:
+      org.fundacionctic.wotsim.broker: ''
     networks:
     - mobile_3g
     privileged: true
@@ -40,8 +42,8 @@ services:
     - --enable-http
     - --enable-mqtt
     depends_on:
-    - gw_mobile_3g
     - gw_wifi
+    - gw_mobile_3g
     - docker_api_proxy
     deploy:
       replicas: 2
@@ -57,6 +59,8 @@ services:
       REDIS_URL: redis://redis
     hostname: '{{.Task.Name}}'
     image: wotsim
+    labels:
+      org.fundacionctic.wotsim.node: ''
     networks:
     - wifi
     - mobile_3g
@@ -73,8 +77,8 @@ services:
     - thing_id
     - urn:org:fundacionctic:thing:clock
     depends_on:
-    - gw_mobile_3g
     - gw_wifi
+    - gw_mobile_3g
     - docker_api_proxy
     deploy:
       replicas: 6
@@ -89,6 +93,8 @@ services:
       REDIS_URL: redis://redis
     hostname: '{{.Task.Name}}'
     image: wotsim
+    labels:
+      org.fundacionctic.wotsim.node: ''
     networks:
     - wifi
     - mobile_3g
