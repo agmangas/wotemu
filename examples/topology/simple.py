@@ -28,7 +28,8 @@ def build_topology():
         name="clock",
         app=NodeApp(path=APP_CLOCK, http=True, mqtt=True),
         networks=[network_wifi],
-        broker=broker)
+        broker=broker,
+        scale=2)
 
     host_clock = "{}.{}".format(
         node_clock.name,
@@ -45,7 +46,7 @@ def build_topology():
         name="clock_sub",
         app=app_sub,
         networks=[network_wifi, network_3g],
-        scale=3)
+        scale=6)
 
     topology = Topology(nodes=[node_clock, node_sub])
 

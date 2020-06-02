@@ -43,6 +43,8 @@ services:
     - gw_mobile_3g
     - gw_wifi
     - docker_api_proxy
+    deploy:
+      replicas: 2
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       MQTT_BROKER_HOST: broker.mobile_3g
@@ -75,7 +77,7 @@ services:
     - gw_wifi
     - docker_api_proxy
     deploy:
-      replicas: 3
+      replicas: 6
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       PATCH_PRIVILEGED: '1'
