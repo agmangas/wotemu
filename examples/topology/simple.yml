@@ -43,10 +43,10 @@ services:
     - --enable-http
     - --enable-mqtt
     depends_on:
-    - redis
-    - docker_api_proxy
     - gw_wifi
+    - docker_api_proxy
     - gw_mobile_3g
+    - redis
     deploy:
       replicas: 2
     environment:
@@ -64,8 +64,8 @@ services:
     labels:
       org.fundacionctic.wotsim.node: ''
     networks:
-    - wifi
     - mobile_3g
+    - wifi
     privileged: true
   clock_sub:
     command:
@@ -79,10 +79,10 @@ services:
     - thing_id
     - urn:org:fundacionctic:thing:clock
     depends_on:
-    - redis
-    - docker_api_proxy
     - gw_wifi
+    - docker_api_proxy
     - gw_mobile_3g
+    - redis
     deploy:
       replicas: 4
     environment:
@@ -99,8 +99,8 @@ services:
     labels:
       org.fundacionctic.wotsim.node: ''
     networks:
-    - wifi
     - mobile_3g
+    - wifi
     privileged: true
   docker_api_proxy:
     deploy:
@@ -110,13 +110,14 @@ services:
     environment:
       CONTAINERS: '1'
       NETWORKS: '1'
+      NODES: '1'
       PATCH_PRIVILEGED: '1'
       SERVICES: '1'
       TASKS: '1'
     image: tecnativa/docker-socket-proxy
     networks:
-    - wifi
     - mobile_3g
+    - wifi
     privileged: true
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
@@ -174,6 +175,6 @@ services:
   redis:
     image: redis:5
     networks:
-    - wifi
     - mobile_3g
+    - wifi
 version: '3.7'

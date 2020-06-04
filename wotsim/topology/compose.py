@@ -17,6 +17,7 @@ SERVICE_BASE_DOCKER_PROXY = {
         "NETWORKS": ENV_VAL_FLAG,
         "TASKS": ENV_VAL_FLAG,
         "SERVICES": ENV_VAL_FLAG,
+        "NODES": ENV_VAL_FLAG,
         ENV_KEY_PRIVILEGED: ENV_VAL_FLAG
     },
     "deploy": {
