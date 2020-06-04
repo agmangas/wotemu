@@ -7,6 +7,8 @@ import sys
 
 import tornado.httpclient
 
+from wotsim.utils import wait_node
+
 _CANCEL_SLEEP = 3
 
 _logger = logging.getLogger("wotsim.subscriber.app")
@@ -68,6 +70,8 @@ async def _cancel_subs(subs):
 
 
 async def app(wot, conf, loop, servient_host, thing_id):
+    await wait_node(conf, servient_host)
+
     consumed_thing = await _consume_from_catalogue(
         wot=wot,
         port_catalogue=conf.port_catalogue,

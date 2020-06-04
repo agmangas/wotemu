@@ -11,8 +11,8 @@ import netifaces
 
 import wotsim.config
 import wotsim.enums
-from wotsim.cli.utils import (get_current_task, get_network_gateway_task,
-                              get_task_networks, ping_docker)
+from wotsim.utils import (get_current_task, get_network_gateway_task,
+                          get_task_networks, ping_docker)
 
 _PATH_IPROUTE2_RT_TABLES = "/etc/iproute2/rt_tables"
 

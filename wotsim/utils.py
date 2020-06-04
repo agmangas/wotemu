@@ -1,14 +1,117 @@
+import asyncio
 import logging
 import pprint
 import re
+import time
 
 import docker
+import tornado.httpclient
 
 from wotsim.enums import Labels
 
 _CGROUP_PATH = "/proc/self/cgroup"
+_STACK_NAMESPACE = "com.docker.stack.namespace"
+_CID_HOST_LEN = 12
 
 _logger = logging.getLogger(__name__)
+
+
+class NodeHTTPTimeout(Exception):
+    pass
+
+
+async def _ping_http(url):
+    http_client = tornado.httpclient.AsyncHTTPClient()
+
+    try:
+        await http_client.fetch(url)
+        _logger.debug("HTTP ping OK: %s", url)
+        return True
+    except Exception as ex:
+        _logger.debug("HTTP ping Error (%s): %s", url, ex)
+        return False
+    finally:
+        http_client.close()
+
+
+async def _ping_http_timeout(url, wait, timeout):
+    _logger.debug("HTTP ping (%s secs timeout): %s", timeout, url)
+
+    ini = time.time()
+
+    def _raise_timeout():
+        if timeout is None:
+            return
+
+        diff = time.time() - ini
+
+        if diff >= timeout:
+            raise NodeHTTPTimeout(
+                "HTTP timeout ({} s): {}".format(timeout, url))
+
+    while True:
+        _raise_timeout()
+
+        if (await _ping_http(url)):
+            break
+
+        _raise_timeout()
+        await asyncio.sleep(wait)
+
+
+async def wait_node(conf, node_name, wait=2, timeout=300, passes=3):
+    docker_api_client = docker.APIClient(base_url=conf.docker_proxy_url)
+
+    _logger.debug("Waiting for node: %s", node_name)
+    service_parts = node_name.split(".")
+
+    try:
+        network_candidate = service_parts[-1]
+        _logger.debug("Checking network existence: %s", network_candidate)
+        docker_api_client.inspect_network(network_candidate)
+        service_name = ".".join(service_parts[:-1])
+    except docker.errors.NotFound:
+        _logger.debug("Network does not exist: %s", network_candidate)
+        service_name = node_name
+
+    namespace = get_current_stack_namespace(conf.docker_proxy_url)
+
+    if not service_name.startswith(namespace):
+        _logger.debug("Adding namespace prefix to service: %s", namespace)
+        service_name = "{}_{}".format(namespace, service_name)
+
+    _logger.debug("Service name: %s", service_name)
+
+    try:
+        docker_api_client.inspect_service(service_name)
+    except docker.errors.NotFound as ex:
+        _logger.warning("Service (%s) not found: %s", service_name, ex)
+        return
+
+    service_tasks = docker_api_client.tasks(filters={
+        "service": service_name
+    })
+
+    _logger.debug("Found %s tasks for %s", len(service_tasks), service_name)
+
+    cont_hosts = [
+        task["Status"]["ContainerStatus"]["ContainerID"][:_CID_HOST_LEN]
+        for task in service_tasks
+    ]
+
+    _logger.debug("Service %s container hosts: %s", service_name, cont_hosts)
+
+    urls = [
+        "http://{}:{}".format(host, conf.port_catalogue)
+        for host in cont_hosts
+    ]
+
+    _logger.debug("Catalogue URLs: %s", urls)
+
+    await asyncio.gather(*[
+        _ping_http_timeout(url=url, wait=wait, timeout=timeout)
+        for url in urls
+    ])
 
 
 def ping_docker(docker_url):
@@ -64,6 +167,19 @@ def get_current_task(docker_url):
     _logger.debug("Current task:\n%s", pprint.pformat(task))
 
     return task
+
+
+def get_current_stack_namespace(docker_url):
+    curr_task = get_current_task(docker_url=docker_url)
+    return curr_task.get("Spec", {}).get("ContainerSpec", {}).get("Labels", {}).get(_STACK_NAMESPACE, None)
+
+
+def get_current_service(docker_url):
+    curr_task = get_current_task(docker_url=docker_url)
+    curr_service_id = curr_task["ServiceID"]
+    docker_api_client = docker.APIClient(base_url=conf.docker_proxy_url)
+
+    return docker_api_client.inspect_service(curr_service_id)
 
 
 def get_task_networks(docker_url, task):

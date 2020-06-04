@@ -8,7 +8,8 @@ import docker
 import netifaces
 import sh
 
-import wotsim.cli.utils
+from wotsim.utils import (get_current_container_id, ping_docker,
+                          strip_ansi_codes)
 
 _IFACE_LO = "lo"
 _LEVEL_DEBUG = "DEBU["
@@ -52,7 +53,7 @@ def _pumba_log_level(line):
 
 def _build_out(cmd_id):
     def out(line):
-        line = wotsim.cli.utils.strip_ansi_codes(line.strip())
+        line = strip_ansi_codes(line.strip())
         _logger.log(_pumba_log_level(line), "[%s]\n\t%s", cmd_id, line.strip())
 
     return out
@@ -67,10 +68,10 @@ def _done(cmd, success, exit_code):
 
 
 def create_chaos(conf, docker_url, netem, duration):
-    wotsim.cli.utils.ping_docker(docker_url=docker_url)
+    ping_docker(docker_url=docker_url)
 
     docker_client = docker.DockerClient(base_url=docker_url)
-    cid = wotsim.cli.utils.get_current_container_id()
+    cid = get_current_container_id()
     container = docker_client.containers.get(cid)
 
     cmd_base = "--host {} --log-level debug netem --duration {} --interface {}".format(
