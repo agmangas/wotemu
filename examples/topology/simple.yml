@@ -43,10 +43,10 @@ services:
     - --enable-http
     - --enable-mqtt
     depends_on:
-    - docker_api_proxy
-    - gw_mobile_3g
     - redis
+    - docker_api_proxy
     - gw_wifi
+    - gw_mobile_3g
     deploy:
       replicas: 2
     environment:
@@ -81,8 +81,8 @@ services:
     depends_on:
     - redis
     - docker_api_proxy
-    - gw_mobile_3g
     - gw_wifi
+    - gw_mobile_3g
     deploy:
       replicas: 4
     environment:
@@ -111,6 +111,7 @@ services:
       CONTAINERS: '1'
       NETWORKS: '1'
       PATCH_PRIVILEGED: '1'
+      SERVICES: '1'
       TASKS: '1'
     image: tecnativa/docker-socket-proxy
     networks:
