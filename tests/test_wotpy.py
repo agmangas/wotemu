@@ -7,8 +7,8 @@ from tests.conftest import TD_EXAMPLE
 from wotpy.protocols.enums import InteractionVerbs
 from wotpy.wot.td import ThingDescription
 
-from wotsim.wotpy.things import ConsumedThing, ExposedThing
-from wotsim.wotpy.wot import wot_entrypoint
+from wotemu.wotpy.things import ConsumedThing, ExposedThing
+from wotemu.wotpy.wot import wot_entrypoint
 
 MAX_DUMMY_SLEEP_SECS = 0.15
 WOT_HOSTNAME = "127.0.0.1"

@@ -6,8 +6,8 @@ import pytest
 from tests.conftest import TD_EXAMPLE
 from wotpy.wot.td import ThingDescription
 
-from wotsim.wotpy.redis import redis_thing_callback
-from wotsim.wotpy.wot import wot_entrypoint
+from wotemu.wotpy.redis import redis_thing_callback
+from wotemu.wotpy.wot import wot_entrypoint
 
 WOT_HOSTNAME = "127.0.0.1"
 

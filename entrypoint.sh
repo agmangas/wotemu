@@ -30,11 +30,11 @@ wait_brokers () {
 
 update_routing () {
     print_section "Updating routing configuration"
-    wotsim route --apply
+    wotemu route --apply
 }
 
 run_app () {
-    exec wotsim app "$@"
+    exec wotemu app "$@"
 }
 
 run_mqtt_broker () {
@@ -50,7 +50,7 @@ run_chaos () {
         args+=(--netem "${var}")
     done
     
-    exec wotsim chaos "${args[@]}"
+    exec wotemu chaos "${args[@]}"
 }
 
 case "$1" in

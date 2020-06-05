@@ -36,7 +36,7 @@ _DESCRIPTION = {
 _EVENT_MEAN_WAIT = 5
 _TIMEOUT = 10
 
-_logger = logging.getLogger("wotsim.clock.app")
+_logger = logging.getLogger("wotemu.clock.app")
 
 
 def _time_millis():

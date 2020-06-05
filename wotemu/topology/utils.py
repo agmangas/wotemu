@@ -1,4 +1,4 @@
-from wotsim.enums import NetworkConditions, NodePlatforms
+from wotemu.enums import NetworkConditions, NodePlatforms
 
 
 def platform_to_resources(platform):

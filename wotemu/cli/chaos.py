@@ -8,7 +8,7 @@ import docker
 import netifaces
 import sh
 
-from wotsim.utils import (get_current_container_id, ping_docker,
+from wotemu.utils import (get_current_container_id, ping_docker,
                           strip_ansi_codes)
 
 _IFACE_LO = "lo"

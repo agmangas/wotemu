@@ -6,10 +6,10 @@ import sys
 import click
 import coloredlogs
 
-import wotsim.cli.app
-import wotsim.cli.chaos
-import wotsim.cli.routes
-import wotsim.config
+import wotemu.cli.app
+import wotemu.cli.chaos
+import wotemu.cli.routes
+import wotemu.config
 
 _COMMAND_KWARGS = {
     "context_settings": {
@@ -48,26 +48,26 @@ def cli(ctx, log_level, quiet, root_logger):
         cli_logger = logging.getLogger(cli_logger_name)
         coloredlogs.install(level=log_level, logger=cli_logger)
 
-    wotsim.config.log_config()
-    ctx.obj = wotsim.config.get_env_config()
+    wotemu.config.log_config()
+    ctx.obj = wotemu.config.get_env_config()
 
 
 @cli.command(**_COMMAND_KWARGS)
-@click.option("--rtable-name", default="wotsim")
+@click.option("--rtable-name", default="wotemu")
 @click.option("--rtable-mark", type=int, default=1)
 @click.option("--apply", is_flag=True)
 @click.pass_obj
 @_catch
 def route(conf, **kwargs):
-    """This command should be called in the initialization phase of all WoTsim nodes. 
+    """This command should be called in the initialization phase of all WoTemu nodes. 
     Updates the routing configuration of this container to force WoT communications to go through 
     the network gateway container. Requires access to the Docker daemon of a manager node."""
 
-    wotsim.cli.routes.update_routing(conf, **kwargs)
+    wotemu.cli.routes.update_routing(conf, **kwargs)
 
 
 @cli.command(**_COMMAND_KWARGS)
-@click.option("--docker-url", default="unix://{}".format(wotsim.config.DEFAULT_DOCKER_SOCKET))
+@click.option("--docker-url", default="unix://{}".format(wotemu.config.DEFAULT_DOCKER_SOCKET))
 @click.option("--netem", type=str, multiple=True)
 @click.option("--duration", type=str, default="72h")
 @click.pass_obj
@@ -77,7 +77,7 @@ def chaos(conf, **kwargs):
     a set of Pumba subprocesses that degrade the network stack of this container 
     to simulate real-life network conditions."""
 
-    wotsim.cli.chaos.create_chaos(conf, **kwargs)
+    wotemu.cli.chaos.create_chaos(conf, **kwargs)
 
 
 @cli.command(**_COMMAND_KWARGS)
@@ -94,4 +94,4 @@ def chaos(conf, **kwargs):
 def app(conf, **kwargs):
     """Runs an user-defined WoT application injected with a decorated WoTPy entrypoint."""
 
-    wotsim.cli.app.run_app(conf, **kwargs)
+    wotemu.cli.app.run_app(conf, **kwargs)

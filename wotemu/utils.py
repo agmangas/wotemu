@@ -7,7 +7,7 @@ import time
 import docker
 import tornado.httpclient
 
-from wotsim.enums import Labels
+from wotemu.enums import Labels
 
 _CGROUP_PATH = "/proc/self/cgroup"
 _STACK_NAMESPACE = "com.docker.stack.namespace"
@@ -212,7 +212,7 @@ def get_task_networks(docker_url, task):
 
     networks = {
         net_id: net_info for net_id, net_info in networks.items()
-        if net_info.get("Labels", {}).get(Labels.WOTSIM_NETWORK.value, None) is not None
+        if net_info.get("Labels", {}).get(Labels.WOTEMU_NETWORK.value, None) is not None
     }
 
     _logger.debug("Simulator networks:\n%s", pprint.pformat(networks))
@@ -260,7 +260,7 @@ def get_network_gateway_task(docker_url, network_id):
     return next(
         task_infos[task_name]
         for task_name, labels in task_labels.items()
-        if labels.get(Labels.WOTSIM_GATEWAY.value, None) is not None)
+        if labels.get(Labels.WOTEMU_GATEWAY.value, None) is not None)
 
 
 def strip_ansi_codes(val):

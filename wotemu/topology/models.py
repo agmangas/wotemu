@@ -5,10 +5,10 @@ import warnings
 import inflection
 import yaml
 
-from wotsim.config import (DEFAULT_CONFIG_VARS, DEFAULT_HOST_DOCKER_PROXY,
+from wotemu.config import (DEFAULT_CONFIG_VARS, DEFAULT_HOST_DOCKER_PROXY,
                            DEFAULT_HOST_REDIS, ConfigVars)
-from wotsim.enums import NetworkConditions, NodePlatforms
-from wotsim.topology.compose import (BASE_IMAGE, get_broker_definition,
+from wotemu.enums import NetworkConditions, NodePlatforms
+from wotemu.topology.compose import (BASE_IMAGE, get_broker_definition,
                                      get_docker_proxy_definition,
                                      get_network_definition,
                                      get_network_gateway_definition,

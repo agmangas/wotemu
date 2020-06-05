@@ -1,9 +1,9 @@
-from wotsim.enums import NetworkConditions
-from wotsim.topology.models import Broker, Network, Node, NodeApp, Topology
-from wotsim.topology.utils import conditions_to_netem
+from wotemu.enums import NetworkConditions
+from wotemu.topology.models import Broker, Network, Node, NodeApp, Topology
+from wotemu.topology.utils import conditions_to_netem
 
-APP_CLOCK = "/root/wotsim/examples/app/clock.py"
-APP_SUBSCRIBER = "/root/wotsim/examples/app/subscriber.py"
+APP_CLOCK = "/root/wotemu/examples/app/clock.py"
+APP_SUBSCRIBER = "/root/wotemu/examples/app/subscriber.py"
 PARAM_SERVIENT_HOST = "servient_host"
 PARAM_THING_ID = "thing_id"
 THING_ID_CLOCK = "urn:org:fundacionctic:thing:clock"

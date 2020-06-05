@@ -1,10 +1,10 @@
 import copy
 
-from wotsim.config import DEFAULT_DOCKER_SOCKET, ConfigVars
-from wotsim.enums import Labels
+from wotemu.config import DEFAULT_DOCKER_SOCKET, ConfigVars
+from wotemu.enums import Labels
 
 COMPOSE_VERSION = "3.7"
-BASE_IMAGE = "wotsim"
+BASE_IMAGE = "wotemu"
 HOSTNAME_TASK = "{{.Task.Name}}"
 ENV_KEY_PRIVILEGED = "PATCH_PRIVILEGED"
 ENV_VAL_FLAG = "1"
@@ -38,7 +38,7 @@ SERVICE_BASE_GATEWAY = {
     "privileged": True,
     "hostname": HOSTNAME_TASK,
     "volumes": [VOL_DOCKER_SOCK],
-    "labels": {Labels.WOTSIM_GATEWAY.value: ""},
+    "labels": {Labels.WOTEMU_GATEWAY.value: ""},
     "environment": {ENV_KEY_PRIVILEGED: ENV_VAL_FLAG}
 }
 
@@ -46,21 +46,21 @@ SERVICE_BASE_BROKER = {
     "image": BASE_IMAGE,
     "privileged": True,
     "hostname": HOSTNAME_TASK,
-    "labels": {Labels.WOTSIM_BROKER.value: ""},
+    "labels": {Labels.WOTEMU_BROKER.value: ""},
     "environment": {ENV_KEY_PRIVILEGED: ENV_VAL_FLAG}
 }
 
 SERVICE_BASE_NODE = {
     "privileged": True,
     "hostname": HOSTNAME_TASK,
-    "labels": {Labels.WOTSIM_NODE.value: ""},
+    "labels": {Labels.WOTEMU_NODE.value: ""},
     "environment": {ENV_KEY_PRIVILEGED: ENV_VAL_FLAG}
 }
 
 NETWORK_BASE = {
     "driver": "overlay",
     "attachable": True,
-    "labels": {Labels.WOTSIM_NETWORK.value: ""}
+    "labels": {Labels.WOTEMU_NETWORK.value: ""}
 }
 
 

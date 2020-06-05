@@ -14,9 +14,9 @@ import aioredis
 import coloredlogs
 import tornado.httpclient
 
-import wotsim.config
-import wotsim.wotpy.redis
-import wotsim.wotpy.wot
+import wotemu.config
+import wotemu.wotpy.redis
+import wotemu.wotpy.wot
 
 _TIMEOUT = 15
 _HTTP_REGEX = r"^https?:\/\/.*"
@@ -100,7 +100,7 @@ def _build_thing_cb(redis_url, loop):
         aioredis.create_redis_pool(redis_url))
 
     redis_cb = functools.partial(
-        wotsim.wotpy.redis.redis_thing_callback,
+        wotemu.wotpy.redis.redis_thing_callback,
         client=redis_pool)
 
     return redis_cb, redis_pool
@@ -204,7 +204,7 @@ def run_app(
     }
 
     _logger.debug("Building WoT entrypoint with args: %s", wot_kwargs)
-    wot = wotsim.wotpy.wot.wot_entrypoint(**wot_kwargs)
+    wot = wotemu.wotpy.wot.wot_entrypoint(**wot_kwargs)
 
     asyncio.ensure_future(_start_servient(wot))
 

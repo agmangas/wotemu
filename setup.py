@@ -1,9 +1,9 @@
 import setuptools
 
-from wotsim.__version__ import __version__
+from wotemu.__version__ import __version__
 
 setuptools.setup(
-    name="wotsim",
+    name="wotemu",
     version=__version__,
     keywords='wot iot fog w3c simulator',
     author='Andres Garcia Mangas',
@@ -18,7 +18,7 @@ setuptools.setup(
     ],
     entry_points={
         "console_scripts": [
-            "wotsim=wotsim.cli.main:cli"
+            "wotemu=wotemu.cli.main:cli"
         ]
     },
     python_requires='>=3.6',

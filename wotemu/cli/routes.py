@@ -9,9 +9,9 @@ import docker
 import netaddr
 import netifaces
 
-import wotsim.config
-import wotsim.enums
-from wotsim.utils import (get_current_task, get_network_gateway_task,
+import wotemu.config
+import wotemu.enums
+from wotemu.utils import (get_current_task, get_network_gateway_task,
                           get_task_networks, ping_docker)
 
 _PATH_IPROUTE2_RT_TABLES = "/etc/iproute2/rt_tables"

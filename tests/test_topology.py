@@ -7,8 +7,8 @@ import uuid
 import pytest
 import sh
 
-from wotsim.config import ConfigVars
-from wotsim.topology.models import (Broker, Network, Node, NodeApp,
+from wotemu.config import ConfigVars
+from wotemu.topology.models import (Broker, Network, Node, NodeApp,
                                     NodeResources, Topology, TopologyPorts,
                                     TopologyRedis)
 

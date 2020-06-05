@@ -7,11 +7,11 @@ import sys
 
 import tornado.httpclient
 
-from wotsim.utils import wait_node
+from wotemu.utils import wait_node
 
 _CANCEL_SLEEP = 3
 
-_logger = logging.getLogger("wotsim.subscriber.app")
+_logger = logging.getLogger("wotemu.subscriber.app")
 
 
 async def _consume_from_catalogue(wot, port_catalogue, servient_host, thing_id):

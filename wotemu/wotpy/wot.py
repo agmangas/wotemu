@@ -8,7 +8,7 @@ from wotpy.protocols.http.server import HTTPServer
 from wotpy.protocols.mqtt.server import MQTTServer
 from wotpy.protocols.ws.server import WebsocketServer
 
-from wotsim.wotpy.things import ConsumedThing, ExposedThing
+from wotemu.wotpy.things import ConsumedThing, ExposedThing
 
 _logger = logging.getLogger(__name__)
 

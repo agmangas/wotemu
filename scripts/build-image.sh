@@ -2,4 +2,4 @@
 
 set -e
 
-docker build -t wotsim /vagrant
+docker build -t wotemu /vagrant

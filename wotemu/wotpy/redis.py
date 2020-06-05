@@ -4,13 +4,13 @@ import os
 
 import aioredis
 
-import wotsim.config
+import wotemu.config
 
 _logger = logging.getLogger(__name__)
 
 
 async def redis_from_env():
-    env_config = wotsim.config.get_env_config()
+    env_config = wotemu.config.get_env_config()
 
     if not env_config.redis_url:
         raise Exception("Undefined Redis URL")

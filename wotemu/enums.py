@@ -2,10 +2,10 @@ import enum
 
 
 class Labels(enum.Enum):
-    WOTSIM_NETWORK = "org.fundacionctic.wotsim.net"
-    WOTSIM_GATEWAY = "org.fundacionctic.wotsim.gw"
-    WOTSIM_NODE = "org.fundacionctic.wotsim.node"
-    WOTSIM_BROKER = "org.fundacionctic.wotsim.broker"
+    WOTEMU_NETWORK = "org.fundacionctic.wotemu.net"
+    WOTEMU_GATEWAY = "org.fundacionctic.wotemu.gw"
+    WOTEMU_NODE = "org.fundacionctic.wotemu.node"
+    WOTEMU_BROKER = "org.fundacionctic.wotemu.broker"
 
 
 class NetworkConditions(enum.Enum):

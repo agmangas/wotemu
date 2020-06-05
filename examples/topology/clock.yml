@@ -3,13 +3,13 @@ networks:
     attachable: true
     driver: overlay
     labels:
-      org.fundacionctic.wotsim.net: ''
+      org.fundacionctic.wotemu.net: ''
     name: mobile_3g
   wifi:
     attachable: true
     driver: overlay
     labels:
-      org.fundacionctic.wotsim.net: ''
+      org.fundacionctic.wotemu.net: ''
     name: wifi
 services:
   broker:
@@ -29,9 +29,9 @@ services:
       PORT_WS: '81'
       REDIS_URL: redis://redis
     hostname: '{{.Task.Name}}'
-    image: wotsim
+    image: wotemu
     labels:
-      org.fundacionctic.wotsim.broker: ''
+      org.fundacionctic.wotemu.broker: ''
     networks:
     - mobile_3g
     privileged: true
@@ -39,7 +39,7 @@ services:
     command:
     - app
     - --path
-    - /root/wotsim/examples/app/clock.py
+    - /root/wotemu/examples/app/clock.py
     - --enable-http
     - --enable-mqtt
     depends_on:
@@ -60,9 +60,9 @@ services:
       PORT_WS: '81'
       REDIS_URL: redis://redis
     hostname: '{{.Task.Name}}'
-    image: wotsim
+    image: wotemu
     labels:
-      org.fundacionctic.wotsim.node: ''
+      org.fundacionctic.wotemu.node: ''
     networks:
     - mobile_3g
     - wifi
@@ -71,7 +71,7 @@ services:
     command:
     - app
     - --path
-    - /root/wotsim/examples/app/subscriber.py
+    - /root/wotemu/examples/app/subscriber.py
     - --func-param
     - servient_host
     - clock.wifi
@@ -95,9 +95,9 @@ services:
       PORT_WS: '81'
       REDIS_URL: redis://redis
     hostname: '{{.Task.Name}}'
-    image: wotsim
+    image: wotemu
     labels:
-      org.fundacionctic.wotsim.node: ''
+      org.fundacionctic.wotemu.node: ''
     networks:
     - mobile_3g
     - wifi
@@ -139,9 +139,9 @@ services:
       PORT_WS: '81'
       REDIS_URL: redis://redis
     hostname: '{{.Task.Name}}'
-    image: wotsim
+    image: wotemu
     labels:
-      org.fundacionctic.wotsim.gw: ''
+      org.fundacionctic.wotemu.gw: ''
     networks:
     - mobile_3g
     privileged: true
@@ -164,9 +164,9 @@ services:
       PORT_WS: '81'
       REDIS_URL: redis://redis
     hostname: '{{.Task.Name}}'
-    image: wotsim
+    image: wotemu
     labels:
-      org.fundacionctic.wotsim.gw: ''
+      org.fundacionctic.wotemu.gw: ''
     networks:
     - wifi
     privileged: true
