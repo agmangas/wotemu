@@ -1,5 +1,3 @@
-import sys
-
 from wotsim.enums import NetworkConditions
 from wotsim.topology.models import Broker, Network, Node, NodeApp, Topology
 from wotsim.topology.utils import conditions_to_netem
@@ -51,17 +49,3 @@ def build_topology():
     topology = Topology(nodes=[node_clock, node_sub])
 
     return topology
-
-
-if __name__ == "__main__":
-    topology = build_topology()
-
-    if len(sys.argv) < 2:
-        print("First argument should be the output file path")
-        sys.exit(0)
-
-    compose_path = sys.argv[1]
-    print("Writing Compose file to: {}".format(compose_path))
-
-    with open(compose_path, "w") as fh:
-        fh.write(topology.to_compose_yaml())

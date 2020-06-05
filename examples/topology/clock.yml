@@ -43,10 +43,10 @@ services:
     - --enable-http
     - --enable-mqtt
     depends_on:
+    - redis
+    - gw_mobile_3g
     - gw_wifi
     - docker_api_proxy
-    - gw_mobile_3g
-    - redis
     deploy:
       replicas: 2
     environment:
@@ -79,10 +79,10 @@ services:
     - thing_id
     - urn:org:fundacionctic:thing:clock
     depends_on:
+    - redis
+    - gw_mobile_3g
     - gw_wifi
     - docker_api_proxy
-    - gw_mobile_3g
-    - redis
     deploy:
       replicas: 4
     environment:
