@@ -59,47 +59,22 @@ async def _ping_http_timeout(url, wait, timeout):
         await asyncio.sleep(wait)
 
 
-async def wait_node(conf, node_name, wait=2, timeout=300, passes=3):
-    docker_api_client = docker.APIClient(base_url=conf.docker_proxy_url)
+async def wait_node(conf, name, wait=2, timeout=300, find_replicas=True):
+    cont_hosts = [name]
 
-    _logger.debug("Waiting for node: %s", node_name)
-    service_parts = node_name.split(".")
+    if find_replicas:
+        _logger.debug((
+            "Attempting to translate service name '%s' "
+            "to the container hostnames of all the "
+            "replicas for that service"
+        ), name)
 
-    try:
-        network_candidate = service_parts[-1]
-        _logger.debug("Checking network existence: %s", network_candidate)
-        docker_api_client.inspect_network(network_candidate)
-        service_name = ".".join(service_parts[:-1])
-    except docker.errors.NotFound:
-        _logger.debug("Network does not exist: %s", network_candidate)
-        service_name = node_name
-
-    namespace = get_current_stack_namespace(conf.docker_proxy_url)
-
-    if not service_name.startswith(namespace):
-        _logger.debug("Adding namespace prefix to service: %s", namespace)
-        service_name = "{}_{}".format(namespace, service_name)
-
-    _logger.debug("Service name: %s", service_name)
-
-    try:
-        docker_api_client.inspect_service(service_name)
-    except docker.errors.NotFound as ex:
-        _logger.warning("Service (%s) not found: %s", service_name, ex)
-        return
-
-    service_tasks = docker_api_client.tasks(filters={
-        "service": service_name
-    })
-
-    _logger.debug("Found %s tasks for %s", len(service_tasks), service_name)
-
-    cont_hosts = [
-        task["Status"]["ContainerStatus"]["ContainerID"][:_CID_HOST_LEN]
-        for task in service_tasks
-    ]
-
-    _logger.debug("Service %s container hosts: %s", service_name, cont_hosts)
+        try:
+            cont_hosts = get_service_container_hostnames(
+                docker_url=conf.docker_proxy_url,
+                name=name)
+        except docker.errors.NotFound as ex:
+            _logger.warning("Error finding container hostnames: %s", ex)
 
     urls = [
         "http://{}:{}".format(host, conf.port_catalogue)
@@ -108,10 +83,50 @@ async def wait_node(conf, node_name, wait=2, timeout=300, passes=3):
 
     _logger.debug("Catalogue URLs: %s", urls)
 
-    await asyncio.gather(*[
+    ping_awaitables = [
         _ping_http_timeout(url=url, wait=wait, timeout=timeout)
         for url in urls
-    ])
+    ]
+
+    await asyncio.gather(*ping_awaitables)
+
+
+def get_service_container_hostnames(docker_url, name):
+    docker_api_client = docker.APIClient(base_url=docker_url)
+
+    _logger.debug("Finding container hostnames for: %s", name)
+    service_parts = name.split(".")
+
+    try:
+        network_candidate = service_parts[-1]
+        _logger.debug("Checking network existence: %s", network_candidate)
+        docker_api_client.inspect_network(network_candidate)
+        inspect_name = ".".join(service_parts[:-1])
+    except docker.errors.NotFound:
+        _logger.debug("Network does not exist: %s", network_candidate)
+        inspect_name = name
+
+    namespace = get_current_stack_namespace(docker_url)
+
+    if not inspect_name.startswith(namespace):
+        _logger.debug("Adding namespace prefix: %s", namespace)
+        inspect_name = "{}_{}".format(namespace, inspect_name)
+
+    _logger.debug("Service name: %s", inspect_name)
+
+    service_tasks = docker_api_client.tasks(
+        filters={"service": inspect_name})
+
+    _logger.debug("Found %s tasks for %s", len(service_tasks), inspect_name)
+
+    cont_hosts = [
+        task["Status"]["ContainerStatus"]["ContainerID"][:_CID_HOST_LEN]
+        for task in service_tasks
+    ]
+
+    _logger.debug("Service %s container hosts: %s", inspect_name, cont_hosts)
+
+    return cont_hosts
 
 
 def ping_docker(docker_url):
