@@ -5,16 +5,17 @@ from wotemu.__version__ import __version__
 setuptools.setup(
     name="wotemu",
     version=__version__,
-    keywords='wot iot fog w3c simulator',
+    keywords='wot iot fog emulator',
     author='Andres Garcia Mangas',
     author_email='andres.garcia@fundacionctic.org',
-    description="Real time fog layer simulator based on the W3C Web of Things",
+    description="A Fog-layer emulator based on Swarm Mode for Web of Things applications",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
-        "License :: OSI Approved :: MIT License"
+        "License :: OSI Approved :: MIT License",
+        "Development Status :: 3 - Alpha"
     ],
     entry_points={
         "console_scripts": [
