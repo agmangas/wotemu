@@ -29,7 +29,7 @@ services:
       PORT_WS: '81'
       REDIS_URL: redis://redis
     hostname: '{{.Task.Name}}'
-    image: wotemu
+    image: agmangas/wotemu
     labels:
       org.fundacionctic.wotemu.broker: ''
     networks:
@@ -43,10 +43,10 @@ services:
     - --enable-http
     - --enable-mqtt
     depends_on:
-    - redis
-    - gw_mobile_3g
     - gw_wifi
     - docker_api_proxy
+    - redis
+    - gw_mobile_3g
     deploy:
       replicas: 2
     environment:
@@ -60,7 +60,7 @@ services:
       PORT_WS: '81'
       REDIS_URL: redis://redis
     hostname: '{{.Task.Name}}'
-    image: wotemu
+    image: agmangas/wotemu
     labels:
       org.fundacionctic.wotemu.node: ''
     networks:
@@ -79,10 +79,10 @@ services:
     - thing_id
     - urn:org:fundacionctic:thing:clock
     depends_on:
-    - redis
-    - gw_mobile_3g
     - gw_wifi
     - docker_api_proxy
+    - redis
+    - gw_mobile_3g
     deploy:
       replicas: 4
     environment:
@@ -95,7 +95,7 @@ services:
       PORT_WS: '81'
       REDIS_URL: redis://redis
     hostname: '{{.Task.Name}}'
-    image: wotemu
+    image: agmangas/wotemu
     labels:
       org.fundacionctic.wotemu.node: ''
     networks:
@@ -139,7 +139,7 @@ services:
       PORT_WS: '81'
       REDIS_URL: redis://redis
     hostname: '{{.Task.Name}}'
-    image: wotemu
+    image: agmangas/wotemu
     labels:
       org.fundacionctic.wotemu.gw: ''
     networks:
@@ -164,7 +164,7 @@ services:
       PORT_WS: '81'
       REDIS_URL: redis://redis
     hostname: '{{.Task.Name}}'
-    image: wotemu
+    image: agmangas/wotemu
     labels:
       org.fundacionctic.wotemu.gw: ''
     networks:

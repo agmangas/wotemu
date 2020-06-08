@@ -4,7 +4,7 @@ from wotemu.config import DEFAULT_DOCKER_SOCKET, ConfigVars
 from wotemu.enums import Labels
 
 COMPOSE_VERSION = "3.7"
-BASE_IMAGE = "wotemu"
+BASE_IMAGE = "agmangas/wotemu"
 HOSTNAME_TASK = "{{.Task.Name}}"
 ENV_KEY_PRIVILEGED = "PATCH_PRIVILEGED"
 ENV_VAL_FLAG = "1"
