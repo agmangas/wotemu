@@ -8,6 +8,7 @@ import coloredlogs
 
 import wotemu.cli.app
 import wotemu.cli.chaos
+import wotemu.cli.compose
 import wotemu.cli.routes
 import wotemu.config
 
@@ -25,8 +26,8 @@ def _catch(func):
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except Exception as ex:
-            _logger.error(ex)
+        except Exception:
+            _logger.error("CLI error", exc_info=True)
             sys.exit(1)
 
     return wrapper
@@ -92,6 +93,18 @@ def chaos(conf, **kwargs):
 @click.pass_obj
 @_catch
 def app(conf, **kwargs):
-    """Runs an user-defined WoT application injected with a decorated WoTPy entrypoint."""
+    """Runs a user-defined WoT application injected with a decorated WoTPy entrypoint."""
 
     wotemu.cli.app.run_app(conf, **kwargs)
+
+
+@cli.command(**_COMMAND_KWARGS)
+@click.option("--path", required=True, type=str)
+@click.option("--output", type=str, default=None)
+@click.option("--func", type=str, default="topology")
+@click.pass_obj
+@_catch
+def compose(conf, **kwargs):
+    """Takes a topology definition and builds a Compose file for emulation."""
+
+    wotemu.cli.compose.build_compose(conf, **kwargs)

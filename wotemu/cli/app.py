@@ -1,6 +1,5 @@
 import asyncio
 import functools
-import importlib
 import inspect
 import logging
 import os
@@ -17,6 +16,7 @@ import tornado.httpclient
 import wotemu.config
 import wotemu.wotpy.redis
 import wotemu.wotpy.wot
+from wotemu.utils import import_func
 
 _TIMEOUT = 15
 _HTTP_REGEX = r"^https?:\/\/.*"
@@ -57,31 +57,9 @@ def _import_app_func(module_path, func_name):
         module_path = _fetch_app_file(module_path)
 
     try:
-        path_root, path_base = os.path.split(module_path)
-
-        if path_root not in sys.path:
-            sys.path.insert(0, path_root)
-
-        mod_name, _ext = os.path.splitext(path_base)
-        mod_import = importlib.import_module(mod_name)
-        mod_dir = dir(mod_import)
-
-        _logger.info("Imported: %s", mod_import)
-        _logger.debug("dir(%s): %s", mod_import, mod_dir)
-
-        if func_name not in mod_dir:
-            raise Exception(
-                "Module {} does not contain function '{}'".format(mod_import, func_name))
-
-        app_func = getattr(mod_import, func_name)
+        app_func = import_func(module_path=module_path, func_name=func_name)
         app_func_sig = inspect.signature(app_func)
-
         _logger.debug("Function (%s) signature: %s", app_func, app_func_sig)
-
-        if len(app_func_sig.parameters) < 2:
-            raise Exception(
-                "Function {} should take at least two parameters".format(app_func))
-
         return app_func
     finally:
         _remove_tempfile(module_path)

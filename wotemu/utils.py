@@ -1,7 +1,10 @@
 import asyncio
+import importlib
 import logging
+import os
 import pprint
 import re
+import sys
 import time
 
 import docker
@@ -267,3 +270,25 @@ def strip_ansi_codes(val):
     """Attribution to: https://stackoverflow.com/a/15780675"""
 
     return re.sub(r'\x1b\[([0-9,A-Z]{1,2}(;[0-9]{1,2})?(;[0-9]{3})?)?[m|K]?', "", val)
+
+
+def import_func(module_path, func_name):
+    _logger.debug("Attempting to import module: %s", module_path)
+
+    path_root, path_base = os.path.split(module_path)
+
+    if path_root not in sys.path:
+        sys.path.insert(0, path_root)
+
+    mod_name, _ext = os.path.splitext(path_base)
+    mod_import = importlib.import_module(mod_name)
+    mod_dir = dir(mod_import)
+
+    _logger.info("Imported: %s", mod_import)
+    _logger.debug("dir(%s): %s", mod_import, mod_dir)
+
+    if func_name not in mod_dir:
+        raise Exception("Module {} does not contain function '{}'".format(
+            mod_import, func_name))
+
+    return getattr(mod_import, func_name)

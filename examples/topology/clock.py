@@ -9,7 +9,7 @@ PARAM_THING_ID = "thing_id"
 THING_ID_CLOCK = "urn:org:fundacionctic:thing:clock"
 
 
-def build_topology():
+def topology():
     network_wifi = Network(
         name="wifi",
         netem=conditions_to_netem(NetworkConditions.WIFI))
