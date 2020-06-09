@@ -123,28 +123,43 @@ class Node(BaseNamedModel):
 
     ENTRY_APP = "app"
 
-    def __init__(
-            self, name, app, networks, broker=None, broker_network=None,
-            image=BASE_IMAGE, resources=None, scale=None, args_compose=None):
+    @staticmethod
+    def _assert_broker(app, broker):
         if app.enabled_mqtt and not broker:
             raise ValueError("A broker should be defined when MQTT is enabled")
 
+    @staticmethod
+    def _assert_broker_network(broker, broker_network):
         if broker and broker_network and broker_network not in broker.networks:
-            raise ValueError("Broker network {} is not linked to broker {}".format(
-                broker_network, broker))
+            raise ValueError((
+                "The node's broker ({}) is not "
+                "attached to the node's broker network ({})"
+            ).format(broker, broker_network))
 
+    @staticmethod
+    def _warn_broker_network_undefined(broker, broker_network):
         if broker and not broker_network and len(broker.networks) > 1:
             warnings.warn((
-                "Broker '{}' is linked to multiple "
-                "networks but broker network "
-                "has not been explicitly defined"
+                "The node's broker ({}) is attached to "
+                "multiple networks but the node's "
+                "broker network has not been explicitly defined"
             ).format(broker), Warning)
 
+    @staticmethod
+    def _warn_broker_unrequired(broker, app):
         if broker and not app.enabled_mqtt:
             warnings.warn((
                 "There is no need to set the node broker ({}) "
                 "if MQTT is disabled in the node app ({})"
             ).format(broker, app), Warning)
+
+    def __init__(
+            self, name, app, networks, broker=None, broker_network=None,
+            image=BASE_IMAGE, resources=None, scale=None, args_compose=None):
+        self._assert_broker(app, broker)
+        self._assert_broker_network(broker, broker_network)
+        self._warn_broker_network_undefined(broker, broker_network)
+        self._warn_broker_unrequired(broker, app)
 
         self.app = app
         self.networks = networks
