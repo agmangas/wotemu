@@ -7,7 +7,7 @@ import yaml
 
 from wotemu.config import (DEFAULT_CONFIG_VARS, DEFAULT_HOST_DOCKER_PROXY,
                            DEFAULT_HOST_REDIS, ConfigVars)
-from wotemu.enums import NetworkConditions, NodePlatforms
+from wotemu.enums import NETEM_CONDITIONS, NetworkConditions, NodePlatforms
 from wotemu.topology.compose import (BASE_IMAGE, get_broker_definition,
                                      get_docker_proxy_definition,
                                      get_network_definition,
@@ -223,7 +223,15 @@ class Network(BaseNamedModel):
     assert inflection.underscore(GATEWAY_PREFIX) == GATEWAY_PREFIX
     ENTRY_GATEWAY = "gateway"
 
-    def __init__(self, name, netem=None, args_compose_net=None, args_compose_gw=None):
+    def __init__(
+            self, name, netem=None, conditions=None,
+            args_compose_net=None, args_compose_gw=None):
+        if conditions and conditions not in NetworkConditions:
+            raise ValueError("Unexpected conditions value")
+
+        if conditions and not netem:
+            netem = NETEM_CONDITIONS[conditions]
+
         self._netem = netem
         self.args_compose_net = args_compose_net
         self.args_compose_gw = args_compose_gw

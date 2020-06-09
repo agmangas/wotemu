@@ -1,6 +1,5 @@
 from wotemu.enums import NetworkConditions
 from wotemu.topology.models import Broker, Network, Node, NodeApp, Topology
-from wotemu.topology.utils import conditions_to_netem
 
 APP_CLOCK = "/root/wotemu/examples/app/clock.py"
 APP_SUBSCRIBER = "/root/wotemu/examples/app/subscriber.py"
@@ -12,11 +11,11 @@ THING_ID_CLOCK = "urn:org:fundacionctic:thing:clock"
 def topology():
     network_wifi = Network(
         name="wifi",
-        netem=conditions_to_netem(NetworkConditions.WIFI))
+        conditions=NetworkConditions.WIFI)
 
     network_3g = Network(
         name="mobile_3g",
-        netem=conditions_to_netem(NetworkConditions.THREEG))
+        conditions=NetworkConditions.THREEG)
 
     broker = Broker(
         name="broker",

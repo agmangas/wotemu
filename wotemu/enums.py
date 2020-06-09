@@ -19,3 +19,19 @@ class NodePlatforms(enum.Enum):
     GATEWAY = "LOW_TIER"
     CLOUD = "CLOUD"
     UNCONSTRAINED = "UNCONSTRAINED"
+
+
+NETEM_CONDITIONS = {
+    NetworkConditions.THREEG: [
+        "delay --time 100 --jitter 50 --distribution normal",
+        "rate --rate 200kbit"
+    ],
+    NetworkConditions.WIFI: [
+        "delay --time 15 --jitter 10 --distribution normal"
+    ],
+    NetworkConditions.CABLE: [
+        "delay --time 5 --jitter 1 --distribution normal"
+    ]
+}
+
+assert set(NETEM_CONDITIONS.keys()) == set(NetworkConditions)
