@@ -21,6 +21,8 @@ services:
     - redis
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
+      NODE_HOSTNAME: '{{.Node.Hostname}}'
+      NODE_ID: '{{.Node.ID}}'
       PATCH_PRIVILEGED: '1'
       PORT_CATALOGUE: '9090'
       PORT_COAP: '5683'
@@ -43,10 +45,10 @@ services:
     - --enable-http
     - --enable-mqtt
     depends_on:
-    - docker_api_proxy
-    - gw_wifi
     - gw_mobile_3g
+    - docker_api_proxy
     - redis
+    - gw_wifi
     deploy:
       replicas: 2
     environment:
@@ -81,10 +83,10 @@ services:
     - thing_id
     - urn:org:fundacionctic:thing:clock
     depends_on:
-    - docker_api_proxy
-    - gw_wifi
     - gw_mobile_3g
+    - docker_api_proxy
     - redis
+    - gw_wifi
     deploy:
       replicas: 4
     environment:
@@ -135,6 +137,8 @@ services:
     - redis
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
+      NODE_HOSTNAME: '{{.Node.Hostname}}'
+      NODE_ID: '{{.Node.ID}}'
       PATCH_PRIVILEGED: '1'
       PORT_CATALOGUE: '9090'
       PORT_COAP: '5683'
@@ -160,6 +164,8 @@ services:
     - redis
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
+      NODE_HOSTNAME: '{{.Node.Hostname}}'
+      NODE_ID: '{{.Node.ID}}'
       PATCH_PRIVILEGED: '1'
       PORT_CATALOGUE: '9090'
       PORT_COAP: '5683'

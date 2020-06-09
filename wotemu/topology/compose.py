@@ -43,7 +43,11 @@ SERVICE_BASE_GATEWAY = {
     "hostname": TEMPLATE_TASK_NAME,
     "volumes": [VOL_DOCKER_SOCK],
     "labels": {Labels.WOTEMU_GATEWAY.value: ""},
-    "environment": {ENV_KEY_PRIVILEGED: ENV_VAL_FLAG}
+    "environment": {
+        ENV_KEY_PRIVILEGED: ENV_VAL_FLAG,
+        ENV_KEY_NODE_HOST: TEMPLATE_NODE_HOST,
+        ENV_KEY_NODE_ID: TEMPLATE_NODE_ID
+    }
 }
 
 SERVICE_BASE_BROKER = {
@@ -51,7 +55,11 @@ SERVICE_BASE_BROKER = {
     "privileged": True,
     "hostname": TEMPLATE_TASK_NAME,
     "labels": {Labels.WOTEMU_BROKER.value: ""},
-    "environment": {ENV_KEY_PRIVILEGED: ENV_VAL_FLAG}
+    "environment": {
+        ENV_KEY_PRIVILEGED: ENV_VAL_FLAG,
+        ENV_KEY_NODE_HOST: TEMPLATE_NODE_HOST,
+        ENV_KEY_NODE_ID: TEMPLATE_NODE_ID
+    }
 }
 
 SERVICE_BASE_NODE = {
