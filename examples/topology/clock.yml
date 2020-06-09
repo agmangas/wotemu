@@ -44,14 +44,16 @@ services:
     - --enable-mqtt
     depends_on:
     - docker_api_proxy
-    - redis
-    - gw_mobile_3g
     - gw_wifi
+    - gw_mobile_3g
+    - redis
     deploy:
       replicas: 2
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       MQTT_BROKER_HOST: broker.mobile_3g
+      NODE_HOSTNAME: '{{.Node.Hostname}}'
+      NODE_ID: '{{.Node.ID}}'
       PATCH_PRIVILEGED: '1'
       PORT_CATALOGUE: '9090'
       PORT_COAP: '5683'
@@ -80,13 +82,15 @@ services:
     - urn:org:fundacionctic:thing:clock
     depends_on:
     - docker_api_proxy
-    - redis
-    - gw_mobile_3g
     - gw_wifi
+    - gw_mobile_3g
+    - redis
     deploy:
       replicas: 4
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
+      NODE_HOSTNAME: '{{.Node.Hostname}}'
+      NODE_ID: '{{.Node.ID}}'
       PATCH_PRIVILEGED: '1'
       PORT_CATALOGUE: '9090'
       PORT_COAP: '5683'

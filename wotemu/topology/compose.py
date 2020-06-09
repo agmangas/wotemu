@@ -5,8 +5,12 @@ from wotemu.enums import Labels
 
 COMPOSE_VERSION = "3.7"
 BASE_IMAGE = "agmangas/wotemu"
-HOSTNAME_TASK = "{{.Task.Name}}"
+TEMPLATE_TASK_NAME = "{{.Task.Name}}"
+TEMPLATE_NODE_HOST = "{{.Node.Hostname}}"
+TEMPLATE_NODE_ID = "{{.Node.ID}}"
 ENV_KEY_PRIVILEGED = "PATCH_PRIVILEGED"
+ENV_KEY_NODE_HOST = "NODE_HOSTNAME"
+ENV_KEY_NODE_ID = "NODE_ID"
 ENV_VAL_FLAG = "1"
 VOL_DOCKER_SOCK = "{}:{}".format(DEFAULT_DOCKER_SOCKET, DEFAULT_DOCKER_SOCKET)
 
@@ -36,7 +40,7 @@ SERVICE_BASE_REDIS = {
 SERVICE_BASE_GATEWAY = {
     "image": BASE_IMAGE,
     "privileged": True,
-    "hostname": HOSTNAME_TASK,
+    "hostname": TEMPLATE_TASK_NAME,
     "volumes": [VOL_DOCKER_SOCK],
     "labels": {Labels.WOTEMU_GATEWAY.value: ""},
     "environment": {ENV_KEY_PRIVILEGED: ENV_VAL_FLAG}
@@ -45,16 +49,20 @@ SERVICE_BASE_GATEWAY = {
 SERVICE_BASE_BROKER = {
     "image": BASE_IMAGE,
     "privileged": True,
-    "hostname": HOSTNAME_TASK,
+    "hostname": TEMPLATE_TASK_NAME,
     "labels": {Labels.WOTEMU_BROKER.value: ""},
     "environment": {ENV_KEY_PRIVILEGED: ENV_VAL_FLAG}
 }
 
 SERVICE_BASE_NODE = {
     "privileged": True,
-    "hostname": HOSTNAME_TASK,
+    "hostname": TEMPLATE_TASK_NAME,
     "labels": {Labels.WOTEMU_NODE.value: ""},
-    "environment": {ENV_KEY_PRIVILEGED: ENV_VAL_FLAG}
+    "environment": {
+        ENV_KEY_PRIVILEGED: ENV_VAL_FLAG,
+        ENV_KEY_NODE_HOST: TEMPLATE_NODE_HOST,
+        ENV_KEY_NODE_ID: TEMPLATE_NODE_ID
+    }
 }
 
 NETWORK_BASE = {
