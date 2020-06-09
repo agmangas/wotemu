@@ -87,7 +87,7 @@ def get_cpu_core_speed_poly(cache=True):
     return poly
 
 
-def get_docker_cpus(target_core_speed, core_poly=None):
+def get_cpu_core_scale(target_core_speed, core_poly=None):
     core_poly = core_poly if core_poly else get_cpu_core_speed_poly()
     max_core_speed = core_poly(1.0)
 
@@ -112,7 +112,7 @@ def get_docker_cpus(target_core_speed, core_poly=None):
     cpus = max(cpus, 1e-2)
 
     _logger.debug(
-        "Target core speed: %s ~ Docker cpus: %s",
+        "Target CPU core speed: %s ~ CPU core scale factor: %s",
         target_core_speed, cpus)
 
     return cpus
