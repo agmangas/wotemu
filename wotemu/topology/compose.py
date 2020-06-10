@@ -54,6 +54,7 @@ SERVICE_BASE_BROKER = {
     "image": BASE_IMAGE,
     "privileged": True,
     "hostname": TEMPLATE_TASK_NAME,
+    "volumes": [VOL_DOCKER_SOCK],
     "labels": {Labels.WOTEMU_BROKER.value: ""},
     "environment": {
         ENV_KEY_PRIVILEGED: ENV_VAL_FLAG,
@@ -65,6 +66,7 @@ SERVICE_BASE_BROKER = {
 SERVICE_BASE_NODE = {
     "privileged": True,
     "hostname": TEMPLATE_TASK_NAME,
+    "volumes": [VOL_DOCKER_SOCK],
     "labels": {Labels.WOTEMU_NODE.value: ""},
     "environment": {
         ENV_KEY_PRIVILEGED: ENV_VAL_FLAG,
