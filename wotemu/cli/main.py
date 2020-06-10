@@ -9,6 +9,7 @@ import coloredlogs
 import wotemu.cli.app
 import wotemu.cli.chaos
 import wotemu.cli.compose
+import wotemu.cli.limits
 import wotemu.cli.routes
 import wotemu.config
 
@@ -108,3 +109,14 @@ def compose(conf, **kwargs):
     """Takes a topology definition and builds a Compose file for emulation."""
 
     wotemu.cli.compose.build_compose(conf, **kwargs)
+
+
+@cli.command(**_COMMAND_KWARGS)
+@click.option("--docker-url", default="unix://{}".format(wotemu.config.DEFAULT_DOCKER_SOCKET))
+@click.option("--speed", type=int, required=True)
+@click.pass_obj
+@_catch
+def limits(conf, **kwargs):
+    """Updates the CPU performance limits from inside a WoTemu container."""
+
+    wotemu.cli.limits.update_limits(conf, **kwargs)
