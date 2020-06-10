@@ -31,12 +31,14 @@ services:
       PORT_WS: '81'
       REDIS_URL: redis://redis
     hostname: '{{.Task.Name}}'
-    image: agmangas/wotemu
+    image: wotemu
     labels:
       org.fundacionctic.wotemu.broker: ''
     networks:
     - mobile_3g
     privileged: true
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
   clock:
     command:
     - app
@@ -45,10 +47,10 @@ services:
     - --enable-http
     - --enable-mqtt
     depends_on:
-    - gw_mobile_3g
     - docker_api_proxy
     - redis
     - gw_wifi
+    - gw_mobile_3g
     deploy:
       replicas: 2
     environment:
@@ -64,13 +66,15 @@ services:
       PORT_WS: '81'
       REDIS_URL: redis://redis
     hostname: '{{.Task.Name}}'
-    image: agmangas/wotemu
+    image: wotemu
     labels:
       org.fundacionctic.wotemu.node: ''
     networks:
     - mobile_3g
     - wifi
     privileged: true
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
   clock_sub:
     command:
     - app
@@ -83,10 +87,10 @@ services:
     - thing_id
     - urn:org:fundacionctic:thing:clock
     depends_on:
-    - gw_mobile_3g
     - docker_api_proxy
     - redis
     - gw_wifi
+    - gw_mobile_3g
     deploy:
       replicas: 4
     environment:
@@ -101,13 +105,15 @@ services:
       PORT_WS: '81'
       REDIS_URL: redis://redis
     hostname: '{{.Task.Name}}'
-    image: agmangas/wotemu
+    image: wotemu
     labels:
       org.fundacionctic.wotemu.node: ''
     networks:
     - mobile_3g
     - wifi
     privileged: true
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
   docker_api_proxy:
     deploy:
       placement:
@@ -147,7 +153,7 @@ services:
       PORT_WS: '81'
       REDIS_URL: redis://redis
     hostname: '{{.Task.Name}}'
-    image: agmangas/wotemu
+    image: wotemu
     labels:
       org.fundacionctic.wotemu.gw: ''
     networks:
@@ -174,7 +180,7 @@ services:
       PORT_WS: '81'
       REDIS_URL: redis://redis
     hostname: '{{.Task.Name}}'
-    image: agmangas/wotemu
+    image: wotemu
     labels:
       org.fundacionctic.wotemu.gw: ''
     networks:
