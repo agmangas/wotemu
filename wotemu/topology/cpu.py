@@ -11,14 +11,8 @@ _SYSBENCH_THREADS = 1
 _SYSBENCH_TIME = 10
 _CPU_PERIOD = 100000
 _REGEX_SPEED = r"events\sper\ssecond:\s*(\d+\.\d+)"
-_CPU_SAMPLES_NUM = 6
-_CPU_SAMPLES_START = 0.1
-_CPU_SAMPLES_STOP = 1.0
-_CACHE_POLY = "poly"
 
-assert _CPU_SAMPLES_START > 0
-
-_cache = {_CACHE_POLY: None}
+_cache = dict()
 _logger = logging.getLogger(__name__)
 
 
@@ -56,17 +50,19 @@ def get_cpu_core_speed(cpus):
     return cpu_speed
 
 
-def get_cpu_core_speed_poly(cache=True):
-    if cache and _cache.get(_CACHE_POLY):
+def get_cpu_core_speed_poly(num=6, start=0.1, stop=1.0, cache=True):
+    cache_key = (num, start, stop)
+
+    if start <= 0:
+        raise ValueError("Parameter 'start' should be > 0")
+
+    if cache and _cache.get(cache_key):
         _logger.debug("Using cached CPU core speed poly")
-        return _cache.get(_CACHE_POLY)
+        return _cache.get(cache_key)
 
     _logger.info("Building CPU core speed poly")
 
-    cpu_samples = numpy.linspace(
-        start=_CPU_SAMPLES_START,
-        stop=_CPU_SAMPLES_STOP,
-        num=_CPU_SAMPLES_NUM)
+    cpu_samples = numpy.linspace(start=start, stop=stop, num=num)
 
     speeds = [(0.0, 0.0)] + [
         (cpus, get_cpu_core_speed(cpus))
@@ -82,7 +78,7 @@ def get_cpu_core_speed_poly(cache=True):
 
     _logger.debug("CPU speed poly: %s", poly)
 
-    _cache[_CACHE_POLY] = poly
+    _cache[cache_key] = poly
 
     return poly
 
