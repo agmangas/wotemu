@@ -4,13 +4,14 @@ from wotemu.config import DEFAULT_DOCKER_SOCKET, ConfigVars
 from wotemu.enums import Labels
 
 COMPOSE_VERSION = "3.7"
-BASE_IMAGE = "agmangas/wotemu"
+BASE_IMAGE = "wotemu"
 TEMPLATE_TASK_NAME = "{{.Task.Name}}"
 TEMPLATE_NODE_HOST = "{{.Node.Hostname}}"
 TEMPLATE_NODE_ID = "{{.Node.ID}}"
 ENV_KEY_PRIVILEGED = "PATCH_PRIVILEGED"
 ENV_KEY_NODE_HOST = "NODE_HOSTNAME"
 ENV_KEY_NODE_ID = "NODE_ID"
+ENV_KEY_CPU_SPEED = "CPU_SPEED"
 ENV_VAL_FLAG = "1"
 VOL_DOCKER_SOCK = "{}:{}".format(DEFAULT_DOCKER_SOCKET, DEFAULT_DOCKER_SOCKET)
 
