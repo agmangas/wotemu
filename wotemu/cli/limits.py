@@ -14,7 +14,7 @@ from wotemu.utils import get_current_container_id, ping_docker
 
 _CPU_PERIOD = 100000
 _KEY_CPU_PREFIX = "cpu"
-_EXPIRE_SECS = 900
+_EXPIRE_SECS = 3600
 
 _logger = logging.getLogger(__name__)
 
@@ -109,6 +109,8 @@ def update_limits(conf, docker_url, speed):
 
     speed_scale = get_cpu_core_scale(speed, core_poly=cpu_poly)
     curr_container = docker_client.containers.get(cid)
-    cpu_quota = _CPU_PERIOD * speed_scale
-    result = curr_container.update(cpu_period=_CPU_PERIOD, cpu_quota=cpu_quota)
-    _logger.info("Container update limits result: %s", result)
+    cpu_quota = int(_CPU_PERIOD * speed_scale)
+    update_kwargs = {"cpu_period": _CPU_PERIOD, "cpu_quota": cpu_quota}
+    _logger.info("Updating container: %s", update_kwargs)
+    result = curr_container.update(**update_kwargs)
+    _logger.info("Container update result: %s", result)
