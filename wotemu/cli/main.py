@@ -19,6 +19,8 @@ _COMMAND_KWARGS = {
     }
 }
 
+_DEFAULT_DOCKER_SOCK = "unix://{}".format(wotemu.config.DEFAULT_DOCKER_SOCKET)
+
 _logger = logging.getLogger(__name__)
 
 
@@ -69,7 +71,7 @@ def route(conf, **kwargs):
 
 
 @cli.command(**_COMMAND_KWARGS)
-@click.option("--docker-url", default="unix://{}".format(wotemu.config.DEFAULT_DOCKER_SOCKET))
+@click.option("--docker-url", default=_DEFAULT_DOCKER_SOCK)
 @click.option("--netem", type=str, multiple=True)
 @click.option("--duration", type=str, default="72h")
 @click.pass_obj
@@ -112,8 +114,11 @@ def compose(conf, **kwargs):
 
 
 @cli.command(**_COMMAND_KWARGS)
-@click.option("--docker-url", default="unix://{}".format(wotemu.config.DEFAULT_DOCKER_SOCKET))
+@click.option("--docker-url", default=_DEFAULT_DOCKER_SOCK)
 @click.option("--speed", type=int, required=True)
+@click.option("--timeout", type=int, default=300)
+@click.option("--wait", type=int, default=2)
+@click.option("--local", is_flag=True)
 @click.pass_obj
 @_catch
 def limits(conf, **kwargs):

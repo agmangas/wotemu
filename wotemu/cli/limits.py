@@ -94,23 +94,47 @@ async def _get_cpu_poly(redis_url, timeout=300, wait=2):
         _raise_timeout()
 
 
-def update_limits(conf, docker_url, speed):
+def update_limits(conf, docker_url, speed, timeout, wait, local):
     ping_docker(docker_url=docker_url)
-    cid = get_current_container_id()
-    docker_client = docker.DockerClient(base_url=docker_url)
 
-    try:
-        _logger.debug("Getting CPU speed poly")
-        loop = asyncio.get_event_loop()
-        cpu_poly = loop.run_until_complete(_get_cpu_poly(conf.redis_url))
-    except Exception as ex:
-        _logger.warning("Error getting CPU poly from Redis: %s", repr(ex))
+    cpu_poly = None
+
+    if not local:
+        _logger.debug((
+            "Attempting to build the CPU speed poly "
+            "in a distributed fashion using Redis as a "
+            "central cache to avoid overloading the host "
+            "with multiple parallel CPU speed benchmarks"
+        ))
+
+        try:
+            loop = asyncio.get_event_loop()
+            cpu_poly_fut = _get_cpu_poly(conf.redis_url, timeout, wait)
+            cpu_poly = loop.run_until_complete(cpu_poly_fut)
+        except Exception as ex:
+            _logger.warning("Error getting CPU poly from Redis: %s", repr(ex))
+
+    if not cpu_poly:
+        _logger.info("Forced to build local CPU speed poly")
         cpu_poly = _local_cpu_poly()
 
+    _logger.debug("Calculating the CPU scale to match target speed: %s", speed)
     speed_scale = get_cpu_core_scale(speed, core_poly=cpu_poly)
+
+    _logger.debug("Getting current container to update CPU limits")
+    cid = get_current_container_id()
+    docker_client = docker.DockerClient(base_url=docker_url)
     curr_container = docker_client.containers.get(cid)
-    cpu_quota = int(_CPU_PERIOD * speed_scale)
-    update_kwargs = {"cpu_period": _CPU_PERIOD, "cpu_quota": cpu_quota}
-    _logger.info("Updating container: %s", update_kwargs)
+
+    update_kwargs = {
+        "cpu_period": _CPU_PERIOD,
+        "cpu_quota": int(_CPU_PERIOD * speed_scale)
+    }
+
+    _logger.info("Container update parameters: %s", update_kwargs)
     result = curr_container.update(**update_kwargs)
-    _logger.info("Container update result: %s", result)
+
+    _logger.log(
+        logging.WARNING if result.get("Warnings", None) else logging.DEBUG,
+        "Container update result: %s",
+        result)
