@@ -27,17 +27,33 @@ _logger = logging.getLogger(__name__)
 class NodeResources:
     """Represents the hardware constraints and resources of a node."""
 
-    def __init__(self, cpu_limit, mem_limit, cpu_reservation=None, mem_reservation=None):
-        if cpu_reservation is not None:
-            cpu_reservation = str(cpu_reservation)
+    def __init__(
+            self, cpu_limit=None, mem_limit=None,
+            cpu_reservation=None, mem_reservation=None, target_cpu_speed=None):
+        if cpu_limit and target_cpu_speed:
+            raise ValueError("Use either CPU limit or target CPU speed")
 
-        if mem_reservation is not None:
-            mem_reservation = str(mem_reservation)
+        self._cpu_limit = cpu_limit
+        self._mem_limit = mem_limit
+        self._cpu_reservation = cpu_reservation
+        self._mem_reservation = mem_reservation
+        self.target_cpu_speed = target_cpu_speed
 
-        self.cpu_limit = str(cpu_limit)
-        self.mem_limit = str(mem_limit)
-        self.cpu_reservation = cpu_reservation
-        self.mem_reservation = mem_reservation
+    @property
+    def cpu_limit(self):
+        return str(self._cpu_limit) if self._cpu_limit else None
+
+    @property
+    def mem_limit(self):
+        return str(self._mem_limit) if self._mem_limit else None
+
+    @property
+    def cpu_reservation(self):
+        return str(self._cpu_reservation) if self._cpu_reservation else None
+
+    @property
+    def mem_reservation(self):
+        return str(self._mem_reservation) if self._mem_reservation else None
 
 
 class NodeApp:

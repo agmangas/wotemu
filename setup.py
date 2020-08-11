@@ -35,7 +35,8 @@ setuptools.setup(
         "tornado>=5.1,<6.0",
         "PyYAML>=5.3,<6.0",
         "inflection>=0.4.0,<0.5.0",
-        "numpy>=1.15.0,<2.0"
+        "numpy>=1.15.0,<2.0",
+        "deepmerge>=0.1.0,<0.2.0"
     ],
     extras_require={
         "dev": [

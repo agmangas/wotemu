@@ -1,5 +1,5 @@
 from wotemu.enums import NetworkConditions
-from wotemu.topology.models import Broker, Network, Node, NodeApp, Topology
+from wotemu.topology.models import Broker, Network, Node, NodeApp, Topology, NodeResources
 
 APP_CLOCK = "/root/wotemu/examples/app/clock.py"
 APP_SUBSCRIBER = "/root/wotemu/examples/app/subscriber.py"
@@ -39,10 +39,13 @@ def topology():
             PARAM_THING_ID: THING_ID_CLOCK
         })
 
+    sub_resources = NodeResources(target_cpu_speed=200, mem_limit="200M")
+
     node_sub = Node(
         name="clock_sub",
         app=app_sub,
         networks=[network_wifi, network_3g],
+        resources=sub_resources,
         scale=4)
 
     topology = Topology(nodes=[node_clock, node_sub])

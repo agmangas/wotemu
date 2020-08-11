@@ -16,7 +16,7 @@ class NetworkConditions(enum.Enum):
 
 class NodePlatforms(enum.Enum):
     CONSTRAINED = "CONSTRAINED"
-    GATEWAY = "LOW_TIER"
+    GATEWAY = "GATEWAY"
     CLOUD = "CLOUD"
     UNCONSTRAINED = "UNCONSTRAINED"
 

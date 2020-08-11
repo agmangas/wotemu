@@ -1,5 +1,7 @@
 import copy
 
+from deepmerge import always_merger
+
 from wotemu.config import DEFAULT_DOCKER_SOCKET, ConfigVars
 from wotemu.enums import Labels
 
@@ -8,6 +10,7 @@ BASE_IMAGE = "wotemu"
 TEMPLATE_TASK_NAME = "{{.Task.Name}}"
 TEMPLATE_NODE_HOST = "{{.Node.Hostname}}"
 TEMPLATE_NODE_ID = "{{.Node.ID}}"
+ENV_KEY_CPU_SPEED = "TARGET_CPU_SPEED"
 ENV_KEY_PRIVILEGED = "PATCH_PRIVILEGED"
 ENV_KEY_NODE_HOST = "NODE_HOSTNAME"
 ENV_KEY_NODE_ID = "NODE_ID"
@@ -133,7 +136,7 @@ def get_network_gateway_definition(topology, network):
     })
 
     if network.args_compose_gw:
-        service.update(network.args_compose_gw)
+        always_merger.merge(service, network.args_compose_gw)
 
     _merge_topology_config(service, topology)
 
@@ -166,7 +169,7 @@ def get_broker_definition(topology, broker):
     })
 
     if broker.args_compose:
-        service.update(broker.args_compose)
+        always_merger.merge(service, broker.args_compose)
 
     _merge_topology_config(service, topology)
 
@@ -174,25 +177,31 @@ def get_broker_definition(topology, broker):
 
 
 def get_node_resources_definition(node_resources):
-    limits = {
-        "cpus": node_resources.cpu_limit,
-        "memory": node_resources.mem_limit
-    }
+    limits = {}
 
-    reservations = {}
+    if node_resources.cpu_limit:
+        limits.update({"cpus": node_resources.cpu_limit})
+
+    if node_resources.mem_limit:
+        limits.update({"memory": node_resources.mem_limit})
+
+    reserv = {}
 
     if node_resources.cpu_reservation:
-        reservations.update({"cpus": node_resources.cpu_reservation})
+        reserv.update({"cpus": node_resources.cpu_reservation})
 
     if node_resources.mem_reservation:
-        reservations.update({"memory": node_resources.mem_reservation})
+        reserv.update({"memory": node_resources.mem_reservation})
 
-    ret = {"limits": limits}
+    ret = {}
 
-    if len(reservations) > 0:
-        ret.update({"reservations": reservations})
+    if len(limits) > 0:
+        ret.update({"limits": limits})
 
-    return ret
+    if len(reserv) > 0:
+        ret.update({"reservations": reserv})
+
+    return ret if len(ret) > 0 else None
 
 
 def get_node_definition(topology, node):
@@ -230,7 +239,13 @@ def get_node_definition(topology, node):
 
     if node.resources:
         resources_dict = get_node_resources_definition(node.resources)
-        deploy.update({"resources": resources_dict})
+
+        if resources_dict:
+            deploy.update({"resources": resources_dict})
+
+        if node.resources.target_cpu_speed:
+            env_speed = {ENV_KEY_CPU_SPEED: node.resources.target_cpu_speed}
+            always_merger.merge(service, {"environment": env_speed})
 
     if node.scale:
         deploy.update({"replicas": node.scale})
@@ -239,7 +254,7 @@ def get_node_definition(topology, node):
         service.update({"deploy": deploy})
 
     if node.args_compose:
-        service.update(node.args_compose)
+        always_merger.merge(service, node.args_compose)
 
     _merge_topology_config(service, topology)
 
