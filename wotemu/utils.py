@@ -192,14 +192,6 @@ def get_current_stack_namespace(docker_url):
     return curr_task.get("Spec", {}).get("ContainerSpec", {}).get("Labels", {}).get(_STACK_NAMESPACE, None)
 
 
-def get_current_service(docker_url):
-    curr_task = get_current_task(docker_url=docker_url)
-    curr_service_id = curr_task["ServiceID"]
-    docker_api_client = docker.APIClient(base_url=conf.docker_proxy_url)
-
-    return docker_api_client.inspect_service(curr_service_id)
-
-
 def get_task_networks(docker_url, task):
     docker_api_client = docker.APIClient(base_url=docker_url)
 
