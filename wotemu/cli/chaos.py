@@ -19,6 +19,9 @@ _logger = logging.getLogger(__name__)
 
 
 def _find_chaos_interface():
+    # Chaos commands are meant to be run in a "gateway" container.
+    # These are attached to a single network, and thus there is only one interface.
+
     gws = netifaces.gateways()
     gw_default = gws.get("default", None)
     gw_iface = gw_default[netifaces.AF_INET][1] if gw_default else None
