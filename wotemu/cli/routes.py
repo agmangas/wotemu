@@ -12,39 +12,13 @@ import netifaces
 import wotemu.config
 import wotemu.enums
 from wotemu.utils import (get_current_task, get_network_gateway_task,
-                          get_task_networks, ping_docker)
+                          get_output_iface_for_remote_task, get_task_networks,
+                          ping_docker)
 
 _PATH_IPROUTE2_RT_TABLES = "/etc/iproute2/rt_tables"
 
 _logger = logging.getLogger(__name__)
 _rtindex = None
-
-
-def _get_gw_task_output_iface(task):
-    task_name = task["Name"]
-    task_addr = netaddr.IPAddress(task["EndpointIP"])
-
-    iface_addrs = {
-        name: netifaces.ifaddresses(name).get(netifaces.AF_INET)
-        for name in netifaces.interfaces()
-        if netifaces.ifaddresses(name).get(netifaces.AF_INET)
-    }
-
-    _logger.debug(
-        "Current container interfaces:\n%s",
-        pprint.pformat(iface_addrs))
-
-    ret = next(
-        (iface_name, addr)
-        for iface_name, iface_addrs in iface_addrs.items()
-        for addr in iface_addrs
-        if task_addr in netaddr.IPNetwork("{}/{}".format(addr["addr"], addr["netmask"])))
-
-    _logger.debug(
-        "Output interface for %s:\n%s",
-        task_name, pprint.pformat(ret))
-
-    return ret
 
 
 def _next_rtable_index():
@@ -82,7 +56,7 @@ def _build_routing_commands(gw_task, ports_tcp, ports_udp, rtable_name, rtable_m
         name=rtable_name,
         path=_PATH_IPROUTE2_RT_TABLES))
 
-    ifname, ifaddr = _get_gw_task_output_iface(gw_task)
+    ifname, ifaddr = get_output_iface_for_remote_task(gw_task)
 
     ifcidr = netaddr.IPNetwork("{}/{}".format(
         ifaddr["addr"], ifaddr["netmask"])).cidr
@@ -159,7 +133,8 @@ def update_routing(conf, rtable_name, rtable_mark, apply):
 
     gw_tasks = {
         net_id: get_network_gateway_task(
-            docker_url=docker_url, network_id=net_id)
+            docker_url=docker_url,
+            network_id=net_id)
         for net_id in network_ids
     }
 

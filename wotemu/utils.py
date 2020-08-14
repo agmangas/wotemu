@@ -8,6 +8,8 @@ import sys
 import time
 
 import docker
+import netaddr
+import netifaces
 import tornado.httpclient
 
 from wotemu.enums import Labels
@@ -256,6 +258,33 @@ def get_network_gateway_task(docker_url, network_id):
         task_infos[task_name]
         for task_name, labels in task_labels.items()
         if labels.get(Labels.WOTEMU_GATEWAY.value, None) is not None)
+
+
+def get_output_iface_for_remote_task(remote_task):
+    rtask_name = remote_task["Name"]
+    rtask_addr = netaddr.IPAddress(remote_task["EndpointIP"])
+
+    iface_addrs = {
+        name: netifaces.ifaddresses(name).get(netifaces.AF_INET)
+        for name in netifaces.interfaces()
+        if netifaces.ifaddresses(name).get(netifaces.AF_INET)
+    }
+
+    _logger.debug(
+        "Current container interfaces:\n%s",
+        pprint.pformat(iface_addrs))
+
+    ret = next(
+        (iface_name, addr)
+        for iface_name, iface_addrs in iface_addrs.items()
+        for addr in iface_addrs
+        if rtask_addr in netaddr.IPNetwork("{}/{}".format(addr["addr"], addr["netmask"])))
+
+    _logger.debug(
+        "Output interface for %s:\n%s",
+        rtask_name, pprint.pformat(ret))
+
+    return ret
 
 
 def strip_ansi_codes(val):
