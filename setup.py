@@ -36,7 +36,8 @@ setuptools.setup(
         "PyYAML>=5.3,<6.0",
         "inflection>=0.4.0,<0.5.0",
         "numpy>=1.15.0,<2.0",
-        "deepmerge>=0.1.0,<0.2.0"
+        "deepmerge>=0.1.0,<0.2.0",
+        "pyshark>=0.4.2,<0.5.0"
     ],
     extras_require={
         "dev": [
@@ -46,6 +47,9 @@ setuptools.setup(
             "pytest>=5.0,<6.0",
             "pytest-asyncio>=0.10.0,<1.0",
             "docker>=4.0,<5.0"
+        ],
+        "nest": [
+            "nest-asyncio>=1.4.0,<2.0"
         ]
     }
 )
