@@ -139,10 +139,13 @@ async def _terminate_proc(proc, stop_event, stop_sleep=2, stop_timeout=10, join_
             _logger.warning("Error killing", exc_info=True)
 
 
-async def monitor_packets(conf, interface, async_cb, queue_maxsize=30, get_sleep=2.0):
+async def monitor_packets(
+        conf, interface, async_cb, queue_maxsize=30,
+        get_sleep=2.0, terminate_kwargs=None):
     display_filter = _build_display_filter(conf=conf)
     output_queue = Queue(queue_maxsize)
     stop_event = Event()
+    terminate_kwargs = terminate_kwargs if terminate_kwargs else {}
 
     proc_target = functools.partial(
         _start_capture,
@@ -166,7 +169,8 @@ async def monitor_packets(conf, interface, async_cb, queue_maxsize=30, get_sleep
     terminate_process = functools.partial(
         _terminate_proc,
         proc=proc,
-        stop_event=stop_event)
+        stop_event=stop_event,
+        **terminate_kwargs)
 
     try:
         while True:
