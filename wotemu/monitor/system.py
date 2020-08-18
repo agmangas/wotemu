@@ -50,9 +50,27 @@ def _get_memory_usage():
     }
 
 
-async def monitor_system(async_cb, sleep=5.0, group=2):
+def _append_datum(data, read_funcs):
+    datum = {"time": time.time()}
+
+    for func in read_funcs:
+        datum.update(func())
+
+    data.append(datum)
+
+
+async def _invoke_callback(data, group_size, async_cb):
+    if not group_size or len(data) >= group_size:
+        await async_cb(data)
+        data.clear()
+
+
+async def monitor_system(async_cb, sleep=5.0, group_size=2):
     cpu_constraint = _get_cpu_constraint()
     cpu_count = psutil.cpu_count()
+
+    _logger.debug("CPU constraint ratio: %s", cpu_constraint)
+    _logger.debug("CPU count: %s", cpu_count)
 
     get_cpu = functools.partial(
         _get_cpu_usage,
@@ -61,6 +79,17 @@ async def monitor_system(async_cb, sleep=5.0, group=2):
 
     data = []
 
+    read_system = functools.partial(
+        _append_datum,
+        data=data,
+        read_funcs=(get_cpu, _get_memory_usage))
+
+    invoke_cb = functools.partial(
+        _invoke_callback,
+        data=data,
+        group_size=group_size,
+        async_cb=async_cb)
+
     try:
         # First CPU usage call to set reference:
         # https://psutil.readthedocs.io/en/latest/#psutil.cpu_percent
@@ -68,15 +97,8 @@ async def monitor_system(async_cb, sleep=5.0, group=2):
         await asyncio.sleep(sleep)
 
         while True:
-            usage = {"time": time.time()}
-            usage.update(get_cpu())
-            usage.update(_get_memory_usage())
-            data.append(usage)
-
-            if not group or len(data) >= group:
-                asyncio.ensure_future(async_cb(data.copy()))
-                data.clear()
-
+            read_system()
+            await invoke_cb()
             await asyncio.sleep(sleep)
     except asyncio.CancelledError:
         _logger.debug("Cancelled system usage task")
