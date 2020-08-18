@@ -8,8 +8,6 @@ from multiprocessing import Event, Process, Queue
 import pyshark
 from pyshark.capture.capture import StopCapture
 
-import wotemu.config
-
 _logger = logging.getLogger(__name__)
 
 
@@ -29,26 +27,26 @@ def _build_display_filter(conf):
 
 def _packet_to_dict(packet):
     ret = {
-        "len": packet.length,
+        "len": int(packet.length),
         "src": packet.ip.src,
         "dst": packet.ip.dst,
         "proto": packet.layers[-1].layer_name,
         "transport": packet.layers[2].layer_name,
-        "time": packet.sniff_timestamp
+        "time": float(packet.sniff_timestamp)
     }
 
     try:
         ret.update({
-            "srcport": packet.tcp.srcport,
-            "dstport": packet.tcp.dstport
+            "srcport": int(packet.tcp.srcport),
+            "dstport": int(packet.tcp.dstport)
         })
     except AttributeError:
         pass
 
     try:
         ret.update({
-            "srcport": packet.udp.srcport,
-            "dstport": packet.udp.dstport
+            "srcport": int(packet.udp.srcport),
+            "dstport": int(packet.udp.dstport)
         })
     except AttributeError:
         pass
@@ -65,6 +63,11 @@ def _packet_callback(packet, output_queue, stop_event):
 
 
 def _start_capture(display_filter, interface, output_queue, stop_event):
+    _logger.debug(
+        "Starting live capture on %s with display filter: %s",
+        interface,
+        display_filter)
+
     capture = pyshark.LiveCapture(
         interface=interface,
         only_summaries=False,
@@ -78,7 +81,7 @@ def _start_capture(display_filter, interface, output_queue, stop_event):
     capture.apply_on_packets(on_packet)
 
 
-def _read_queue(output_queue, queue_maxsize):
+def _read_queue(output_queue, queue_size):
     counter = 0
     ret = []
 
@@ -87,7 +90,7 @@ def _read_queue(output_queue, queue_maxsize):
             item = output_queue.get_nowait()
             ret.append(item)
             counter += 1
-            if counter > queue_maxsize:
+            if counter > queue_size:
                 break
     except queue.Empty:
         pass
@@ -139,11 +142,9 @@ async def _terminate_proc(proc, stop_event, stop_sleep=2, stop_timeout=10, join_
             _logger.warning("Error killing", exc_info=True)
 
 
-async def monitor_packets(
-        conf, interface, async_cb, queue_maxsize=30,
-        get_sleep=2.0, terminate_kwargs=None):
+async def monitor_packets(conf, interface, async_cb, queue_size=30, sleep=2.0, terminate_kwargs=None):
     display_filter = _build_display_filter(conf=conf)
-    output_queue = Queue(queue_maxsize)
+    output_queue = Queue(queue_size)
     stop_event = Event()
     terminate_kwargs = terminate_kwargs if terminate_kwargs else {}
 
@@ -160,7 +161,7 @@ async def monitor_packets(
     read_output_queue = functools.partial(
         _read_queue,
         output_queue=output_queue,
-        queue_maxsize=queue_maxsize)
+        queue_size=queue_size)
 
     check_proc_health = functools.partial(
         _check_proc_alive,
@@ -176,9 +177,9 @@ async def monitor_packets(
         while True:
             items = read_output_queue()
             if items and len(items) > 0:
-                asyncio.ensure_future(async_cb(items))
+                await async_cb(items)
             check_proc_health()
-            await asyncio.sleep(get_sleep)
+            await asyncio.sleep(sleep)
     except asyncio.CancelledError:
         _logger.debug("Cancelled Tshark capture task")
     finally:
