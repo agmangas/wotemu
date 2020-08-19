@@ -4,6 +4,7 @@ import logging
 import multiprocessing
 import os
 import queue
+import signal
 import time
 
 import pyshark
@@ -69,6 +70,18 @@ def _start_capture(display_filter, interface, output_queue, stop_event):
         only_summaries=False,
         display_filter=display_filter)
 
+    def stop_capture(signum, frame):
+        try:
+            # Accessing the private interface of LiveCapture is
+            # less than ideal, but I fail to see another option.
+            for proc in capture._running_processes:
+                os.kill(proc.pid, signal.SIGKILL)
+        except:
+            pass
+
+    signal.signal(signal.SIGINT, stop_capture)
+    signal.signal(signal.SIGTERM, stop_capture)
+
     on_packet = functools.partial(
         _packet_callback,
         output_queue=output_queue,
@@ -105,11 +118,11 @@ def _check_proc_alive(proc):
         raise RuntimeError(err_msg)
 
 
-async def _terminate_proc(proc, stop_event, stop_sleep=2, stop_timeout=10, join_timeout=5):
-    _logger.debug("Setting Tshark process stop event")
+async def _terminate_proc(proc, stop_event, stop_sleep, stop_timeout, stop_join_timeout):
+    _logger.debug("Setting stop event for: %s", proc)
     stop_event.set()
 
-    _logger.debug("Waiting %s seconds for Tshark process", stop_timeout)
+    _logger.debug("Waiting %s seconds for: %s", stop_timeout, proc)
     time_limit = time.time() + stop_timeout
 
     while time.time() <= time_limit:
@@ -118,15 +131,15 @@ async def _terminate_proc(proc, stop_event, stop_sleep=2, stop_timeout=10, join_
         await asyncio.sleep(stop_sleep)
 
     if proc.exitcode is not None:
-        _logger.debug("Tshark process exited with code: %s", proc.exitcode)
+        _logger.debug("%s exited with code: %s", proc, proc.exitcode)
         return
 
-    _logger.warning("Tshark process did not terminate with stop event")
+    _logger.warning("%s did not terminate with stop event", proc)
 
     try:
         _logger.info("Terminating process: %s", proc)
         proc.terminate()
-        proc.join(join_timeout)
+        proc.join(stop_join_timeout)
     except:
         _logger.warning("Error terminating", exc_info=True)
     finally:
@@ -138,7 +151,10 @@ async def _terminate_proc(proc, stop_event, stop_sleep=2, stop_timeout=10, join_
             _logger.warning("Error killing", exc_info=True)
 
 
-async def monitor_packets(conf, interface, async_cb, queue_size=30, sleep=2.0, terminate_kwargs=None):
+async def monitor_packets(
+        conf, interface, async_cb,
+        queue_size=100, sleep=5.0,
+        stop_sleep=2, stop_timeout=10, stop_join_timeout=5):
     spawn_ctx = multiprocessing.get_context("spawn")
     display_filter = _build_display_filter(conf=conf)
     output_queue = spawn_ctx.Queue(queue_size)
@@ -156,7 +172,11 @@ async def monitor_packets(conf, interface, async_cb, queue_size=30, sleep=2.0, t
         interface,
         display_filter)
 
-    proc = spawn_ctx.Process(target=proc_target, daemon=True)
+    proc = spawn_ctx.Process(
+        target=proc_target,
+        daemon=True,
+        name=f"PysharkCapture-{interface}")
+
     proc.start()
 
     read_output_queue = functools.partial(
@@ -168,13 +188,13 @@ async def monitor_packets(conf, interface, async_cb, queue_size=30, sleep=2.0, t
         _check_proc_alive,
         proc=proc)
 
-    terminate_kwargs = terminate_kwargs if terminate_kwargs else {}
-
     terminate_process = functools.partial(
         _terminate_proc,
         proc=proc,
         stop_event=stop_event,
-        **terminate_kwargs)
+        stop_sleep=stop_sleep,
+        stop_timeout=stop_timeout,
+        stop_join_timeout=stop_join_timeout)
 
     try:
         while True:
@@ -184,7 +204,7 @@ async def monitor_packets(conf, interface, async_cb, queue_size=30, sleep=2.0, t
             check_proc_health()
             await asyncio.sleep(sleep)
     except asyncio.CancelledError:
-        _logger.debug("Cancelled Tshark capture task")
+        _logger.debug("Cancelled Task for: %s", proc)
     finally:
         if proc.exitcode is None:
             await terminate_process()
