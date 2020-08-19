@@ -1,9 +1,10 @@
 import asyncio
 import functools
 import logging
+import multiprocessing
+import os
 import queue
 import time
-from multiprocessing import Event, Process, Queue
 
 import pyshark
 from pyshark.capture.capture import StopCapture
@@ -63,11 +64,6 @@ def _packet_callback(packet, output_queue, stop_event):
 
 
 def _start_capture(display_filter, interface, output_queue, stop_event):
-    _logger.debug(
-        "Starting live capture on %s with display filter: %s",
-        interface,
-        display_filter)
-
     capture = pyshark.LiveCapture(
         interface=interface,
         only_summaries=False,
@@ -143,10 +139,10 @@ async def _terminate_proc(proc, stop_event, stop_sleep=2, stop_timeout=10, join_
 
 
 async def monitor_packets(conf, interface, async_cb, queue_size=30, sleep=2.0, terminate_kwargs=None):
+    spawn_ctx = multiprocessing.get_context("spawn")
     display_filter = _build_display_filter(conf=conf)
-    output_queue = Queue(queue_size)
-    stop_event = Event()
-    terminate_kwargs = terminate_kwargs if terminate_kwargs else {}
+    output_queue = spawn_ctx.Queue(queue_size)
+    stop_event = spawn_ctx.Event()
 
     proc_target = functools.partial(
         _start_capture,
@@ -155,7 +151,12 @@ async def monitor_packets(conf, interface, async_cb, queue_size=30, sleep=2.0, t
         output_queue=output_queue,
         stop_event=stop_event)
 
-    proc = Process(target=proc_target, daemon=True)
+    _logger.debug(
+        "Starting LiveCapture on interface %s with display filter: %s",
+        interface,
+        display_filter)
+
+    proc = spawn_ctx.Process(target=proc_target, daemon=True)
     proc.start()
 
     read_output_queue = functools.partial(
@@ -166,6 +167,8 @@ async def monitor_packets(conf, interface, async_cb, queue_size=30, sleep=2.0, t
     check_proc_health = functools.partial(
         _check_proc_alive,
         proc=proc)
+
+    terminate_kwargs = terminate_kwargs if terminate_kwargs else {}
 
     terminate_process = functools.partial(
         _terminate_proc,

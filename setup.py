@@ -38,8 +38,7 @@ setuptools.setup(
         "numpy>=1.15.0,<2.0",
         "deepmerge>=0.1.0,<0.2.0",
         "pyshark>=0.4.2,<0.5.0",
-        "psutil>=5.6.0,<6.0",
-        "nest-asyncio>=1.4.0,<2.0"
+        "psutil>=5.6.0,<6.0"
     ],
     extras_require={
         "dev": [
