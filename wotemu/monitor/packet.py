@@ -182,7 +182,7 @@ async def _terminate_process(proc, stop_event, stop_sleep, stop_timeout, stop_jo
 async def monitor_packets(
         conf, interface, async_cb,
         queue_size=100, sleep=5.0,
-        stop_sleep=2, stop_timeout=10, stop_join_timeout=5):
+        stop_sleep=1, stop_timeout=10, stop_join_timeout=5):
     spawn_ctx = multiprocessing.get_context("spawn")
     display_filter = _build_display_filter(conf=conf)
     output_queue = spawn_ctx.Queue(queue_size)
