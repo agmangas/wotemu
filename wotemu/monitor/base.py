@@ -1,5 +1,9 @@
 import asyncio
+import functools
+import json
 import logging
+import socket
+import time
 
 import aioredis
 
@@ -11,9 +15,16 @@ _logger = logging.getLogger(__name__)
 
 
 class NodeMonitor:
-    def __init__(self, redis_url=None, packet_ifaces=None, packet_kwargs=None, system_kwargs=None):
+    PREFIX_PACKET = "packet"
+    PREFIX_SYSTEM = "system"
+    KEY_SEPARATOR = ":"
+
+    def __init__(
+            self, key=None, redis_url=None, packet_ifaces=None,
+            packet_kwargs=None, system_kwargs=None):
         conf = wotemu.config.get_env_config()
         self._conf = conf
+        self._key = key if key else socket.getfqdn()
         self._redis_url = redis_url if redis_url else conf.redis_url
         self._redis = None
         self._packet_ifaces = packet_ifaces
@@ -42,15 +53,35 @@ class NodeMonitor:
         self._redis = None
         _logger.debug("Closed Redis connection")
 
-    async def _redis_callback(self, items):
-        _logger.debug("Redis callback: %s", items)
-        await asyncio.sleep(1.0)
+    async def _redis_callback(self, items, prefix):
+        key = "{}{}{}".format(
+            prefix,
+            self.KEY_SEPARATOR,
+            self._key)
+
+        _logger.debug("ZADD (%s items): %s", len(items), key)
+
+        tr = self._redis.multi_exec()
+
+        for item in items:
+            score = item.get("time", time.time())
+            member = json.dumps(item)
+            tr.zadd(key=key, score=score, member=member)
+
+        exec_res = await tr.execute()
+
+        if not all(exec_res):
+            _logger.warning("Error in Redis MULTI ZADD: %s", exec_res)
 
     async def _create_system_task(self):
         assert not self._task_system
 
+        async_cb = functools.partial(
+            self._redis_callback,
+            prefix=self.PREFIX_SYSTEM)
+
         system_awaitable = monitor_system(
-            async_cb=self._redis_callback,
+            async_cb=async_cb,
             **self._system_kwargs)
 
         self._task_system = asyncio.ensure_future(system_awaitable)
@@ -61,11 +92,15 @@ class NodeMonitor:
         if not self._packet_ifaces or not len(self._packet_ifaces):
             return
 
+        async_cb = functools.partial(
+            self._redis_callback,
+            prefix=self.PREFIX_PACKET)
+
         packet_awaitables = [
             monitor_packets(
                 conf=self._conf,
                 interface=iface,
-                async_cb=self._redis_callback)
+                async_cb=async_cb)
             for iface in self._packet_ifaces
         ]
 
