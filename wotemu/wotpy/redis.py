@@ -6,6 +6,9 @@ import aioredis
 
 import wotemu.config
 
+PREFIX_THING = "thing"
+KEY_SEPARATOR = ":"
+
 _logger = logging.getLogger(__name__)
 
 
@@ -22,7 +25,7 @@ async def redis_thing_callback(data, client=None):
     try:
         redis = None
         redis = client if client else await redis_from_env()
-        key = data["host"]
+        key = "".join([PREFIX_THING, KEY_SEPARATOR, data["host"]])
         score = data["time"]
         member = json.dumps(data)
         await redis.zadd(key=key, score=score, member=member)
