@@ -90,24 +90,25 @@ def _start_capture(display_filter, interface, output_queue, stop_event):
     capture.apply_on_packets(on_packet)
 
 
-def _read_queue(output_queue, queue_size):
-    counter = 0
-    ret = []
+async def _process_queue(output_queue, queue_size, async_cb):
+    items = []
 
     try:
+        counter = 0
         while not output_queue.empty():
             item = output_queue.get_nowait()
-            ret.append(item)
+            items.append(item)
             counter += 1
             if counter > queue_size:
                 break
     except queue.Empty:
         pass
 
-    return ret
+    if len(items) > 0:
+        await async_cb(items)
 
 
-def _check_proc_alive(proc):
+def _check_proc_health(proc):
     if not proc.is_alive() or proc.exitcode is not None:
         err_msg = (
             "Tshark packet capture process "
@@ -118,7 +119,7 @@ def _check_proc_alive(proc):
         raise RuntimeError(err_msg)
 
 
-async def _terminate_proc(proc, stop_event, stop_sleep, stop_timeout, stop_join_timeout):
+async def _terminate_process(proc, stop_event, stop_sleep, stop_timeout, stop_join_timeout):
     _logger.debug("Setting stop event for: %s", proc)
     stop_event.set()
 
@@ -160,6 +161,19 @@ async def monitor_packets(
     output_queue = spawn_ctx.Queue(queue_size)
     stop_event = spawn_ctx.Event()
 
+    # ToDo: There is a known issue here.
+
+    # The multiprocessing module starts a "resource tracker" process
+    # when using the spawn context, as described in the docs:
+    # https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods
+
+    # A Pyshark LiveCapture may be stopped gracefully by raising a StopCapture
+    # exception inside the packet handling callback. However, that callback may
+    # not be called for a long time depending on the captured packets as determined
+    # by the display filter. In this case the only option is to terminate() the Pyshark
+    # process and capture the signal, manually killing the dumpcap and tshark processes.
+    # This causes the "resource tracker" process to end up as a zombie.
+
     proc_target = functools.partial(
         _start_capture,
         display_filter=display_filter,
@@ -179,17 +193,18 @@ async def monitor_packets(
 
     proc.start()
 
-    read_output_queue = functools.partial(
-        _read_queue,
+    process_queue = functools.partial(
+        _process_queue,
         output_queue=output_queue,
-        queue_size=queue_size)
+        queue_size=queue_size,
+        async_cb=async_cb)
 
     check_proc_health = functools.partial(
-        _check_proc_alive,
+        _check_proc_health,
         proc=proc)
 
     terminate_process = functools.partial(
-        _terminate_proc,
+        _terminate_process,
         proc=proc,
         stop_event=stop_event,
         stop_sleep=stop_sleep,
@@ -198,9 +213,7 @@ async def monitor_packets(
 
     try:
         while True:
-            items = read_output_queue()
-            if items and len(items) > 0:
-                await async_cb(items)
+            await process_queue()
             check_proc_health()
             await asyncio.sleep(sleep)
     except asyncio.CancelledError:
