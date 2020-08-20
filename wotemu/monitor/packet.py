@@ -1,3 +1,20 @@
+"""Packet monitoring task. 
+
+There is a known issue in this module.
+
+The multiprocessing module starts a "resource tracker" process 
+when using the spawn context, as described in the Python docs:
+
+https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods
+
+A Pyshark LiveCapture may be stopped gracefully by raising a 
+StopCapture exception inside the packet handling callback. 
+However, that callback may not be called for a while if no new packets arrive. 
+In this case the only option is to terminate() the Pyshark process and 
+capture the signal, manually killing the dumpcap and tshark child processes. 
+This causes the "resource tracker" process to end up as a zombie.
+"""
+
 import asyncio
 import functools
 import logging
@@ -58,7 +75,11 @@ def _packet_to_dict(packet):
 
 def _packet_callback(packet, output_queue, stop_event):
     packet_dict = _packet_to_dict(packet)
-    output_queue.put(packet_dict)
+
+    try:
+        output_queue.put_nowait(packet_dict)
+    except queue.Full:
+        pass
 
     if stop_event.is_set():
         raise StopCapture()
@@ -119,17 +140,23 @@ def _check_proc_health(proc):
         raise RuntimeError(err_msg)
 
 
+async def _wait_process_exit(proc, timeout, sleep=1):
+    _logger.debug("Waiting %s secs for exit: %s", timeout, proc)
+
+    time_limit = time.time() + timeout
+
+    while time.time() <= time_limit:
+        if proc.exitcode is not None:
+            return
+
+        await asyncio.sleep(sleep)
+
+
 async def _terminate_process(proc, stop_event, stop_sleep, stop_timeout, stop_join_timeout):
     _logger.debug("Setting stop event for: %s", proc)
     stop_event.set()
 
-    _logger.debug("Waiting %s seconds for: %s", stop_timeout, proc)
-    time_limit = time.time() + stop_timeout
-
-    while time.time() <= time_limit:
-        if proc.exitcode is not None:
-            break
-        await asyncio.sleep(stop_sleep)
+    await _wait_process_exit(proc, stop_timeout, stop_sleep)
 
     if proc.exitcode is not None:
         _logger.debug("%s exited with code: %s", proc, proc.exitcode)
@@ -140,7 +167,7 @@ async def _terminate_process(proc, stop_event, stop_sleep, stop_timeout, stop_jo
     try:
         _logger.info("Terminating process: %s", proc)
         proc.terminate()
-        proc.join(stop_join_timeout)
+        await _wait_process_exit(proc, stop_join_timeout, stop_sleep)
     except:
         _logger.warning("Error terminating", exc_info=True)
     finally:
@@ -160,19 +187,6 @@ async def monitor_packets(
     display_filter = _build_display_filter(conf=conf)
     output_queue = spawn_ctx.Queue(queue_size)
     stop_event = spawn_ctx.Event()
-
-    # ToDo: There is a known issue here.
-
-    # The multiprocessing module starts a "resource tracker" process
-    # when using the spawn context, as described in the docs:
-    # https://docs.python.org/3/library/multiprocessing.html#contexts-and-start-methods
-
-    # A Pyshark LiveCapture may be stopped gracefully by raising a StopCapture
-    # exception inside the packet handling callback. However, that callback may
-    # not be called for a long time depending on the captured packets as determined
-    # by the display filter. In this case the only option is to terminate() the Pyshark
-    # process and capture the signal, manually killing the dumpcap and tshark processes.
-    # This causes the "resource tracker" process to end up as a zombie.
 
     proc_target = functools.partial(
         _start_capture,
