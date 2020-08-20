@@ -53,12 +53,7 @@ class NodeMonitor:
         self._redis = None
         _logger.debug("Closed Redis connection")
 
-    async def _redis_callback(self, items, prefix):
-        key = "{}{}{}".format(
-            prefix,
-            self.KEY_SEPARATOR,
-            self._key)
-
+    async def _redis_callback(self, items, key):
         _logger.debug("ZADD (%s items): %s", len(items), key)
 
         tr = self._redis.multi_exec()
@@ -76,9 +71,13 @@ class NodeMonitor:
     async def _create_system_task(self):
         assert not self._task_system
 
-        async_cb = functools.partial(
-            self._redis_callback,
-            prefix=self.PREFIX_SYSTEM)
+        key = "".join([
+            self.PREFIX_SYSTEM,
+            self.KEY_SEPARATOR,
+            self._key
+        ])
+
+        async_cb = functools.partial(self._redis_callback, key=key)
 
         system_awaitable = monitor_system(
             async_cb=async_cb,
@@ -92,17 +91,23 @@ class NodeMonitor:
         if not self._packet_ifaces or not len(self._packet_ifaces):
             return
 
-        async_cb = functools.partial(
-            self._redis_callback,
-            prefix=self.PREFIX_PACKET)
+        packet_awaitables = []
 
-        packet_awaitables = [
-            monitor_packets(
+        for iface in self._packet_ifaces:
+            key = "".join([
+                self.PREFIX_PACKET,
+                self.KEY_SEPARATOR,
+                iface,
+                self.KEY_SEPARATOR,
+                self._key
+            ])
+
+            async_cb = functools.partial(self._redis_callback, key=key)
+
+            packet_awaitables.append(monitor_packets(
                 conf=self._conf,
                 interface=iface,
-                async_cb=async_cb)
-            for iface in self._packet_ifaces
-        ]
+                async_cb=async_cb))
 
         self._tasks_packet = [
             asyncio.ensure_future(item)
