@@ -8,6 +8,12 @@ class Labels(enum.Enum):
     WOTEMU_BROKER = "org.fundacionctic.wotemu.broker"
 
 
+class RedisPrefixes(enum.Enum):
+    PACKET = "packet"
+    THING = "thing"
+    SYSTEM = "system"
+
+
 class NetworkConditions(enum.Enum):
     THREEG = "3G"
     WIFI = "WIFI"

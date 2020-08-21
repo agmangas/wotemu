@@ -8,6 +8,7 @@ import time
 import aioredis
 
 import wotemu.config
+from wotemu.enums import RedisPrefixes
 from wotemu.monitor.packet import monitor_packets
 from wotemu.monitor.system import monitor_system
 
@@ -15,10 +16,6 @@ _logger = logging.getLogger(__name__)
 
 
 class NodeMonitor:
-    PREFIX_PACKET = "packet"
-    PREFIX_SYSTEM = "system"
-    KEY_SEPARATOR = ":"
-
     def __init__(
             self, key=None, redis_url=None, packet_ifaces=None,
             packet_kwargs=None, system_kwargs=None):
@@ -71,12 +68,7 @@ class NodeMonitor:
     async def _create_system_task(self):
         assert not self._task_system
 
-        key = "".join([
-            self.PREFIX_SYSTEM,
-            self.KEY_SEPARATOR,
-            self._key
-        ])
-
+        key = "{}:{}".format(RedisPrefixes.SYSTEM.value, self._key)
         async_cb = functools.partial(self._redis_callback, key=key)
 
         system_awaitable = monitor_system(
@@ -94,13 +86,10 @@ class NodeMonitor:
         packet_awaitables = []
 
         for iface in self._packet_ifaces:
-            key = "".join([
-                self.PREFIX_PACKET,
-                self.KEY_SEPARATOR,
+            key = "{}:{}:{}".format(
+                RedisPrefixes.PACKET.value,
                 iface,
-                self.KEY_SEPARATOR,
-                self._key
-            ])
+                self._key)
 
             async_cb = functools.partial(self._redis_callback, key=key)
 
