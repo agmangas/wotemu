@@ -26,7 +26,7 @@ def _get_cpu_constraint():
         return None
 
 
-def _get_cpu_usage(cpu_constraint, cpu_count):
+def _get_cpu(cpu_constraint, cpu_count):
     cpu_percent = psutil.cpu_percent()
     ret = {"cpu_percent": cpu_percent}
 
@@ -39,7 +39,7 @@ def _get_cpu_usage(cpu_constraint, cpu_count):
     return ret
 
 
-def _get_memory_usage():
+def _get_memory():
     mem = psutil.virtual_memory()
     mem_mb = float(mem.total - mem.available) / (1024 * 1024)
     mem_percent = (float(mem.total - mem.available) / mem.total) * 1e2
@@ -50,7 +50,7 @@ def _get_memory_usage():
     }
 
 
-def _append_datum(data, read_funcs):
+def _read_system(data, read_funcs):
     datum = {"time": time.time()}
 
     for func in read_funcs:
@@ -73,18 +73,18 @@ async def monitor_system(async_cb, sleep=5.0, group_size=2):
     _logger.debug("CPU count: %s", cpu_count)
 
     get_cpu = functools.partial(
-        _get_cpu_usage,
+        _get_cpu,
         cpu_constraint=cpu_constraint,
         cpu_count=cpu_count)
 
     data = []
 
     read_system = functools.partial(
-        _append_datum,
+        _read_system,
         data=data,
-        read_funcs=(get_cpu, _get_memory_usage))
+        read_funcs=(get_cpu, _get_memory))
 
-    invoke_cb = functools.partial(
+    invoke_callback = functools.partial(
         _invoke_callback,
         data=data,
         group_size=group_size,
@@ -98,7 +98,7 @@ async def monitor_system(async_cb, sleep=5.0, group_size=2):
 
         while True:
             read_system()
-            await invoke_cb()
+            await invoke_callback()
             await asyncio.sleep(sleep)
     except asyncio.CancelledError:
         _logger.debug("Cancelled system usage task")
