@@ -16,7 +16,10 @@ import tornado.httpclient
 import wotemu.config
 import wotemu.wotpy.redis
 import wotemu.wotpy.wot
-from wotemu.utils import import_func
+from wotemu.monitor.base import NodeMonitor
+from wotemu.utils import (get_current_task, get_network_gateway_task,
+                          get_output_iface_for_remote_task, get_task_networks,
+                          import_func)
 
 _TIMEOUT = 15
 _HTTP_REGEX = r"^https?:\/\/.*"
@@ -118,7 +121,7 @@ async def _stop_redis(redis_pool):
         _logger.warning("Error in Redis shutdown", exc_info=True)
 
 
-async def _stop(loop, app_task, wot, redis_pool, lock):
+async def _stop(loop, app_task, wot, redis_pool, monitor, lock):
     if lock.locked():
         _logger.debug("Another stop task is already in progress")
         return
@@ -132,6 +135,10 @@ async def _stop(loop, app_task, wot, redis_pool, lock):
             _logger.warning("Error during WoT app cancelation", exc_info=True)
 
         await _stop_servient(wot=wot)
+
+        if monitor:
+            await monitor.stop()
+
         await _stop_redis(redis_pool=redis_pool)
 
         _logger.debug("Stopping loop")
@@ -147,9 +154,29 @@ def _app_done_cb(fut, stop):
     asyncio.ensure_future(stop())
 
 
+def _get_monitor_ifaces(docker_url):
+    curr_task = get_current_task(docker_url=docker_url)
+
+    wotemu_network_ids = get_task_networks(
+        docker_url=docker_url,
+        task=curr_task)
+
+    gw_tasks = [
+        get_network_gateway_task(
+            docker_url=docker_url,
+            network_id=net_id)
+        for net_id in wotemu_network_ids
+    ]
+
+    return [
+        get_output_iface_for_remote_task(gw_task)[0]
+        for gw_task in gw_tasks
+    ]
+
+
 def run_app(
         conf, path, func, func_param, hostname,
-        enable_http, enable_mqtt, enable_coap, enable_ws):
+        enable_http, enable_mqtt, enable_coap, enable_ws, disable_monitor):
     if not enable_http and not enable_mqtt and not enable_coap and not enable_ws:
         _logger.warning("No protocol bindings have been enabled")
 
@@ -197,12 +224,21 @@ def run_app(
     _logger.info("Scheduling task for WoT app: %s", app_func)
     app_task = asyncio.ensure_future(app_func(*app_args, **app_kwargs))
 
+    monitor = None
+
+    if not disable_monitor:
+        _logger.info("Scheduling startup task for node monitor")
+        ifaces = _get_monitor_ifaces(docker_url=conf.docker_proxy_url)
+        monitor = NodeMonitor(redis_url=conf.redis_url, packet_ifaces=ifaces)
+        asyncio.ensure_future(monitor.start())
+
     stop = functools.partial(
         _stop,
         loop=loop,
         app_task=app_task,
         wot=wot,
         redis_pool=redis_pool,
+        monitor=monitor,
         lock=asyncio.Lock())
 
     app_task.add_done_callback(functools.partial(_app_done_cb, stop=stop))

@@ -93,6 +93,7 @@ def chaos(conf, **kwargs):
 @click.option("--enable-coap", is_flag=True)
 @click.option("--enable-mqtt", is_flag=True)
 @click.option("--enable-ws", is_flag=True)
+@click.option("--disable-monitor", is_flag=True)
 @click.pass_obj
 @_catch
 def app(conf, **kwargs):
