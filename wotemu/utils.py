@@ -104,20 +104,21 @@ def get_service_container_hostnames(docker_url, name):
 
     try:
         network_candidate = service_parts[-1]
-        _logger.debug("Checking network existence: %s", network_candidate)
         docker_api_client.inspect_network(network_candidate)
+        _logger.debug("Found network: %s", network_candidate)
         inspect_name = ".".join(service_parts[:-1])
     except docker.errors.NotFound:
-        _logger.debug("Network does not exist: %s", network_candidate)
+        _logger.debug("Network not found: %s", network_candidate)
         inspect_name = name
 
     namespace = get_current_stack_namespace(docker_url)
+    namespace_underscore = f"{namespace}_"
 
-    if not inspect_name.startswith(namespace):
-        _logger.debug("Adding namespace prefix: %s", namespace)
-        inspect_name = "{}_{}".format(namespace, inspect_name)
+    if not inspect_name.startswith(namespace_underscore):
+        _logger.debug("Adding namespace prefix: %s", namespace_underscore)
+        inspect_name = namespace_underscore + inspect_name
 
-    _logger.debug("Service name: %s", inspect_name)
+    _logger.debug("Filtering tasks by service name: %s", inspect_name)
 
     service_tasks = docker_api_client.tasks(
         filters={"service": inspect_name})
@@ -153,13 +154,10 @@ def get_current_container_id():
         ).format(ex))
 
     cid_regex = r"\d+:.+:\/docker\/([a-zA-Z0-9]+)"
-
-    _logger.debug("%s:\n%s", _CGROUP_PATH, cgroup)
-    _logger.debug("Applying '%s' to cgroup content", cid_regex)
-
     result = re.search(cid_regex, cgroup)
 
     if not result or len(result.groups()) <= 0:
+        _logger.warning("Could not find container ID in:\n%s", cgroup)
         raise Exception("Could not retrieve container ID")
 
     cid = result.groups()[0]
@@ -169,8 +167,8 @@ def get_current_container_id():
     return cid
 
 
-def get_task_container_id(task):
-    return task.get("Status", {}).get("ContainerStatus", {}).get("ContainerID", None)
+def get_task_container_id(task_dict):
+    return task_dict.get("Status", {}).get("ContainerStatus", {}).get("ContainerID", None)
 
 
 def get_current_task(docker_url):
@@ -183,8 +181,6 @@ def get_current_task(docker_url):
 
     if task is None:
         raise Exception("Could not find task for container: {}".format(cid))
-
-    _logger.debug("Current task:\n%s", pprint.pformat(task))
 
     return task
 
@@ -212,8 +208,6 @@ def get_task_networks(docker_url, task):
         if net_info.get("Labels", {}).get(Labels.WOTEMU_NETWORK.value, None) is not None
     }
 
-    _logger.debug("Simulator networks:\n%s", pprint.pformat(networks))
-
     return list(networks.keys())
 
 
@@ -236,7 +230,8 @@ def get_network_gateway_task(docker_url, network_id):
     }
 
     _logger.debug(
-        "Network %s services:\n%s", network_id,
+        "Network %s services:\n%s",
+        network_id,
         pprint.pformat(list(service_infos.keys())))
 
     task_infos = {
@@ -246,7 +241,8 @@ def get_network_gateway_task(docker_url, network_id):
     }
 
     _logger.debug(
-        "Network %s tasks:\n%s", network_id,
+        "Network %s tasks:\n%s",
+        network_id,
         pprint.pformat(list(task_infos.keys())))
 
     task_labels = {
@@ -260,9 +256,9 @@ def get_network_gateway_task(docker_url, network_id):
         if labels.get(Labels.WOTEMU_GATEWAY.value, None) is not None)
 
 
-def get_output_iface_for_remote_task(remote_task):
-    rtask_name = remote_task["Name"]
-    rtask_addr = netaddr.IPAddress(remote_task["EndpointIP"])
+def get_output_iface_for_task(net_task_dict):
+    task_name = net_task_dict["Name"]
+    task_addr = netaddr.IPAddress(net_task_dict["EndpointIP"])
 
     iface_addrs = {
         name: netifaces.ifaddresses(name).get(netifaces.AF_INET)
@@ -278,11 +274,9 @@ def get_output_iface_for_remote_task(remote_task):
         (iface_name, addr)
         for iface_name, iface_addrs in iface_addrs.items()
         for addr in iface_addrs
-        if rtask_addr in netaddr.IPNetwork("{}/{}".format(addr["addr"], addr["netmask"])))
+        if task_addr in netaddr.IPNetwork("{}/{}".format(addr["addr"], addr["netmask"])))
 
-    _logger.debug(
-        "Output interface for %s:\n%s",
-        rtask_name, pprint.pformat(ret))
+    _logger.debug("Output interface for %s: %s", task_name, ret)
 
     return ret
 

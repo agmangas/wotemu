@@ -18,7 +18,7 @@ import wotemu.wotpy.redis
 import wotemu.wotpy.wot
 from wotemu.monitor.base import NodeMonitor
 from wotemu.utils import (get_current_task, get_network_gateway_task,
-                          get_output_iface_for_remote_task, get_task_networks,
+                          get_output_iface_for_task, get_task_networks,
                           import_func)
 
 _TIMEOUT = 15
@@ -169,7 +169,7 @@ def _get_monitor_ifaces(docker_url):
     ]
 
     return [
-        get_output_iface_for_remote_task(gw_task)[0]
+        get_output_iface_for_task(gw_task)[0]
         for gw_task in gw_tasks
     ]
 

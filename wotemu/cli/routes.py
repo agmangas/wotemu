@@ -12,7 +12,7 @@ import netifaces
 import wotemu.config
 import wotemu.enums
 from wotemu.utils import (get_current_task, get_network_gateway_task,
-                          get_output_iface_for_remote_task, get_task_networks,
+                          get_output_iface_for_task, get_task_networks,
                           ping_docker)
 
 _PATH_IPROUTE2_RT_TABLES = "/etc/iproute2/rt_tables"
@@ -56,7 +56,7 @@ def _build_routing_commands(gw_task, ports_tcp, ports_udp, rtable_name, rtable_m
         name=rtable_name,
         path=_PATH_IPROUTE2_RT_TABLES))
 
-    ifname, ifaddr = get_output_iface_for_remote_task(gw_task)
+    ifname, ifaddr = get_output_iface_for_task(gw_task)
 
     ifcidr = netaddr.IPNetwork("{}/{}".format(
         ifaddr["addr"], ifaddr["netmask"])).cidr
