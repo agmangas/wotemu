@@ -12,6 +12,7 @@ class RedisPrefixes(enum.Enum):
     PACKET = "packet"
     THING = "thing"
     SYSTEM = "system"
+    INFO = "info"
 
 
 class NetworkConditions(enum.Enum):

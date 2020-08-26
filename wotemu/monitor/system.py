@@ -2,6 +2,8 @@ import asyncio
 import functools
 import logging
 import os
+import platform
+import socket
 import time
 
 import psutil
@@ -102,3 +104,24 @@ async def monitor_system(async_cb, sleep=5.0, group_size=2):
             await asyncio.sleep(sleep)
     except asyncio.CancelledError:
         _logger.debug("Cancelled system usage task")
+
+
+def get_node_info():
+    net_addrs = {
+        key: [item._asdict() for item in val]
+        for key, val in psutil.net_if_addrs().items()
+    }
+
+    disks = [
+        item._asdict()
+        for item in psutil.disk_partitions(all=False)
+    ]
+
+    return {
+        "cpu_count": psutil.cpu_count(),
+        "mem_total": psutil.virtual_memory().total,
+        "net": net_addrs,
+        "disks": disks,
+        "python_version": platform.python_version(),
+        "uname": platform.uname()._asdict()
+    }

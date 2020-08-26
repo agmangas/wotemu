@@ -2,6 +2,7 @@ import asyncio
 import functools
 import json
 import logging
+import pprint
 import socket
 import time
 
@@ -10,7 +11,7 @@ import aioredis
 import wotemu.config
 from wotemu.enums import RedisPrefixes
 from wotemu.monitor.packet import monitor_packets
-from wotemu.monitor.system import monitor_system
+from wotemu.monitor.system import get_node_info, monitor_system
 
 _logger = logging.getLogger(__name__)
 
@@ -119,6 +120,21 @@ class NodeMonitor:
         await asyncio.gather(*self._tasks_packet)
         self._tasks_packet = None
 
+    async def _write_node_info(self):
+        assert self._redis
+
+        node_info = get_node_info()
+        tstamp = time.time()
+        node_info.update({"time": tstamp})
+        member = json.dumps(node_info)
+        key = "{}:{}".format(RedisPrefixes.INFO.value, self._key)
+
+        _logger.debug(
+            "Writing node info - ZADD %s:\n%s",
+            key, pprint.pformat(node_info))
+
+        await self._redis.zadd(key=key, score=tstamp, member=member)
+
     async def start(self):
         if self.is_running:
             raise RuntimeError("Already running")
@@ -126,6 +142,7 @@ class NodeMonitor:
         _logger.debug("Starting node monitor")
 
         await self._redis_open()
+        await self._write_node_info()
         await self._create_system_task()
         await self._create_packet_tasks()
 
