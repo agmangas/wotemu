@@ -156,7 +156,7 @@ async def _terminate_process(proc, stop_event, stop_sleep, stop_timeout, stop_jo
     _logger.debug("Setting stop event for: %s", proc)
     stop_event.set()
 
-    await _wait_process_exit(proc, stop_timeout, stop_sleep)
+    await _wait_process_exit(proc, stop_timeout, sleep=stop_sleep)
 
     if proc.exitcode is not None:
         _logger.debug("%s exited with code: %s", proc, proc.exitcode)
@@ -167,7 +167,7 @@ async def _terminate_process(proc, stop_event, stop_sleep, stop_timeout, stop_jo
     try:
         _logger.info("Terminating process: %s", proc)
         proc.terminate()
-        await _wait_process_exit(proc, stop_join_timeout, stop_sleep)
+        await _wait_process_exit(proc, stop_join_timeout, sleep=stop_sleep)
     except:
         _logger.warning("Error terminating", exc_info=True)
     finally:
@@ -182,7 +182,7 @@ async def _terminate_process(proc, stop_event, stop_sleep, stop_timeout, stop_jo
 async def monitor_packets(
         conf, interface, async_cb,
         queue_size=100, sleep=5.0,
-        stop_sleep=1, stop_timeout=10, stop_join_timeout=5):
+        stop_sleep=0.1, stop_timeout=5.0, stop_join_timeout=5.0):
     spawn_ctx = multiprocessing.get_context("spawn")
     display_filter = _build_display_filter(conf=conf)
     output_queue = spawn_ctx.Queue(queue_size)
