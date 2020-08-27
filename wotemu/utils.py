@@ -17,6 +17,7 @@ from wotemu.enums import Labels
 _CGROUP_PATH = "/proc/self/cgroup"
 _STACK_NAMESPACE = "com.docker.stack.namespace"
 _CID_HOST_LEN = 12
+_STATE_RUNNING = "running"
 
 _logger = logging.getLogger(__name__)
 
@@ -78,8 +79,9 @@ async def wait_node(conf, name, wait=2, timeout=300, find_replicas=True):
             cont_hosts = get_service_container_hostnames(
                 docker_url=conf.docker_proxy_url,
                 name=name)
-        except docker.errors.NotFound as ex:
+        except Exception as ex:
             _logger.warning("Error finding container hostnames: %s", ex)
+            _logger.warning("Using untranslated service name: %s", cont_hosts)
 
     urls = [
         "http://{}:{}".format(host, conf.port_catalogue)
@@ -115,13 +117,19 @@ def get_service_container_hostnames(docker_url, name):
     namespace_underscore = f"{namespace}_"
 
     if not inspect_name.startswith(namespace_underscore):
-        _logger.debug("Adding namespace prefix: %s", namespace_underscore)
         inspect_name = namespace_underscore + inspect_name
 
-    _logger.debug("Filtering tasks by service name: %s", inspect_name)
+    task_filters = {
+        "service": inspect_name,
+        "desired-state": _STATE_RUNNING
+    }
 
-    service_tasks = docker_api_client.tasks(
-        filters={"service": inspect_name})
+    _logger.debug("Filtering tasks using filters: %s", task_filters)
+
+    service_tasks = docker_api_client.tasks(filters=task_filters)
+
+    if not len(service_tasks):
+        raise Exception("Could not find any tasks for %s", inspect_name)
 
     _logger.debug("Found %s tasks for %s", len(service_tasks), inspect_name)
 
