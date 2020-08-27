@@ -1,5 +1,6 @@
 import asyncio
 import functools
+import json
 import logging
 import os
 import platform
@@ -112,16 +113,20 @@ def get_node_info():
         for key, val in psutil.net_if_addrs().items()
     }
 
-    disks = [
-        item._asdict()
-        for item in psutil.disk_partitions(all=False)
-    ]
+    procs = {
+        proc.pid: proc.info
+        for proc in psutil.process_iter(["name", "username"])
+    }
 
-    return {
+    info = {
         "cpu_count": psutil.cpu_count(),
         "mem_total": psutil.virtual_memory().total,
         "net": net_addrs,
-        "disks": disks,
         "python_version": platform.python_version(),
-        "uname": platform.uname()._asdict()
+        "uname": platform.uname()._asdict(),
+        "process": procs,
+        "boot_time": psutil.boot_time(),
+        "env": dict(os.environ)
     }
+
+    return json.loads(json.dumps(info))
