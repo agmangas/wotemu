@@ -11,6 +11,7 @@ import wotemu.cli.chaos
 import wotemu.cli.compose
 import wotemu.cli.limits
 import wotemu.cli.routes
+import wotemu.cli.waiter
 import wotemu.config
 
 _COMMAND_KWARGS = {
@@ -126,3 +127,16 @@ def limits(conf, **kwargs):
     """Updates the CPU performance limits from inside a WoTemu container."""
 
     wotemu.cli.limits.update_limits(conf, **kwargs)
+
+
+@cli.command(**_COMMAND_KWARGS)
+@click.option("--sleep", type=float, default=1.0)
+@click.option("--timeout", type=float, default=30.0)
+@click.option("--waiter-base", is_flag=True)
+@click.option("--waiter-mqtt", is_flag=True)
+@click.pass_obj
+@_catch
+def wait(conf, **kwargs):
+    """Waits for the services of the WoTemu stack to be available."""
+
+    wotemu.cli.waiter.wait_services(conf, **kwargs)

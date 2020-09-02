@@ -3,9 +3,7 @@
 set -e
 set -x
 
-: "${WAIT_INIT:?}"
 : "${WAIT_GATEWAYS:?}"
-: "${WAIT_BROKERS:?}"
 
 print_section () {
     echo
@@ -14,8 +12,8 @@ print_section () {
 }
 
 wait_init () {
-    print_section "Waiting for initialization (${WAIT_INIT}s)"
-    sleep ${WAIT_INIT}
+    print_section "Waiting for base services"
+    wotemu wait --waiter-base
 }
 
 wait_gateways () {
@@ -24,8 +22,8 @@ wait_gateways () {
 }
 
 wait_brokers () {
-    print_section "Waiting for brokers (${WAIT_BROKERS}s)"
-    sleep ${WAIT_BROKERS}
+    print_section "Waiting for MQTT brokers"
+    wotemu wait --waiter-mqtt
 }
 
 update_routing () {
