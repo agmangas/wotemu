@@ -49,8 +49,8 @@ services:
     depends_on:
     - redis
     - gw_mobile_3g
-    - gw_wifi
     - docker_api_proxy
+    - gw_wifi
     deploy:
       replicas: 2
     environment:
@@ -70,8 +70,8 @@ services:
     labels:
       org.fundacionctic.wotemu.node: ''
     networks:
-    - wifi
     - mobile_3g
+    - wifi
     privileged: true
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
@@ -89,8 +89,8 @@ services:
     depends_on:
     - redis
     - gw_mobile_3g
-    - gw_wifi
     - docker_api_proxy
+    - gw_wifi
     deploy:
       replicas: 4
       resources:
@@ -113,8 +113,8 @@ services:
     labels:
       org.fundacionctic.wotemu.node: ''
     networks:
-    - wifi
     - mobile_3g
+    - wifi
     privileged: true
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
@@ -132,8 +132,8 @@ services:
       TASKS: '1'
     image: tecnativa/docker-socket-proxy
     networks:
-    - wifi
     - mobile_3g
+    - wifi
     privileged: true
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
@@ -195,6 +195,8 @@ services:
   redis:
     image: redis:5
     networks:
-    - wifi
     - mobile_3g
+    - wifi
+    ports:
+    - 26379:6379
 version: '3.7'

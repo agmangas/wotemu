@@ -108,11 +108,12 @@ def get_docker_proxy_definition(topology):
     return {topology.docker_proxy.host: service}
 
 
-def get_redis_definition(topology):
+def get_redis_definition(topology, topology_redis):
     service = copy.deepcopy(SERVICE_BASE_REDIS)
 
     service.update({
-        "networks": [net.name for net in topology.networks]
+        "networks": [net.name for net in topology.networks],
+        "ports": [f"{topology_redis.public_port}:6379"]
     })
 
     return {topology.redis.host: service}

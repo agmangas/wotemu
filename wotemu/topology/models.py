@@ -4,9 +4,9 @@ import warnings
 
 import inflection
 import yaml
-
 from wotemu.config import (DEFAULT_CONFIG_VARS, DEFAULT_HOST_DOCKER_PROXY,
-                           DEFAULT_HOST_REDIS, ConfigVars)
+                           DEFAULT_HOST_REDIS, DEFAULT_REDIS_PUBLIC_PORT,
+                           ConfigVars)
 from wotemu.enums import NETEM_CONDITIONS, NetworkConditions, NodePlatforms
 from wotemu.topology.compose import (BASE_IMAGE, get_broker_definition,
                                      get_docker_proxy_definition,
@@ -296,20 +296,37 @@ class TopologyPorts:
 class TopologyRedis:
     WARN_MSG = "Disabled built-in topology Redis service"
 
-    def __init__(self, enabled=True, host=DEFAULT_HOST_REDIS):
+    def __init__(
+            self, enabled=True, host=DEFAULT_HOST_REDIS,
+            redis_url=None, public_port=DEFAULT_REDIS_PUBLIC_PORT):
+        if not enabled and not redis_url:
+            raise ValueError((
+                "An explicit Redis URL has to be provided "
+                "when the built-in Redis service is disabled"
+            ))
+
         self.enabled = bool(enabled)
         self.host = host
+        self.redis_url = redis_url
+        self.public_port = public_port
 
         if not self.enabled:
             warnings.warn(self.WARN_MSG, Warning)
 
     @property
+    def public_url(self):
+        return f"redis://localhost:{self.public_port}" if self.enabled else self.redis_url
+
+    @property
+    def internal_url(self):
+        return f"redis://{self.host}" if self.enabled else self.redis_url
+
+    @property
     def config(self):
-        redis_url = "redis://{}".format(self.host)
-        return {ConfigVars.REDIS_URL.value: redis_url}
+        return {ConfigVars.REDIS_URL.value: self.internal_url}
 
     def to_compose_dict(self, topology):
-        return get_redis_definition(topology)
+        return get_redis_definition(topology, self)
 
 
 class TopologyDockerProxy:
