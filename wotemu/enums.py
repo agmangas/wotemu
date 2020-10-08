@@ -9,10 +9,12 @@ class Labels(enum.Enum):
 
 
 class RedisPrefixes(enum.Enum):
+    NAMESPACE = "wotemu"
     PACKET = "packet"
     THING = "thing"
     SYSTEM = "system"
     INFO = "info"
+    BENCHMARK = "benchmark"
 
 
 class NetworkConditions(enum.Enum):

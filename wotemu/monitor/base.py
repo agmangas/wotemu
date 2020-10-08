@@ -7,7 +7,6 @@ import socket
 import time
 
 import aioredis
-
 import wotemu.config
 from wotemu.enums import RedisPrefixes
 from wotemu.monitor.packet import monitor_packets
@@ -69,7 +68,11 @@ class NodeMonitor:
     async def _create_system_task(self):
         assert not self._task_system
 
-        key = "{}:{}".format(RedisPrefixes.SYSTEM.value, self._key)
+        key = "{}:{}:{}".format(
+            RedisPrefixes.NAMESPACE.value,
+            RedisPrefixes.SYSTEM.value,
+            self._key)
+
         async_cb = functools.partial(self._redis_callback, key=key)
 
         system_awaitable = monitor_system(
@@ -87,7 +90,8 @@ class NodeMonitor:
         packet_awaitables = []
 
         for iface in self._packet_ifaces:
-            key = "{}:{}:{}".format(
+            key = "{}:{}:{}:{}".format(
+                RedisPrefixes.NAMESPACE.value,
                 RedisPrefixes.PACKET.value,
                 iface,
                 self._key)
@@ -127,7 +131,11 @@ class NodeMonitor:
         tstamp = time.time()
         node_info.update({"time": tstamp})
         member = json.dumps(node_info)
-        key = "{}:{}".format(RedisPrefixes.INFO.value, self._key)
+
+        key = "{}:{}:{}".format(
+            RedisPrefixes.NAMESPACE.value,
+            RedisPrefixes.INFO.value,
+            self._key)
 
         _logger.debug(
             "Writing node info - ZADD %s:\n%s",

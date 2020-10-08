@@ -3,7 +3,6 @@ import logging
 import os
 
 import aioredis
-
 import wotemu.config
 from wotemu.enums import RedisPrefixes
 
@@ -23,7 +22,12 @@ async def redis_thing_callback(data, client=None):
     try:
         redis = None
         redis = client if client else await redis_from_env()
-        key = "{}:{}".format(RedisPrefixes.THING.value, data["host"])
+
+        key = "{}:{}:{}".format(
+            RedisPrefixes.NAMESPACE.value,
+            RedisPrefixes.THING.value,
+            data["host"])
+
         score = data["time"]
         member = json.dumps(data)
         await redis.zadd(key=key, score=score, member=member)

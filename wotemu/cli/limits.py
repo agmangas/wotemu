@@ -7,7 +7,7 @@ import time
 import aioredis
 import docker
 import numpy
-
+from wotemu.enums import RedisPrefixes
 from wotemu.topology.compose import ENV_KEY_CPU_SPEED, ENV_KEY_NODE_ID
 from wotemu.topology.cpu import get_cpu_core_scale, get_cpu_core_speed_poly
 from wotemu.utils import get_current_container_id, ping_docker
@@ -21,7 +21,14 @@ _logger = logging.getLogger(__name__)
 
 def _get_cpu_poly_key():
     node_id = os.environ.get(ENV_KEY_NODE_ID, None)
-    return "{}_{}".format(_KEY_CPU_PREFIX, node_id) if node_id else None
+
+    if node_id is None:
+        raise RuntimeError(f"Undefined ${ENV_KEY_NODE_ID}")
+
+    return "{}:{}:{}".format(
+        RedisPrefixes.NAMESPACE.value,
+        RedisPrefixes.BENCHMARK.value,
+        node_id)
 
 
 def _local_cpu_poly():
