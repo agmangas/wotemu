@@ -6,37 +6,9 @@ import pprint
 import sys
 
 import tornado.httpclient
-
-from wotemu.utils import wait_node
-
-_CANCEL_SLEEP = 3
+from wotemu.utils import consume_from_catalogue, wait_node
 
 _logger = logging.getLogger("wotemu.subscriber.app")
-
-
-async def _consume_from_catalogue(wot, port_catalogue, servient_host, thing_id):
-    http_client = tornado.httpclient.AsyncHTTPClient()
-    catalogue_url = "http://{}:{}".format(servient_host, port_catalogue)
-
-    _logger.debug("Fetching catalogue: %s", catalogue_url)
-
-    catalogue_res = await http_client.fetch(catalogue_url)
-    catalogue = json.loads(catalogue_res.body)
-
-    _logger.debug("Catalogue:\n%s", pprint.pformat(catalogue))
-
-    if thing_id not in catalogue:
-        raise Exception(
-            "Thing '{}' not found in catalogue: {}".format(thing_id, catalogue_url))
-
-    td_url = "http://{}:{}/{}".format(
-        servient_host,
-        port_catalogue,
-        catalogue[thing_id].strip("/"))
-
-    _logger.debug("Consuming from URL: %s", td_url)
-
-    return await wot.consume_from_url(td_url)
 
 
 def _on_next(item, interaction):
@@ -47,32 +19,36 @@ def _on_completed(interaction):
     _logger.info("%s: Completed", interaction)
 
 
-def _on_error(err, interaction):
+def _on_error(err, interaction, error_event):
     _logger.warning("%s: Error\n%s", interaction, err)
+    error_event.set()
 
 
-def _subscribe(interaction):
+def _subscribe(interaction, error_event):
     _logger.debug("Subscribing to: {}".format(interaction))
 
     return interaction.subscribe(
         on_next=functools.partial(_on_next, interaction=interaction),
         on_completed=functools.partial(_on_completed, interaction=interaction),
-        on_error=functools.partial(_on_error, interaction=interaction))
+        on_error=functools.partial(_on_error, interaction=interaction, error_event=error_event))
 
 
-async def _cancel_subs(subs):
+async def _cancel_subs(subs, cancel_sleep=3):
     for sub in subs:
-        _logger.debug("Disposing: {}".format(sub))
-        sub.dispose()
+        try:
+            _logger.debug("Disposing: {}".format(sub))
+            sub.dispose()
+        except Exception as ex:
+            _logger.debug("Error disposing of %s: %s", sub, ex)
 
-    _logger.info("Waiting for subscriptions")
-    await asyncio.sleep(_CANCEL_SLEEP)
+    _logger.info("Waiting %s s. for subscriptions", cancel_sleep)
+    await asyncio.sleep(cancel_sleep)
 
 
-async def app(wot, conf, loop, servient_host, thing_id):
-    await wait_node(conf, servient_host)
+async def _consume_and_subscribe(wot, conf, servient_host, thing_id, error_event):
+    await wait_node(conf=conf, name=servient_host)
 
-    consumed_thing = await _consume_from_catalogue(
+    consumed_thing = await consume_from_catalogue(
         wot=wot,
         port_catalogue=conf.port_catalogue,
         servient_host=servient_host,
@@ -82,12 +58,32 @@ async def app(wot, conf, loop, servient_host, thing_id):
 
     for name in consumed_thing.properties:
         if consumed_thing.properties[name].observable:
-            subs.append(_subscribe(consumed_thing.properties[name]))
+            sub = _subscribe(consumed_thing.properties[name], error_event)
+            subs.append(sub)
 
     for name in consumed_thing.events:
-        subs.append(_subscribe(consumed_thing.events[name]))
+        sub = _subscribe(consumed_thing.events[name], error_event)
+        subs.append(sub)
+
+    return subs
+
+
+async def app(wot, conf, loop, servient_host, thing_id):
+    error_event = asyncio.Event()
+
+    consume_subscribe_partial = functools.partial(
+        _consume_and_subscribe,
+        wot=wot,
+        conf=conf,
+        servient_host=servient_host,
+        thing_id=thing_id,
+        error_event=error_event)
 
     try:
-        await asyncio.sleep(sys.maxsize)
+        while True:
+            subs = await consume_subscribe_partial()
+            await error_event.wait()
+            _cancel_subs(subs)
+            error_event.clear()
     except asyncio.CancelledError:
         await _cancel_subs(subs)
