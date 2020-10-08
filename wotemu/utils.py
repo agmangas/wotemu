@@ -1,5 +1,6 @@
 import asyncio
 import importlib
+import json
 import logging
 import os
 import pprint
@@ -65,7 +66,7 @@ async def _ping_http_timeout(url, wait, timeout):
         await asyncio.sleep(wait)
 
 
-async def wait_node(conf, name, wait=2, timeout=300, find_replicas=True):
+async def wait_node(conf, name, wait=2, timeout=120, find_replicas=True):
     cont_hosts = [name]
 
     if find_replicas:
@@ -315,3 +316,27 @@ def import_func(module_path, func_name):
             mod_import, func_name))
 
     return getattr(mod_import, func_name)
+
+
+async def consume_from_catalogue(wot, port_catalogue, servient_host, thing_id):
+    http_client = tornado.httpclient.AsyncHTTPClient()
+    cat_url = "http://{}:{}".format(servient_host, port_catalogue)
+
+    _logger.debug("Fetching catalogue: %s", cat_url)
+
+    catalogue_res = await http_client.fetch(cat_url)
+    catalogue = json.loads(catalogue_res.body)
+
+    _logger.debug("Catalogue:\n%s", pprint.pformat(catalogue))
+
+    if thing_id not in catalogue:
+        raise Exception(f"Thing '{thing_id}' not in catalogue: {cat_url}")
+
+    td_url = "http://{}:{}/{}".format(
+        servient_host,
+        port_catalogue,
+        catalogue[thing_id].strip("/"))
+
+    _logger.debug("Consuming from URL: %s", td_url)
+
+    return await wot.consume_from_url(td_url)
