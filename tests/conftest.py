@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import os
 import time
@@ -116,3 +117,21 @@ async def redis():
             redis_service.container.remove(force=True, v=True)
         except:
             pass
+
+
+@pytest.fixture
+async def redis_loaded(redis):
+    current_dir = os.path.dirname(os.path.realpath(__file__))
+    data_file = os.path.join(current_dir, "redis_data.json")
+
+    with open(data_file, "r") as fh:
+        data = json.loads(fh.read())
+
+    for key, members in data.items():
+        _logger.debug("ZADD %s: %s items", key, len(members))
+
+        for idx, member in enumerate(members):
+            score = json.loads(member).get("time", idx)
+            await redis.zadd(key=key, score=score, member=member)
+
+    return redis
