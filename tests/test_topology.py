@@ -6,7 +6,6 @@ import uuid
 
 import pytest
 import sh
-
 from wotemu.config import ConfigVars
 from wotemu.topology.models import (Broker, Network, Node, NodeApp,
                                     NodeResources, Topology, TopologyPorts,
@@ -139,7 +138,11 @@ def test_topology_redis():
     assert redis_host in services
     assert node_env[ConfigVars.REDIS_URL.value] == redis_url
 
-    top_redis_disabled = TopologyRedis(host=redis_host, enabled=False)
+    top_redis_disabled = TopologyRedis(
+        host=redis_host,
+        enabled=False,
+        redis_url=redis_url)
+
     top_disabled = Topology(nodes=[node], redis=top_redis_disabled)
     compose_disabled = top_disabled.to_compose_dict()
     services_disabled = compose_disabled.get("services")
