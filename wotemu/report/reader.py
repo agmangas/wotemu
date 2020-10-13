@@ -34,12 +34,9 @@ class ReportDataRedisReader:
         members = await self._client.zrange(key=key)
         rows = [json.loads(item) for item in members]
 
-        [
-            row.update({
-                "date": datetime.fromtimestamp(row["time"], timezone.utc)
-            })
-            for row in rows
-        ]
+        for row in rows:
+            row_date = datetime.fromtimestamp(row["time"], timezone.utc)
+            row.update({"date": row_date})
 
         df = pd.DataFrame(rows)
         df.set_index("date", inplace=True)
