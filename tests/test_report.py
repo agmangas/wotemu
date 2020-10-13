@@ -27,6 +27,8 @@ async def test_get_system_df(redis_reader):
     task = tasks.pop()
     df = await redis_reader.get_system_df(task=task)
 
+    assert set(df.index.names) == {"date"}
+
     columns = [
         "cpu_percent",
         "mem_mb",
@@ -42,6 +44,8 @@ async def test_get_packet_df(redis_reader):
     tasks = await redis_reader.get_tasks()
     task = tasks.pop()
     df = await redis_reader.get_packet_df(task=task)
+
+    assert set(df.index.names) == {"date", "iface"}
 
     columns = [
         "len",
@@ -78,6 +82,8 @@ async def _get_thing_df(reader):
 @pytest.mark.asyncio
 async def test_get_thing_df(redis_reader):
     df = await _get_thing_df(reader=redis_reader)
+
+    assert set(df.index.names) == {"date", "thing", "name", "verb"}
 
     columns = [
         "class",
