@@ -43,7 +43,7 @@ class ReportDataRedisReader:
 
         return df
 
-    async def get_nodes(self):
+    async def get_tasks(self):
         pattern = "{}:{}:*".format(
             RedisPrefixes.NAMESPACE.value,
             RedisPrefixes.INFO.value)
@@ -52,19 +52,19 @@ class ReportDataRedisReader:
 
         return {key.decode().split(":")[-1] for key in keys}
 
-    async def get_system_df(self, node):
+    async def get_system_df(self, task):
         key = "{}:{}:{}".format(
             RedisPrefixes.NAMESPACE.value,
             RedisPrefixes.SYSTEM.value,
-            node)
+            task)
 
         return await self._get_zrange_df(key=key)
 
-    async def get_packet_df(self, node):
+    async def get_packet_df(self, task):
         pattern = "{}:{}:*:{}".format(
             RedisPrefixes.NAMESPACE.value,
             RedisPrefixes.PACKET.value,
-            node)
+            task)
 
         packet_keys = await self._client.keys(pattern=pattern)
 

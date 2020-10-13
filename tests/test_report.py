@@ -13,16 +13,16 @@ async def redis_reader(redis_loaded):
 
 
 @pytest.mark.asyncio
-async def test_get_nodes(redis_reader):
-    nodes = await redis_reader.get_nodes()
-    assert len(nodes) == 2
+async def test_get_tasks(redis_reader):
+    tasks = await redis_reader.get_tasks()
+    assert len(tasks) == 2
 
 
 @pytest.mark.asyncio
 async def test_get_system_df(redis_reader):
-    nodes = await redis_reader.get_nodes()
-    node = nodes.pop()
-    df = await redis_reader.get_system_df(node=node)
+    tasks = await redis_reader.get_tasks()
+    task = tasks.pop()
+    df = await redis_reader.get_system_df(task=task)
 
     columns = [
         "cpu_percent",
@@ -36,9 +36,9 @@ async def test_get_system_df(redis_reader):
 
 @pytest.mark.asyncio
 async def test_get_packet_df(redis_reader):
-    nodes = await redis_reader.get_nodes()
-    node = nodes.pop()
-    df = await redis_reader.get_packet_df(node=node)
+    tasks = await redis_reader.get_tasks()
+    task = tasks.pop()
+    df = await redis_reader.get_packet_df(task=task)
 
     columns = [
         "len",
