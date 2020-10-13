@@ -1,5 +1,8 @@
+import pandas as pd
 import pytest
-from wotemu.report.reader import ReportDataRedisReader
+from wotemu.report.reader import ReportDataRedisReader, explode_dict_column
+
+pd.set_option("display.max_columns", None)
 
 
 @pytest.fixture
@@ -65,3 +68,44 @@ async def test_get_info(redis_reader):
     assert info["python_version"]
     assert info["cpu_count"]
     assert len(info["net"].keys()) > 0
+
+
+async def _get_thing_df(reader):
+    task = "clock_clock_sub.1.3gc5vwib8jj63098et34517ed"
+    return await reader.get_thing_df(task=task)
+
+
+@pytest.mark.asyncio
+async def test_get_thing_df(redis_reader):
+    df = await _get_thing_df(reader=redis_reader)
+
+    columns = [
+        "class",
+        "host",
+        "time"
+    ]
+
+    for col in columns:
+        assert len(df[col]) > 0
+
+
+@pytest.mark.asyncio
+async def test_explode_dict_column(redis_reader):
+    df = await _get_thing_df(reader=redis_reader)
+
+    assert "item_value" not in df
+
+    explode_dict_column(df, "item")
+
+    assert df["item_value"].notna().any()
+    assert "error_type" not in df
+    assert "error_message" not in df
+
+    explode_dict_column(df, "error")
+
+    assert df["error_type"].notna().any()
+    assert df["error_message"].notna().any()
+
+    explode_dict_column(df, "result")
+
+    assert "result" not in "df"

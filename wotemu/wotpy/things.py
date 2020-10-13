@@ -35,7 +35,7 @@ class VerbCallback:
             "thing": self.thing_id,
             "verb": self.verb,
             "name": self.interaction_name,
-            "time": int(time.time() * 1e3),
+            "time": time.time(),
             "host": self.hostname,
             "class": self.thing_class
         }

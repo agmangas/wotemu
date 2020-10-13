@@ -1,12 +1,46 @@
+import functools
 import json
 import logging
 from datetime import datetime, timezone
 
 import aioredis
+import numpy as np
 import pandas as pd
 from wotemu.enums import RedisPrefixes
 
 _logger = logging.getLogger(__name__)
+
+
+def _explode_mapper(val, key):
+    if val is np.nan:
+        return np.nan
+
+    try:
+        return val[key]
+    except:
+        return np.nan
+
+
+def _unique_keys_dict_column(df, col):
+    dict_filter = df[col].apply(lambda x: isinstance(x, dict))
+    keys = df[dict_filter][col].apply(tuple).unique()
+
+    # Flatten list of tuples:
+    # https://stackoverflow.com/a/10636583
+    keys = set(sum(keys, ()))
+
+    return keys
+
+
+def explode_dict_column(df, col):
+    if col not in df:
+        return
+
+    keys = _unique_keys_dict_column(df, col)
+
+    for key in keys:
+        mapper = functools.partial(_explode_mapper, key=key)
+        df[f"{col}_{key}"] = df[col].apply(mapper)
 
 
 class ReportDataRedisReader:
@@ -93,3 +127,14 @@ class ReportDataRedisReader:
         df_concat.sort_index(inplace=True)
 
         return df_concat
+
+    async def get_thing_df(self, task):
+        key = "{}:{}:{}".format(
+            RedisPrefixes.NAMESPACE.value,
+            RedisPrefixes.THING.value,
+            task)
+
+        df = await self._get_zrange_df(key=key)
+        df.set_index(["thing", "name", "verb"], append=True, inplace=True)
+
+        return df
