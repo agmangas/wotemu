@@ -52,3 +52,16 @@ async def test_get_packet_df(redis_reader):
 
     for col in columns:
         assert len(df[col]) > 0
+
+
+@pytest.mark.asyncio
+async def test_get_info(redis_reader):
+    tasks = await redis_reader.get_tasks()
+    task = tasks.pop()
+    infos = await redis_reader.get_info(task=task)
+
+    assert len(infos) > 0
+    info = infos[0]
+    assert info["python_version"]
+    assert info["cpu_count"]
+    assert len(info["net"].keys()) > 0

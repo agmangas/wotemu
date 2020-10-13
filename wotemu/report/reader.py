@@ -52,6 +52,18 @@ class ReportDataRedisReader:
 
         return {key.decode().split(":")[-1] for key in keys}
 
+    async def get_info(self, task):
+        key = "{}:{}:{}".format(
+            RedisPrefixes.NAMESPACE.value,
+            RedisPrefixes.INFO.value,
+            task)
+
+        members = await self._client.zrange(key=key)
+        rows = [json.loads(item) for item in members]
+        rows.sort(key=lambda row: row["time"])
+
+        return rows
+
     async def get_system_df(self, task):
         key = "{}:{}:{}".format(
             RedisPrefixes.NAMESPACE.value,
