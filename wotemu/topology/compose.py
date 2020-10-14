@@ -1,7 +1,6 @@
 import copy
 
 from deepmerge import always_merger
-
 from wotemu.config import DEFAULT_DOCKER_SOCKET, ConfigVars
 from wotemu.enums import Labels
 
@@ -10,10 +9,14 @@ BASE_IMAGE = "wotemu"
 TEMPLATE_TASK_NAME = "{{.Task.Name}}"
 TEMPLATE_NODE_HOST = "{{.Node.Hostname}}"
 TEMPLATE_NODE_ID = "{{.Node.ID}}"
+TEMPLATE_SERVICE_ID = "{{.Service.ID}}"
+TEMPLATE_SERVICE_NAME = "{{.Service.Name}}"
 ENV_KEY_CPU_SPEED = "TARGET_CPU_SPEED"
 ENV_KEY_PRIVILEGED = "PATCH_PRIVILEGED"
 ENV_KEY_NODE_HOST = "NODE_HOSTNAME"
 ENV_KEY_NODE_ID = "NODE_ID"
+ENV_KEY_SERVICE_ID = "SERVICE_ID"
+ENV_KEY_SERVICE_NAME = "SERVICE_NAME"
 ENV_KEY_CPU_SPEED = "TARGET_CPU_SPEED"
 ENV_VAL_FLAG = "1"
 VOL_DOCKER_SOCK = "{}:{}".format(DEFAULT_DOCKER_SOCKET, DEFAULT_DOCKER_SOCKET)
@@ -41,17 +44,21 @@ SERVICE_BASE_REDIS = {
     "image": "redis:5"
 }
 
+_ENVIRONMENT_BASE = {
+    ENV_KEY_PRIVILEGED: ENV_VAL_FLAG,
+    ENV_KEY_NODE_HOST: TEMPLATE_NODE_HOST,
+    ENV_KEY_NODE_ID: TEMPLATE_NODE_ID,
+    ENV_KEY_SERVICE_NAME: TEMPLATE_SERVICE_NAME,
+    ENV_KEY_SERVICE_ID: TEMPLATE_SERVICE_ID
+}
+
 SERVICE_BASE_GATEWAY = {
     "image": BASE_IMAGE,
     "privileged": True,
     "hostname": TEMPLATE_TASK_NAME,
     "volumes": [VOL_DOCKER_SOCK],
     "labels": {Labels.WOTEMU_GATEWAY.value: ""},
-    "environment": {
-        ENV_KEY_PRIVILEGED: ENV_VAL_FLAG,
-        ENV_KEY_NODE_HOST: TEMPLATE_NODE_HOST,
-        ENV_KEY_NODE_ID: TEMPLATE_NODE_ID
-    }
+    "environment": {**_ENVIRONMENT_BASE}
 }
 
 SERVICE_BASE_BROKER = {
@@ -60,11 +67,7 @@ SERVICE_BASE_BROKER = {
     "hostname": TEMPLATE_TASK_NAME,
     "volumes": [VOL_DOCKER_SOCK],
     "labels": {Labels.WOTEMU_BROKER.value: ""},
-    "environment": {
-        ENV_KEY_PRIVILEGED: ENV_VAL_FLAG,
-        ENV_KEY_NODE_HOST: TEMPLATE_NODE_HOST,
-        ENV_KEY_NODE_ID: TEMPLATE_NODE_ID
-    }
+    "environment": {**_ENVIRONMENT_BASE}
 }
 
 SERVICE_BASE_NODE = {
@@ -72,11 +75,7 @@ SERVICE_BASE_NODE = {
     "hostname": TEMPLATE_TASK_NAME,
     "volumes": [VOL_DOCKER_SOCK],
     "labels": {Labels.WOTEMU_NODE.value: ""},
-    "environment": {
-        ENV_KEY_PRIVILEGED: ENV_VAL_FLAG,
-        ENV_KEY_NODE_HOST: TEMPLATE_NODE_HOST,
-        ENV_KEY_NODE_ID: TEMPLATE_NODE_ID
-    }
+    "environment": {**_ENVIRONMENT_BASE}
 }
 
 NETWORK_BASE = {

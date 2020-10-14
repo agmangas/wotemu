@@ -30,6 +30,8 @@ services:
       PORT_MQTT: '1883'
       PORT_WS: '81'
       REDIS_URL: redis://redis
+      SERVICE_ID: '{{.Service.ID}}'
+      SERVICE_NAME: '{{.Service.Name}}'
     hostname: '{{.Task.Name}}'
     image: wotemu
     labels:
@@ -47,10 +49,10 @@ services:
     - --enable-http
     - --enable-mqtt
     depends_on:
-    - redis
     - gw_mobile_3g
     - docker_api_proxy
     - gw_wifi
+    - redis
     deploy:
       replicas: 2
     environment:
@@ -65,13 +67,15 @@ services:
       PORT_MQTT: '1883'
       PORT_WS: '81'
       REDIS_URL: redis://redis
+      SERVICE_ID: '{{.Service.ID}}'
+      SERVICE_NAME: '{{.Service.Name}}'
     hostname: '{{.Task.Name}}'
     image: wotemu
     labels:
       org.fundacionctic.wotemu.node: ''
     networks:
-    - mobile_3g
     - wifi
+    - mobile_3g
     privileged: true
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
@@ -87,10 +91,10 @@ services:
     - thing_id
     - urn:org:fundacionctic:thing:clock
     depends_on:
-    - redis
     - gw_mobile_3g
     - docker_api_proxy
     - gw_wifi
+    - redis
     deploy:
       replicas: 4
       resources:
@@ -107,14 +111,16 @@ services:
       PORT_MQTT: '1883'
       PORT_WS: '81'
       REDIS_URL: redis://redis
+      SERVICE_ID: '{{.Service.ID}}'
+      SERVICE_NAME: '{{.Service.Name}}'
       TARGET_CPU_SPEED: 200
     hostname: '{{.Task.Name}}'
     image: wotemu
     labels:
       org.fundacionctic.wotemu.node: ''
     networks:
-    - mobile_3g
     - wifi
+    - mobile_3g
     privileged: true
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
@@ -132,8 +138,8 @@ services:
       TASKS: '1'
     image: tecnativa/docker-socket-proxy
     networks:
-    - mobile_3g
     - wifi
+    - mobile_3g
     privileged: true
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
@@ -156,6 +162,8 @@ services:
       PORT_MQTT: '1883'
       PORT_WS: '81'
       REDIS_URL: redis://redis
+      SERVICE_ID: '{{.Service.ID}}'
+      SERVICE_NAME: '{{.Service.Name}}'
     hostname: '{{.Task.Name}}'
     image: wotemu
     labels:
@@ -183,6 +191,8 @@ services:
       PORT_MQTT: '1883'
       PORT_WS: '81'
       REDIS_URL: redis://redis
+      SERVICE_ID: '{{.Service.ID}}'
+      SERVICE_NAME: '{{.Service.Name}}'
     hostname: '{{.Task.Name}}'
     image: wotemu
     labels:
@@ -195,8 +205,8 @@ services:
   redis:
     image: redis:5
     networks:
-    - mobile_3g
     - wifi
+    - mobile_3g
     ports:
     - 26379:6379
 version: '3.7'

@@ -2,6 +2,7 @@ import pandas as pd
 import pytest
 from wotemu.report.reader import ReportDataRedisReader, explode_dict_column
 
+_NUM_TASKS = 2
 _TASK_THING_DF = "clock_clock_sub.1.3gc5vwib8jj63098et34517ed"
 
 pd.set_option("display.max_columns", None)
@@ -20,7 +21,7 @@ async def redis_reader(redis_loaded):
 @pytest.mark.asyncio
 async def test_get_tasks(redis_reader):
     tasks = await redis_reader.get_tasks()
-    assert len(tasks) == 2
+    assert len(tasks) == _NUM_TASKS
 
 
 @pytest.mark.asyncio
