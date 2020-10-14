@@ -125,3 +125,11 @@ async def test_explode_dict_column(redis_reader):
     explode_dict_column(df, "result")
 
     assert "result" not in "df"
+
+
+@pytest.mark.asyncio
+async def test_get_address_df(redis_reader):
+    df = await redis_reader.get_address_df()
+
+    assert set(df.index.names) == {"date", "iface", "task"}
+    assert df["address"].notna().all()

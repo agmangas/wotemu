@@ -1,12 +1,15 @@
 import functools
 import json
 import logging
+import socket
 from datetime import datetime, timezone
 
 import aioredis
 import numpy as np
 import pandas as pd
 from wotemu.enums import RedisPrefixes
+
+_IFACE_LO = "lo"
 
 _logger = logging.getLogger(__name__)
 
@@ -136,5 +139,26 @@ class ReportDataRedisReader:
 
         df = await self._get_zrange_df(key=key)
         df.set_index(["thing", "name", "verb"], append=True, inplace=True)
+
+        return df
+
+    async def get_address_df(self):
+        tasks = await self.get_tasks()
+
+        rows = [
+            {
+                "iface": iface,
+                "address": iface_item["address"],
+                "task": task,
+                "date": datetime.fromtimestamp(info_item["time"], timezone.utc)
+            }
+            for task in tasks
+            for info_item in await self.get_info(task=task)
+            for iface, iface_items in info_item.get("net", {}).items() if iface != _IFACE_LO
+            for iface_item in iface_items if iface_item.get("family") == socket.AF_INET
+        ]
+
+        df = pd.DataFrame(rows)
+        df.set_index(["date", "iface", "task"], inplace=True)
 
         return df
