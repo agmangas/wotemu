@@ -2,6 +2,8 @@ import pandas as pd
 import pytest
 from wotemu.report.reader import ReportDataRedisReader, explode_dict_column
 
+_TASK_THING_DF = "clock_clock_sub.1.3gc5vwib8jj63098et34517ed"
+
 pd.set_option("display.max_columns", None)
 
 
@@ -36,7 +38,7 @@ async def test_get_system_df(redis_reader):
     ]
 
     for col in columns:
-        assert len(df[col]) > 0
+        assert df[col].notna().any()
 
 
 @pytest.mark.asyncio
@@ -58,7 +60,7 @@ async def test_get_packet_df(redis_reader):
     ]
 
     for col in columns:
-        assert len(df[col]) > 0
+        assert df[col].notna().any()
 
 
 @pytest.mark.asyncio
@@ -68,36 +70,44 @@ async def test_get_info(redis_reader):
     infos = await redis_reader.get_info(task=task)
 
     assert len(infos) > 0
-    info = infos[0]
-    assert info["python_version"]
-    assert info["cpu_count"]
-    assert len(info["net"].keys()) > 0
 
+    info_item = infos[0]
 
-async def _get_thing_df(reader):
-    task = "clock_clock_sub.1.3gc5vwib8jj63098et34517ed"
-    return await reader.get_thing_df(task=task)
+    assert set(info_item.keys()) == {
+        "boot_time",
+        "cpu_count",
+        "env",
+        "mem_total",
+        "net",
+        "process",
+        "python_version",
+        "time",
+        "uname"
+    }
 
 
 @pytest.mark.asyncio
 async def test_get_thing_df(redis_reader):
-    df = await _get_thing_df(reader=redis_reader)
+    df = await redis_reader.get_thing_df(task=_TASK_THING_DF)
 
     assert set(df.index.names) == {"date", "thing", "name", "verb"}
 
     columns = [
+        "event",
         "class",
         "host",
-        "time"
+        "subscription",
+        "item",
+        "error"
     ]
 
     for col in columns:
-        assert len(df[col]) > 0
+        assert df[col].notna().any()
 
 
 @pytest.mark.asyncio
 async def test_explode_dict_column(redis_reader):
-    df = await _get_thing_df(reader=redis_reader)
+    df = await redis_reader.get_thing_df(task=_TASK_THING_DF)
 
     assert "item_value" not in df
 
