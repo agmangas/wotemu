@@ -98,6 +98,8 @@ async def _start_monitor(monitor, close_loop):
 
 
 def run_mqtt_broker(conf, disable_monitor):
+    assert sh.Command("mosquitto")
+
     loop = asyncio.get_event_loop()
     loop.set_exception_handler(_loop_ex_handler)
 
