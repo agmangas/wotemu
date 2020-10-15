@@ -2,10 +2,10 @@ import pandas as pd
 import pytest
 from wotemu.report.reader import ReportDataRedisReader, explode_dict_column
 
-_NUM_TASKS = 4
-_TASK_SYSTEM_DF = "clock_clock.1.m7q9itb8mh7677kl1msu45zek"
-_TASK_THING_DF = "clock_clock.1.m7q9itb8mh7677kl1msu45zek"
-_TASK_PACKET_DF = "clock_clock.1.m7q9itb8mh7677kl1msu45zek"
+_NUM_TASKS = 7
+_TASK_SYSTEM_DF = "clock_clock.1.usxzm8nskxi4fr5t63k8wmorq"
+_TASK_THING_DF = "clock_clock.1.usxzm8nskxi4fr5t63k8wmorq"
+_TASK_PACKET_DF = "clock_clock.1.usxzm8nskxi4fr5t63k8wmorq"
 
 pd.set_option("display.max_columns", None)
 
@@ -81,7 +81,8 @@ async def test_get_info(redis_reader):
         "process",
         "python_version",
         "time",
-        "uname"
+        "uname",
+        "service_vip"
     }
 
 

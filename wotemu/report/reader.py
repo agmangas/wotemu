@@ -141,7 +141,7 @@ class ReportDataRedisReader:
             df_packet, df_address,
             how="left", left_on="src", right_on="address")
 
-        df = df.drop(columns=["address"]).rename(columns={
+        df = df.drop(columns=["address", "service_vip"]).rename(columns={
             "task": "src_task",
             "service": "src_service"
         })
@@ -150,7 +150,7 @@ class ReportDataRedisReader:
             df, df_address,
             how="left", left_on="dst", right_on="address")
 
-        df = df.drop(columns=["address"]).rename(columns={
+        df = df.drop(columns=["address", "service_vip"]).rename(columns={
             "task": "dst_task",
             "service": "dst_service"
         })
@@ -163,7 +163,7 @@ class ReportDataRedisReader:
         if len(na_cols) > 0:
             _logger.warning((
                 "Could not fill all columns on an extended "
-                "packet DF (some contain NaN values): %s\n%s"
+                "packet DF (some columns contain NaN values): %s\n%s"
             ), na_cols, df)
 
         df.set_index(["date", "iface"], inplace=True)
@@ -190,6 +190,7 @@ class ReportDataRedisReader:
                 "address": iface_item["address"],
                 "task": task,
                 "service": info_item.get("env", {}).get(ENV_KEY_SERVICE_NAME),
+                "service_vip": info_item.get("service_vip", None),
                 "date": datetime.fromtimestamp(info_item["time"], timezone.utc)
             }
             for task in tasks

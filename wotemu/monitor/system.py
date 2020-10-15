@@ -8,6 +8,7 @@ import socket
 import time
 
 import psutil
+from wotemu.topology.compose import ENV_KEY_SERVICE_NAME
 
 _PATH_PERIOD = "/sys/fs/cgroup/cpu/cpu.cfs_period_us"
 _PATH_QUOTA = "/sys/fs/cgroup/cpu/cpu.cfs_quota_us"
@@ -107,6 +108,20 @@ async def monitor_system(async_cb, sleep=5.0, group_size=2):
         _logger.debug("Cancelled system usage task")
 
 
+def _get_service_vip():
+    try:
+        service_name = os.environ[ENV_KEY_SERVICE_NAME]
+        service_info = socket.getaddrinfo(service_name, 0)
+
+        return next(
+            item[-1][0]
+            for item in service_info
+            if item[0] == socket.AF_INET and item[1] == socket.SOCK_STREAM)
+    except:
+        _logger.warning("Error reading service VIP", exc_info=True)
+        return None
+
+
 def get_node_info():
     net_addrs = {
         key: [item._asdict() for item in val]
@@ -126,7 +141,8 @@ def get_node_info():
         "uname": platform.uname()._asdict(),
         "process": procs,
         "boot_time": psutil.boot_time(),
-        "env": dict(os.environ)
+        "env": dict(os.environ),
+        "service_vip": _get_service_vip()
     }
 
     return json.loads(json.dumps(info))
