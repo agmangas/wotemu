@@ -2,8 +2,10 @@ import pandas as pd
 import pytest
 from wotemu.report.reader import ReportDataRedisReader, explode_dict_column
 
-_NUM_TASKS = 2
-_TASK_THING_DF = "clock_clock_sub.1.3gc5vwib8jj63098et34517ed"
+_NUM_TASKS = 4
+_TASK_SYSTEM_DF = "clock_clock.2.39l4efcd96zbtz7hf4pgb85kn"
+_TASK_THING_DF = "clock_clock.1.cr6cs1uks4sric1t405rbtgy4"
+_TASK_PACKET_DF = "clock_clock.1.cr6cs1uks4sric1t405rbtgy4"
 
 pd.set_option("display.max_columns", None)
 
@@ -26,9 +28,7 @@ async def test_get_tasks(redis_reader):
 
 @pytest.mark.asyncio
 async def test_get_system_df(redis_reader):
-    tasks = await redis_reader.get_tasks()
-    task = tasks.pop()
-    df = await redis_reader.get_system_df(task=task)
+    df = await redis_reader.get_system_df(task=_TASK_SYSTEM_DF)
 
     assert set(df.index.names) == {"date"}
 
@@ -44,9 +44,7 @@ async def test_get_system_df(redis_reader):
 
 @pytest.mark.asyncio
 async def test_get_packet_df(redis_reader):
-    tasks = await redis_reader.get_tasks()
-    task = tasks.pop()
-    df = await redis_reader.get_packet_df(task=task)
+    df = await redis_reader.get_packet_df(task=_TASK_PACKET_DF)
 
     assert set(df.index.names) == {"date", "iface"}
 
@@ -94,12 +92,8 @@ async def test_get_thing_df(redis_reader):
     assert set(df.index.names) == {"date", "thing", "name", "verb"}
 
     columns = [
-        "event",
         "class",
-        "host",
-        "subscription",
-        "item",
-        "error"
+        "host"
     ]
 
     for col in columns:
@@ -138,9 +132,7 @@ async def test_get_address_df(redis_reader):
 
 @pytest.mark.asyncio
 async def test_extend_packet_df(redis_reader):
-    tasks = await redis_reader.get_tasks()
-    task = tasks.pop()
-    df_packet = await redis_reader.get_packet_df(task=task)
+    df_packet = await redis_reader.get_packet_df(task=_TASK_PACKET_DF)
     df = await redis_reader.extend_packet_df(df_packet)
 
     assert set(df.index.names) == {"date", "iface"}
