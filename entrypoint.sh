@@ -47,8 +47,7 @@ run_app () {
 }
 
 run_mqtt_broker () {
-    port_mqtt=${PORT_MQTT:-1883}
-    exec mosquitto -p ${port_mqtt}
+    exec wotemu broker
 }
 
 run_chaos () {

@@ -5,8 +5,8 @@ import sys
 
 import click
 import coloredlogs
-
 import wotemu.cli.app
+import wotemu.cli.broker
 import wotemu.cli.chaos
 import wotemu.cli.compose
 import wotemu.cli.limits
@@ -140,3 +140,13 @@ def wait(conf, **kwargs):
     """Waits for the services of the WoTemu stack to be available."""
 
     wotemu.cli.waiter.wait_services(conf, **kwargs)
+
+
+@cli.command(**_COMMAND_KWARGS)
+@click.option("--disable-monitor", is_flag=True)
+@click.pass_obj
+@_catch
+def broker(conf, **kwargs):
+    """Runs a MQTT broker."""
+
+    wotemu.cli.broker.run_mqtt_broker(conf, **kwargs)
