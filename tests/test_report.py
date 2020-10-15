@@ -134,3 +134,30 @@ async def test_get_address_df(redis_reader):
 
     assert set(df.index.names) == {"date", "iface", "task"}
     assert df["address"].notna().all()
+
+
+@pytest.mark.asyncio
+async def test_extend_packet_df(redis_reader):
+    tasks = await redis_reader.get_tasks()
+    task = tasks.pop()
+    df_packet = await redis_reader.get_packet_df(task=task)
+    df = await redis_reader.extend_packet_df(df_packet)
+
+    assert set(df.index.names) == {"date", "iface"}
+
+    columns = [
+        "len",
+        "src",
+        "dst",
+        "proto",
+        "transport",
+        "srcport",
+        "dstport",
+        "src_task",
+        "src_service",
+        "dst_task",
+        "dst_service"
+    ]
+
+    for col in columns:
+        assert df[col].notna().any()

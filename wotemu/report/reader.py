@@ -8,6 +8,7 @@ import aioredis
 import numpy as np
 import pandas as pd
 from wotemu.enums import RedisPrefixes
+from wotemu.topology.compose import ENV_KEY_SERVICE_NAME
 
 _IFACE_LO = "lo"
 
@@ -131,6 +132,44 @@ class ReportDataRedisReader:
 
         return df_concat
 
+    async def extend_packet_df(self, df_packet, df_address=None):
+        df_address = df_address if df_address else await self.get_address_df()
+        df_address = df_address.reset_index().drop(columns=["iface", "date"])
+        df_packet = df_packet.reset_index()
+
+        df = pd.merge(
+            df_packet, df_address,
+            how="left", left_on="src", right_on="address")
+
+        df = df.drop(columns=["address"]).rename(columns={
+            "task": "src_task",
+            "service": "src_service"
+        })
+
+        df = pd.merge(
+            df, df_address,
+            how="left", left_on="dst", right_on="address")
+
+        df = df.drop(columns=["address"]).rename(columns={
+            "task": "dst_task",
+            "service": "dst_service"
+        })
+
+        na_cols = [
+            col for col in ["src_task", "src_service", "dst_task", "dst_service"]
+            if df[col].notna().any()
+        ]
+
+        if len(na_cols) > 0:
+            _logger.warning((
+                "Could not fill all columns on an extended "
+                "packet DF (some contain NaN values): %s\n%s"
+            ), na_cols, df.head(15))
+
+        df.set_index(["date", "iface"], inplace=True)
+
+        return df
+
     async def get_thing_df(self, task):
         key = "{}:{}:{}".format(
             RedisPrefixes.NAMESPACE.value,
@@ -150,6 +189,7 @@ class ReportDataRedisReader:
                 "iface": iface,
                 "address": iface_item["address"],
                 "task": task,
+                "service": info_item.get("env", {}).get(ENV_KEY_SERVICE_NAME),
                 "date": datetime.fromtimestamp(info_item["time"], timezone.utc)
             }
             for task in tasks
