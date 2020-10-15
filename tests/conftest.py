@@ -25,6 +25,7 @@ TD_EXAMPLE = {
 _ENV_REDIS_TEST = "TEST_REDIS_URL"
 _DOCKER_REDIS_IMAGE = "redis:5"
 _DOCKER_REDIS_PORT = "6379/tcp"
+_REDIS_DATA_FILE = "./redis_data.json"
 
 RedisService = namedtuple(
     "RedisService",
@@ -119,19 +120,30 @@ async def redis():
             pass
 
 
+async def _insert_zset(redis, item):
+    assert item["type"] == "zset"
+
+    for value_item in item["value"]:
+        await redis.zadd(
+            key=item["key"],
+            score=value_item[1],
+            member=value_item[0])
+
+
 @pytest.fixture
 async def redis_loaded(redis):
     current_dir = os.path.dirname(os.path.realpath(__file__))
-    data_file = os.path.join(current_dir, "redis_data.json")
+    data_file = os.path.join(current_dir, _REDIS_DATA_FILE)
 
     with open(data_file, "r") as fh:
         data = json.loads(fh.read())
 
-    for key, members in data.items():
-        _logger.debug("ZADD %s: %s items", key, len(members))
+    for item in data:
+        item_log = {**item}
+        item_log.update({"value": len(item_log["value"])})
+        _logger.debug("Loading: %s", item_log)
 
-        for idx, member in enumerate(members):
-            score = json.loads(member).get("time", idx)
-            await redis.zadd(key=key, score=score, member=member)
+        if item["type"] == "zset":
+            await _insert_zset(redis, item)
 
     return redis

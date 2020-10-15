@@ -164,7 +164,7 @@ class ReportDataRedisReader:
             _logger.warning((
                 "Could not fill all columns on an extended "
                 "packet DF (some contain NaN values): %s\n%s"
-            ), na_cols, df.head(15))
+            ), na_cols, df)
 
         df.set_index(["date", "iface"], inplace=True)
 
