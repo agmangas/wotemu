@@ -4,14 +4,21 @@ import json
 import logging
 import os
 import platform
+import pprint
+import re
 import socket
 import time
 
+import docker
 import psutil
+import sh
+import wotemu.config
 from wotemu.topology.compose import ENV_KEY_SERVICE_NAME
+from wotemu.utils import get_current_task, get_task_networks
 
 _PATH_PERIOD = "/sys/fs/cgroup/cpu/cpu.cfs_period_us"
 _PATH_QUOTA = "/sys/fs/cgroup/cpu/cpu.cfs_quota_us"
+_NSLOOKUP_REGEX = r"Name:\s.+\..+\nAddress:\s(.+)"
 
 _logger = logging.getLogger(__name__)
 
@@ -108,17 +115,52 @@ async def monitor_system(async_cb, sleep=5.0, group_size=2):
         _logger.debug("Cancelled system usage task")
 
 
-def _get_service_vip():
+def _get_service_vips():
     try:
         service_name = os.environ[ENV_KEY_SERVICE_NAME]
-        service_info = socket.getaddrinfo(service_name, 0)
+        conf = wotemu.config.get_env_config()
+        docker_url = conf.docker_proxy_url
+        curr_task = get_current_task(docker_url=docker_url)
+        net_ids = get_task_networks(docker_url=docker_url, task=curr_task)
+        docker_api_client = docker.APIClient(base_url=docker_url)
 
-        return next(
-            item[-1][0]
-            for item in service_info
-            if item[0] == socket.AF_INET and item[1] == socket.SOCK_STREAM)
+        net_names = [
+            docker_api_client.inspect_network(nid).get("Name")
+            for nid in net_ids
+        ]
+
+        nslookup = sh.Command("nslookup")
+
+        nslookup_results = {
+            net_name: nslookup(f"{service_name}.{net_name}")
+            for net_name in net_names
+        }
+
+        _logger.debug(
+            "VIP nslookup results for service '%s':\n%s",
+            service_name,
+            pprint.pformat(nslookup_results))
+
+        re_results = {
+            net_name: re.search(_NSLOOKUP_REGEX, str(res))
+            for net_name, res in nslookup_results.items()
+        }
+
+        assert all(re_results.values())
+        assert all(len(res.groups()) == 1 for res in re_results.values())
+
+        vips = {
+            net_name: res.groups()[0]
+            for net_name, res in re_results.items()
+        }
+
+        _logger.debug(
+            "Service '%s' VIPs obtained from nslookup: %s",
+            service_name, vips)
+
+        return vips
     except:
-        _logger.warning("Error reading service VIP", exc_info=True)
+        _logger.warning("Error reading service VIPs", exc_info=True)
         return None
 
 
@@ -141,8 +183,12 @@ def get_node_info():
         "uname": platform.uname()._asdict(),
         "process": procs,
         "boot_time": psutil.boot_time(),
-        "env": dict(os.environ),
-        "service_vip": _get_service_vip()
+        "env": dict(os.environ)
     }
+
+    service_vips = _get_service_vips()
+
+    if service_vips:
+        info.update({"service_vips": service_vips})
 
     return json.loads(json.dumps(info))

@@ -110,7 +110,7 @@ class ReportDataRedisReader:
 
         return await self._get_zrange_df(key=key)
 
-    async def get_packet_df(self, task):
+    async def get_packet_df(self, task, extended=False):
         pattern = "{}:{}:*:{}".format(
             RedisPrefixes.NAMESPACE.value,
             RedisPrefixes.PACKET.value,
@@ -127,21 +127,28 @@ class ReportDataRedisReader:
             df_iface.set_index(["iface"], append=True, inplace=True)
             dfs.append(df_iface)
 
-        df_concat = pd.concat(dfs)
-        df_concat.sort_index(inplace=True)
+        df = pd.concat(dfs)
+        df.sort_index(inplace=True)
 
-        return df_concat
+        if extended:
+            df = await self.extend_packet_df(df_packet=df)
 
-    async def extend_packet_df(self, df_packet, df_address=None):
+        return df
+
+    async def extend_packet_df(self, df_packet, df_address=None, df_vip=None):
         df_address = df_address if df_address else await self.get_address_df()
         df_address = df_address.reset_index().drop(columns=["iface", "date"])
+
+        df_vip = df_vip if df_vip else await self.get_service_vip_df()
+        df_vip = df_vip.reset_index().drop(columns=["date", "task"])
+
         df_packet = df_packet.reset_index()
 
         df = pd.merge(
             df_packet, df_address,
             how="left", left_on="src", right_on="address")
 
-        df = df.drop(columns=["address", "service_vip"]).rename(columns={
+        df = df.drop(columns=["address"]).rename(columns={
             "task": "src_task",
             "service": "src_service"
         })
@@ -150,10 +157,34 @@ class ReportDataRedisReader:
             df, df_address,
             how="left", left_on="dst", right_on="address")
 
-        df = df.drop(columns=["address", "service_vip"]).rename(columns={
+        df = df.drop(columns=["address"]).rename(columns={
             "task": "dst_task",
             "service": "dst_service"
         })
+
+        df = pd.merge(
+            df, df_vip,
+            how="left", left_on="src", right_on="vip")
+
+        df = df.drop(columns=["vip", "network"]).rename(columns={
+            "service": "src_vip_service"
+        })
+
+        df = pd.merge(
+            df, df_vip,
+            how="left", left_on="dst", right_on="vip")
+
+        df = df.drop(columns=["vip", "network"]).rename(columns={
+            "service": "dst_vip_service"
+        })
+
+        df["src_service"] = df["src_service"].fillna(
+            value=df["src_vip_service"])
+
+        df["dst_service"] = df["dst_service"].fillna(
+            value=df["dst_vip_service"])
+
+        df = df.drop(columns=["src_vip_service", "dst_vip_service"])
 
         na_cols = [
             col for col in ["src_task", "src_service", "dst_task", "dst_service"]
@@ -181,17 +212,16 @@ class ReportDataRedisReader:
 
         return df
 
-    async def get_address_df(self):
-        tasks = await self.get_tasks()
+    async def get_address_df(self, tasks=None):
+        tasks = tasks if tasks else await self.get_tasks()
 
         rows = [
             {
-                "iface": iface,
-                "address": iface_item["address"],
+                "date": datetime.fromtimestamp(info_item["time"], timezone.utc),
                 "task": task,
                 "service": info_item.get("env", {}).get(ENV_KEY_SERVICE_NAME),
-                "service_vip": info_item.get("service_vip", None),
-                "date": datetime.fromtimestamp(info_item["time"], timezone.utc)
+                "iface": iface,
+                "address": iface_item["address"]
             }
             for task in tasks
             for info_item in await self.get_info(task=task)
@@ -200,6 +230,27 @@ class ReportDataRedisReader:
         ]
 
         df = pd.DataFrame(rows)
-        df.set_index(["date", "iface", "task"], inplace=True)
+        df.set_index(["date", "task", "iface"], inplace=True)
+
+        return df
+
+    async def get_service_vip_df(self, tasks=None):
+        tasks = tasks if tasks else await self.get_tasks()
+
+        rows = [
+            {
+                "date": datetime.fromtimestamp(info_item["time"], timezone.utc),
+                "task": task,
+                "service": info_item.get("env", {}).get(ENV_KEY_SERVICE_NAME),
+                "network": net_name,
+                "vip": vip
+            }
+            for task in tasks
+            for info_item in await self.get_info(task=task)
+            for net_name, vip in info_item.get("service_vips", {}).items()
+        ]
+
+        df = pd.DataFrame(rows)
+        df.set_index(["date", "task", "network"], inplace=True)
 
         return df

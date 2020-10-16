@@ -3,9 +3,9 @@ import pytest
 from wotemu.report.reader import ReportDataRedisReader, explode_dict_column
 
 _NUM_TASKS = 7
-_TASK_SYSTEM_DF = "clock_clock.1.usxzm8nskxi4fr5t63k8wmorq"
-_TASK_THING_DF = "clock_clock.1.usxzm8nskxi4fr5t63k8wmorq"
-_TASK_PACKET_DF = "clock_clock.1.usxzm8nskxi4fr5t63k8wmorq"
+_TASK_SYSTEM_DF = "clock_clock.1.m8et1liyos42ljc15lkre6b71"
+_TASK_THING_DF = "clock_clock.1.m8et1liyos42ljc15lkre6b71"
+_TASK_PACKET_DF = "clock_clock.1.m8et1liyos42ljc15lkre6b71"
 
 pd.set_option("display.max_columns", None)
 
@@ -82,7 +82,7 @@ async def test_get_info(redis_reader):
         "python_version",
         "time",
         "uname",
-        "service_vip"
+        "service_vips"
     }
 
 
@@ -149,6 +149,10 @@ async def test_extend_packet_df(redis_reader):
         "dst_task",
         "dst_service"
     ]
+
+    df_tcp = df[df["transport"] == "tcp"]
+    assert df_tcp["src_service"].all()
+    assert df_tcp["dst_service"].all()
 
     for col in columns:
         assert df[col].notna().any()
