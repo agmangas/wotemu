@@ -15,7 +15,8 @@ RUN apt-get update -y && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     curl \
     tcpdump \
     git \
-    mosquitto
+    mosquitto \
+    dnsutils
 
 COPY . ${PATH_WOTEMU}
 RUN ${PATH_WOTEMU}/scripts/install-pumba.sh
