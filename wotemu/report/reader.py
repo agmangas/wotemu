@@ -185,19 +185,11 @@ class ReportDataRedisReader:
             value=df["dst_vip_service"])
 
         df = df.drop(columns=["src_vip_service", "dst_vip_service"])
-
-        na_cols = [
-            col for col in ["src_task", "src_service", "dst_task", "dst_service"]
-            if df[col].notna().any()
-        ]
-
-        if len(na_cols) > 0:
-            _logger.warning((
-                "Could not fill all columns on an extended "
-                "packet DF (some columns contain NaN values): %s\n%s"
-            ), na_cols, df)
-
         df.set_index(["date", "iface"], inplace=True)
+
+        _logger.debug(
+            "NaN ratio for extended packet DF (len: %s):\n%s",
+            len(df), df.isna().sum() / len(df))
 
         return df
 

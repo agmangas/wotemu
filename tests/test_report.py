@@ -7,8 +7,6 @@ _TASK_SYSTEM_DF = "clock_clock.1.m8et1liyos42ljc15lkre6b71"
 _TASK_THING_DF = "clock_clock.1.m8et1liyos42ljc15lkre6b71"
 _TASK_PACKET_DF = "clock_clock.1.m8et1liyos42ljc15lkre6b71"
 
-pd.set_option("display.max_columns", None)
-
 
 @pytest.fixture
 async def redis_reader(redis_loaded):
