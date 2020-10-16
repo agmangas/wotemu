@@ -139,9 +139,9 @@ async def redis_loaded(redis):
         data = json.loads(fh.read())
 
     for item in data:
-        item_log = {**item}
-        item_log.update({"value": len(item_log["value"])})
-        _logger.debug("Loading: %s", item_log)
+        _logger.debug(
+            "Loading '%s' (type: %s) (size: %s)",
+            item.get("key"), item.get("type"), len(item.get("value", [])))
 
         if item["type"] == "zset":
             await _insert_zset(redis, item)
