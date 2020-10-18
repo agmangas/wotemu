@@ -1,21 +1,11 @@
 import pandas as pd
 import pytest
-from wotemu.report.reader import ReportDataRedisReader, explode_dict_column
+from wotemu.report.reader import explode_dict_column
 
 _NUM_TASKS = 7
 _TASK_SYSTEM_DF = "clock_clock.1.m8et1liyos42ljc15lkre6b71"
 _TASK_THING_DF = "clock_clock.1.m8et1liyos42ljc15lkre6b71"
 _TASK_PACKET_DF = "clock_clock.1.m8et1liyos42ljc15lkre6b71"
-
-
-@pytest.fixture
-async def redis_reader(redis_loaded):
-    host, port = redis_loaded.connection.address
-    redis_url = f"redis://{host}:{port}"
-    reader = ReportDataRedisReader(redis_url=redis_url)
-    await reader.connect()
-    yield reader
-    await reader.close()
 
 
 @pytest.mark.asyncio

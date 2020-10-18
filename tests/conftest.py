@@ -8,6 +8,7 @@ from collections import namedtuple
 import aioredis
 import docker
 import pytest
+from wotemu.report.reader import ReportDataRedisReader
 
 TD_EXAMPLE = {
     "id": "urn:org:fundacionctic:thing:testthing",
@@ -147,3 +148,13 @@ async def redis_loaded(redis):
             await _insert_zset(redis, item)
 
     return redis
+
+
+@pytest.fixture
+async def redis_reader(redis_loaded):
+    host, port = redis_loaded.connection.address
+    redis_url = f"redis://{host}:{port}"
+    reader = ReportDataRedisReader(redis_url=redis_url)
+    await reader.connect()
+    yield reader
+    await reader.close()
