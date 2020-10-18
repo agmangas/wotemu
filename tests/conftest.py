@@ -153,7 +153,8 @@ async def redis_loaded(redis):
 @pytest.fixture
 async def redis_reader(redis_loaded):
     host, port = redis_loaded.connection.address
-    redis_url = f"redis://{host}:{port}"
+    db = redis_loaded.connection.db
+    redis_url = f"redis://{host}:{port}/{db}"
     reader = ReportDataRedisReader(redis_url=redis_url)
     await reader.connect()
     yield reader
