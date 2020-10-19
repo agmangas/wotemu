@@ -10,6 +10,8 @@ setuptools.setup(
     author_email='andres.garcia@fundacionctic.org',
     description="A Fog-layer emulator based on Swarm Mode for Web of Things applications",
     packages=setuptools.find_packages(),
+    include_package_data=True,
+    zip_safe=False,
     classifiers=[
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
