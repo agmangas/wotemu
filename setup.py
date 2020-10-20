@@ -51,7 +51,8 @@ setuptools.setup(
             "rope>=0.16.0,<1.0",
             "pytest>=5.0,<6.0",
             "pytest-asyncio>=0.10.0,<1.0",
-            "docker>=4.0,<5.0"
+            "docker>=4.0,<5.0",
+            "html5lib>=1.1,<2.0"
         ]
     }
 )

@@ -9,10 +9,41 @@ from plotly.subplots import make_subplots
 
 
 class ReportBuilder:
+    @classmethod
+    def build_figure_block_element(cls, fig, title=None, height=450, col_class="col-md", with_row=True):
+        try:
+            fig_io = io.StringIO()
+            fig.write_html(fig_io, include_plotlyjs=False, full_html=False)
+            fig_html = fig_io.getvalue()
+
+            el_title = ET.Element("h4")
+
+            if title:
+                el_title.text = title
+
+            el_plot = ET.fromstring(fig_html)
+            el_plot.set("style", f"height: {height}px;")
+            el_col = ET.Element("div", attrib={"class": col_class})
+            el_col.append(el_title)
+            el_col.append(el_plot)
+
+            if not with_row:
+                return el_col
+
+            el_row = ET.Element("div", attrib={"class": "row"})
+            el_row.append(el_col)
+
+            return el_row
+        finally:
+            try:
+                fig_io.close()
+            except:
+                pass
+
     def __init__(self, reader):
         self._reader = reader
 
-    async def build_task_mem_fig(self, task):
+    async def build_task_mem_figure(self, task):
         df_system = await self._reader.get_system_df(task=task)
         df_system = df_system.reset_index()
 
@@ -44,21 +75,8 @@ class ReportBuilder:
         tasks = await self._reader.get_tasks()
 
         figs = {
-            task: await self.build_task_mem_fig(task=task)
+            task: await self.build_task_mem_figure(task=task)
             for task in tasks
-        }
-
-        figs_html_io = {task: io.StringIO() for task in tasks}
-
-        for task in figs_html_io.keys():
-            figs[task].write_html(
-                figs_html_io[task],
-                include_plotlyjs=False,
-                full_html=False)
-
-        figs_html = {
-            task: fig_html_io.getvalue()
-            for task, fig_html_io in figs_html_io.items()
         }
 
         resource_path = '/'.join(("templates", "base.html"))
@@ -69,16 +87,7 @@ class ReportBuilder:
             el for el in tree.find("body").iter()
             if el.attrib.get("id") == "root")
 
-        for task, fig_html in figs_html.items():
-            el_title = ET.Element("h3")
-            el_title.text = task
-            el_plot = ET.fromstring(fig_html)
-            el_plot.set("style", f"height: {plot_height}px;")
-            el_col = ET.Element("div", attrib={"class": "col-lg"})
-            el_col.append(el_title)
-            el_col.append(el_plot)
-            el_row = ET.Element("div", attrib={"class": "row"})
-            el_row.append(el_col)
-            root.append(el_row)
+        for task, fig in figs.items():
+            root.append(self.build_figure_block_element(fig, title=task))
 
         return ET.tostring(tree, method="html")
