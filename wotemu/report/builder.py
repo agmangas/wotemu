@@ -136,6 +136,37 @@ class ReportBuilder:
 
         return fig
 
+    async def build_task_packet_figure(self, task, freq="10s"):
+        df = await self._reader.get_packet_df(task=task, extended=True)
+
+        if df is None:
+            return None
+
+        df = df.reset_index()
+        df = df[df["dstport"].notna() & df["srcport"].notna()]
+
+        iface_series = {}
+        grouper = pd.Grouper(freq=freq)
+
+        for iface in df["iface"].unique():
+            df_iface = df[df["iface"] == iface]
+            df_iface.set_index(["date"], inplace=True)
+            iface_series[iface] = df_iface["len"].groupby(grouper).sum()
+            iface_series[iface] /= 1024.0
+
+        iface_traces = {
+            iface: go.Scatter(x=ser.index, y=ser, name=iface)
+            for iface, ser in iface_series.items()
+        }
+
+        fig = make_subplots()
+        [fig.add_trace(trace) for trace in iface_traces.values()]
+        fig.update_layout(title_text="Data transfer")
+        fig.update_xaxes(title_text="Date (UTC)")
+        fig.update_yaxes(title_text="KB")
+
+        return fig
+
     async def build_report(self, plot_height=500):
         tasks = await self._reader.get_tasks()
 
@@ -149,6 +180,11 @@ class ReportBuilder:
             for task in tasks
         }
 
+        figs_packet = {
+            task: await self.build_task_packet_figure(task=task)
+            for task in tasks
+        }
+
         resource_path = '/'.join(("templates", "base.html"))
         template = pkg_resources.resource_string(__name__, resource_path)
         tree = ET.fromstring(template.decode())
@@ -158,8 +194,13 @@ class ReportBuilder:
             if el.attrib.get("id") == "root")
 
         for task in sorted(figs_mem.keys()):
+            task_figs = [figs_mem[task], figs_cpu[task]]
+
+            if figs_packet.get(task):
+                task_figs.append(figs_packet[task])
+
             task_row = self.build_figures_row_el(
-                [figs_mem[task], figs_cpu[task]],
+                task_figs,
                 col_class="col-xl-6",
                 title=task)
 

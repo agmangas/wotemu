@@ -118,6 +118,12 @@ class ReportDataRedisReader:
 
         packet_keys = await self._client.keys(pattern=pattern)
 
+        if len(packet_keys) == 0:
+            _logger.debug(
+                "No packet keys found for task '%s': Undefined packet DF", task)
+
+            return None
+
         dfs = []
 
         for key in packet_keys:
