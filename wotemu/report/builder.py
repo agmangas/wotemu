@@ -136,7 +136,7 @@ class ReportBuilder:
 
         return fig
 
-    async def build_task_packet_figure(self, task, freq="10s"):
+    async def _build_task_packet_figure(self, task, freq, col):
         df = await self._reader.get_packet_df(task=task, extended=True)
 
         if df is None:
@@ -145,25 +145,50 @@ class ReportBuilder:
         df = df.reset_index()
         df = df[df["dstport"].notna() & df["srcport"].notna()]
 
-        iface_series = {}
+        col_series = {}
         grouper = pd.Grouper(freq=freq)
 
-        for iface in df["iface"].unique():
-            df_iface = df[df["iface"] == iface]
-            df_iface.set_index(["date"], inplace=True)
-            iface_series[iface] = df_iface["len"].groupby(grouper).sum()
-            iface_series[iface] /= 1024.0
+        for key in df[col].unique():
+            df_key = df[df[col] == key]
+            df_key.set_index(["date"], inplace=True)
+            ser = df_key["len"].groupby(grouper).sum() / 1024.0
+            col_series[key] = ser
 
         iface_traces = {
-            iface: go.Scatter(x=ser.index, y=ser, name=iface)
-            for iface, ser in iface_series.items()
+            key: go.Scatter(x=ser.index, y=ser, name=key)
+            for key, ser in col_series.items()
         }
 
         fig = make_subplots()
         [fig.add_trace(trace) for trace in iface_traces.values()]
-        fig.update_layout(title_text="Data transfer")
         fig.update_xaxes(title_text="Date (UTC)")
         fig.update_yaxes(title_text="KB")
+
+        return fig
+
+    async def build_task_packet_iface_figure(self, task, freq="10s"):
+        fig = await self._build_task_packet_figure(
+            task=task,
+            freq=freq,
+            col="iface")
+
+        if not fig:
+            return None
+
+        fig.update_layout(title_text="Data transfer (by interface)")
+
+        return fig
+
+    async def build_task_packet_protocol_figure(self, task, freq="10s"):
+        fig = await self._build_task_packet_figure(
+            task=task,
+            freq=freq,
+            col="proto")
+
+        if not fig:
+            return None
+
+        fig.update_layout(title_text="Data transfer (by protocol)")
 
         return fig
 
@@ -180,8 +205,13 @@ class ReportBuilder:
             for task in tasks
         }
 
-        figs_packet = {
-            task: await self.build_task_packet_figure(task=task)
+        figs_packet_iface = {
+            task: await self.build_task_packet_iface_figure(task=task)
+            for task in tasks
+        }
+
+        figs_packet_proto = {
+            task: await self.build_task_packet_protocol_figure(task=task)
             for task in tasks
         }
 
@@ -196,8 +226,11 @@ class ReportBuilder:
         for task in sorted(figs_mem.keys()):
             task_figs = [figs_mem[task], figs_cpu[task]]
 
-            if figs_packet.get(task):
-                task_figs.append(figs_packet[task])
+            if figs_packet_iface.get(task):
+                task_figs.append(figs_packet_iface[task])
+
+            if figs_packet_proto.get(task):
+                task_figs.append(figs_packet_proto[task])
 
             task_row = self.build_figures_row_el(
                 task_figs,
