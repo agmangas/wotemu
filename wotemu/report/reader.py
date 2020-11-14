@@ -252,3 +252,31 @@ class ReportDataRedisReader:
         df.set_index(["date", "task", "network"], inplace=True)
 
         return df
+
+    async def get_service_traffic_df(self, tasks=None, inbound=True):
+        tasks = tasks if tasks else await self.get_tasks()
+
+        col_task = "src_task" if inbound else "dst_task"
+        col_service = "dst_service" if inbound else "src_service"
+
+        dfs = {
+            task: await self.get_packet_df(task, extended=True)
+            for task in tasks
+        }
+
+        dfs = {
+            task: df[(df[col_task] == task) & df[col_service].notna()]
+            for task, df in dfs.items()
+            if df is not None
+        }
+
+        dfs = {
+            task: df.groupby(col_service)["len"].sum().to_frame()
+            for task, df in dfs.items()
+        }
+
+        for task, df in dfs.items():
+            df.reset_index(inplace=True)
+            df[col_task] = task
+
+        return pd.concat(dfs.values())

@@ -144,3 +144,28 @@ async def test_extend_packet_df(redis_reader):
 
     for col in columns:
         assert df[col].notna().any()
+
+
+@pytest.mark.asyncio
+async def test_get_service_traffic_df(redis_reader):
+    df_in = await redis_reader.get_service_traffic_df(inbound=True)
+
+    columns_in = [
+        "len",
+        "src_task",
+        "dst_service"
+    ]
+
+    for col in columns_in:
+        assert df_in[col].notna().any()
+
+    df_out = await redis_reader.get_service_traffic_df(inbound=False)
+
+    columns_out = [
+        "len",
+        "dst_task",
+        "src_service"
+    ]
+
+    for col in columns_out:
+        assert df_out[col].notna().any()
