@@ -2,21 +2,17 @@ import pandas as pd
 import pytest
 from wotemu.report.reader import explode_dict_column
 
-_NUM_TASKS = 7
-_TASK_SYSTEM_DF = "clock_clock.1.m8et1liyos42ljc15lkre6b71"
-_TASK_THING_DF = "clock_clock.1.m8et1liyos42ljc15lkre6b71"
-_TASK_PACKET_DF = "clock_clock.1.m8et1liyos42ljc15lkre6b71"
-
 
 @pytest.mark.asyncio
-async def test_get_tasks(redis_reader):
+async def test_get_tasks(redis_reader, redis_test_data):
     tasks = await redis_reader.get_tasks()
-    assert len(tasks) == _NUM_TASKS
+    assert len(tasks) == redis_test_data.get_num_tasks()
 
 
 @pytest.mark.asyncio
-async def test_get_system_df(redis_reader):
-    df = await redis_reader.get_system_df(task=_TASK_SYSTEM_DF)
+async def test_get_system_df(redis_reader, redis_test_data):
+    task = redis_test_data.get_task_with_system_data()
+    df = await redis_reader.get_system_df(task=task)
 
     assert set(df.index.names) == {"date"}
 
@@ -31,8 +27,9 @@ async def test_get_system_df(redis_reader):
 
 
 @pytest.mark.asyncio
-async def test_get_packet_df(redis_reader):
-    df = await redis_reader.get_packet_df(task=_TASK_PACKET_DF)
+async def test_get_packet_df(redis_reader, redis_test_data):
+    task = redis_test_data.get_task_with_packet_data()
+    df = await redis_reader.get_packet_df(task=task)
 
     assert set(df.index.names) == {"date", "iface"}
 
@@ -75,8 +72,9 @@ async def test_get_info(redis_reader):
 
 
 @pytest.mark.asyncio
-async def test_get_thing_df(redis_reader):
-    df = await redis_reader.get_thing_df(task=_TASK_THING_DF)
+async def test_get_thing_df(redis_reader, redis_test_data):
+    task = redis_test_data.get_task_with_thing_data()
+    df = await redis_reader.get_thing_df(task=task)
 
     assert set(df.index.names) == {"date", "thing", "name", "verb"}
 
@@ -118,8 +116,9 @@ async def test_get_address_df(redis_reader):
 
 
 @pytest.mark.asyncio
-async def test_extend_packet_df(redis_reader):
-    df_packet = await redis_reader.get_packet_df(task=_TASK_PACKET_DF)
+async def test_extend_packet_df(redis_reader, redis_test_data):
+    task = redis_test_data.get_task_with_packet_data()
+    df_packet = await redis_reader.get_packet_df(task=task)
     df = await redis_reader.extend_packet_df(df_packet)
 
     assert set(df.index.names) == {"date", "iface"}

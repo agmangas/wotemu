@@ -159,3 +159,41 @@ async def redis_reader(redis_loaded):
     await reader.connect()
     yield reader
     await reader.close()
+
+
+@pytest.fixture
+def redis_test_data():
+    current_dir = os.path.dirname(os.path.realpath(__file__))
+    data_file = os.path.join(current_dir, _REDIS_DATA_FILE)
+
+    with open(data_file, "r") as fh:
+        data = json.loads(fh.read())
+        return RedisTestData(data)
+
+
+class RedisTestData:
+    def __init__(self, data):
+        self._data = data
+
+    def get_num_tasks(self):
+        return len(set(
+            item["key"]
+            for item in self._data
+            if item["key"].startswith("wotemu:info:")))
+
+    def _next_task_with_data(self, redis_key):
+        prefix = "wotemu:{}:".format(redis_key)
+
+        return next(
+            item["key"].split(":")[-1]
+            for item in self._data
+            if item["key"].startswith(prefix))
+
+    def get_task_with_system_data(self):
+        return self._next_task_with_data(redis_key="system")
+
+    def get_task_with_packet_data(self):
+        return self._next_task_with_data(redis_key="packet")
+
+    def get_task_with_thing_data(self):
+        return self._next_task_with_data(redis_key="thing")
