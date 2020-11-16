@@ -1,5 +1,6 @@
 import io
 import math
+import functools
 import xml.etree.ElementTree as ET
 
 import pandas as pd
@@ -192,7 +193,57 @@ class ReportBuilder:
 
         return fig
 
-    async def build_report(self, plot_height=500):
+    def _get_traffic(self, df, col_service, col_task, service, task):
+        df_where = df[
+            (df[col_service] == service) &
+            (df[col_task] == task)]
+
+        return 0 if df_where.empty else (df_where.iloc[0]["len"] / 1024.0)
+
+    async def build_service_traffic_figure(self, inbound):
+        df = await self._reader.get_service_traffic_df(inbound=inbound)
+
+        col_service = "dst_service" if inbound else "src_service"
+        col_task = "src_task" if inbound else "dst_task"
+
+        heatmap_x = sorted(list(df[col_service].unique()))
+        heatmap_y = sorted(list(df[col_task].unique()))
+
+        get_traffic_partial = functools.partial(
+            self._get_traffic,
+            df=df,
+            col_service=col_service,
+            col_task=col_task)
+
+        heatmap_z = [
+            [
+                get_traffic_partial(service=service, task=task)
+                for service in heatmap_x
+            ]
+            for task in heatmap_y
+        ]
+
+        fig = make_subplots()
+
+        trace = go.Heatmap(
+            z=heatmap_z,
+            x=heatmap_x,
+            y=heatmap_y,
+            hoverongaps=False)
+
+        fig.add_trace(trace)
+
+        title = "{} traffic (KB) (service {})".format(
+            "Task - service" if inbound else "Service - task",
+            "inbound" if inbound else "outbound")
+
+        fig.update_xaxes(title_text="Service", tickangle=90)
+        fig.update_yaxes(title_text="Task")
+        fig.update_layout(title_text=title)
+
+        return fig
+
+    async def build_report(self, default_height=450, service_traffic_height=650):
         tasks = await self._reader.get_tasks()
 
         figs_mem = {
@@ -223,6 +274,21 @@ class ReportBuilder:
             el for el in tree.find("body").iter()
             if el.attrib.get("id") == "root")
 
+        serv_traffic_rows = [
+            self.build_figure_block_el(
+                await self.build_service_traffic_figure(inbound=True),
+                title="Service traffic heatmap (inbound)",
+                height=service_traffic_height,
+                with_row=True),
+            self.build_figure_block_el(
+                await self.build_service_traffic_figure(inbound=False),
+                title="Service traffic heatmap (outbound)",
+                height=service_traffic_height,
+                with_row=True)
+        ]
+
+        [root.append(row) for row in serv_traffic_rows]
+
         for task in sorted(figs_mem.keys()):
             task_figs = [figs_mem[task], figs_cpu[task]]
 
@@ -235,7 +301,8 @@ class ReportBuilder:
             task_row = self.build_figures_row_el(
                 task_figs,
                 col_class="col-xl-6",
-                title=task)
+                title=task,
+                height=default_height)
 
             root.append(task_row)
 

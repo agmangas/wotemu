@@ -5,13 +5,12 @@ import html5lib
 import pytest
 from wotemu.report.builder import ReportBuilder
 
-_TASK_SYSTEM_DF = "clock_clock.1.m8et1liyos42ljc15lkre6b71"
-
 
 @pytest.mark.asyncio
-async def test_build_task_mem_figure(redis_reader):
+async def test_build_task_mem_figure(redis_reader, redis_test_data):
     builder = ReportBuilder(reader=redis_reader)
-    fig = await builder.build_task_mem_figure(task=_TASK_SYSTEM_DF)
+    task = redis_test_data.get_task_with_system_data()
+    fig = await builder.build_task_mem_figure(task=task)
     assert fig
 
 

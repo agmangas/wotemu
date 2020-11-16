@@ -279,4 +279,4 @@ class ReportDataRedisReader:
             df.reset_index(inplace=True)
             df[col_task] = task
 
-        return pd.concat(dfs.values())
+        return pd.concat(dfs.values(), ignore_index=True)
