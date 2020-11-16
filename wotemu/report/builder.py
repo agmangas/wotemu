@@ -237,7 +237,7 @@ class ReportBuilder:
             "Task - service" if inbound else "Service - task",
             "inbound" if inbound else "outbound")
 
-        fig.update_xaxes(title_text="Service", tickangle=90)
+        fig.update_xaxes(title_text="Service")
         fig.update_yaxes(title_text="Task")
         fig.update_layout(title_text=title)
 
