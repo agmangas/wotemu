@@ -121,11 +121,11 @@ async def redis():
             pass
 
 
-async def _insert_zset(redis, item):
+def _insert_zset(tr, item):
     assert item["type"] == "zset"
 
     for value_item in item["value"]:
-        await redis.zadd(
+        tr.zadd(
             key=item["key"],
             score=value_item[1],
             member=value_item[0])
@@ -139,13 +139,17 @@ async def redis_loaded(redis):
     with open(data_file, "r") as fh:
         data = json.loads(fh.read())
 
+    tr = redis.multi_exec()
+
     for item in data:
         _logger.debug(
             "Loading '%s' (type: %s) (size: %s)",
             item.get("key"), item.get("type"), len(item.get("value", [])))
 
         if item["type"] == "zset":
-            await _insert_zset(redis, item)
+            _insert_zset(tr, item)
+
+    await tr.execute()
 
     return redis
 
