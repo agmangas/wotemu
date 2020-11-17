@@ -1,5 +1,6 @@
 from wotemu.enums import NetworkConditions
-from wotemu.topology.models import Broker, Network, Node, NodeApp, Topology, NodeResources
+from wotemu.topology.models import (Broker, Network, Node, NodeApp,
+                                    NodeResources, Topology)
 
 APP_CLOCK = "/root/wotemu/examples/app/clock.py"
 APP_SUBSCRIBER = "/root/wotemu/examples/app/subscriber.py"
@@ -21,33 +22,64 @@ def topology():
         name="broker",
         networks=[network_3g])
 
-    node_clock = Node(
-        name="clock",
-        app=NodeApp(path=APP_CLOCK, http=True, mqtt=True),
+    node_clock_mqtt = Node(
+        name="clock_mqtt",
+        app=NodeApp(path=APP_CLOCK, mqtt=True),
         networks=[network_wifi],
         broker=broker,
         scale=2)
 
-    host_clock = "{}.{}".format(
-        node_clock.name,
+    node_clock_http = Node(
+        name="clock_http",
+        app=NodeApp(path=APP_CLOCK, http=True),
+        networks=[network_wifi],
+        scale=2)
+
+    host_clock_mqtt = "{}.{}".format(
+        node_clock_mqtt.name,
         network_wifi.name)
 
-    app_sub = NodeApp(
+    app_sub_mqtt = NodeApp(
         path=APP_SUBSCRIBER,
         params={
-            PARAM_SERVIENT_HOST: host_clock,
+            PARAM_SERVIENT_HOST: host_clock_mqtt,
             PARAM_THING_ID: THING_ID_CLOCK
         })
 
-    sub_resources = NodeResources(target_cpu_speed=200, mem_limit="200M")
+    host_clock_http = "{}.{}".format(
+        node_clock_http.name,
+        network_wifi.name)
 
-    node_sub = Node(
-        name="clock_sub",
-        app=app_sub,
+    app_sub_http = NodeApp(
+        path=APP_SUBSCRIBER,
+        params={
+            PARAM_SERVIENT_HOST: host_clock_http,
+            PARAM_THING_ID: THING_ID_CLOCK
+        })
+
+    sub_resources = NodeResources(
+        target_cpu_speed=200,
+        mem_limit="200M")
+
+    node_sub_mqtt = Node(
+        name="clock_sub_mqtt",
+        app=app_sub_mqtt,
+        networks=[network_wifi, network_3g],
+        resources=sub_resources,
+        scale=2)
+
+    node_sub_http = Node(
+        name="clock_sub_http",
+        app=app_sub_http,
         networks=[network_wifi, network_3g],
         resources=sub_resources,
         scale=4)
 
-    topology = Topology(nodes=[node_clock, node_sub])
+    topology = Topology(nodes=[
+        node_clock_mqtt,
+        node_clock_http,
+        node_sub_mqtt,
+        node_sub_http
+    ])
 
     return topology
