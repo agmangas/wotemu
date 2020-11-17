@@ -1,6 +1,8 @@
+import functools
 import io
 import math
-import functools
+import os
+import tempfile
 import xml.etree.ElementTree as ET
 
 import pandas as pd
@@ -11,6 +13,18 @@ from plotly.subplots import make_subplots
 
 
 class ReportBuilder:
+    @classmethod
+    def _get_template(cls):
+        resource_path = '/'.join(("templates", "base.html"))
+        template = pkg_resources.resource_string(__name__, resource_path)
+        tree = ET.fromstring(template.decode())
+
+        root = next(
+            el for el in tree.find("body").iter()
+            if el.attrib.get("id") == "root")
+
+        return tree, root
+
     @classmethod
     def build_figure_block_el(cls, fig, title=None, height=450, col_class="col", with_row=True):
         try:
@@ -198,6 +212,8 @@ class ReportBuilder:
             (df[col_service] == service) &
             (df[col_task] == task)]
 
+        assert len(df_where) in [0, 1]
+
         return 0 if df_where.empty else (df_where.iloc[0]["len"] / 1024.0)
 
     async def build_service_traffic_figure(self, inbound):
@@ -224,13 +240,7 @@ class ReportBuilder:
         ]
 
         fig = make_subplots()
-
-        trace = go.Heatmap(
-            z=heatmap_z,
-            x=heatmap_x,
-            y=heatmap_y,
-            hoverongaps=False)
-
+        trace = go.Heatmap(z=heatmap_z, x=heatmap_x, y=heatmap_y)
         fig.add_trace(trace)
 
         title = "{} traffic (KB) (service {})".format(
@@ -243,67 +253,96 @@ class ReportBuilder:
 
         return fig
 
-    async def build_report(self, default_height=450, service_traffic_height=650):
-        tasks = await self._reader.get_tasks()
+    async def build_task_section(self, task, height=450):
+        figs = [
+            await self.build_task_mem_figure(task=task),
+            await self.build_task_cpu_figure(task=task),
+            await self.build_task_packet_iface_figure(task=task),
+            await self.build_task_packet_protocol_figure(task=task)
+        ]
 
-        figs_mem = {
-            task: await self.build_task_mem_figure(task=task)
-            for task in tasks
-        }
+        figs = [item for item in figs if item is not None]
 
-        figs_cpu = {
-            task: await self.build_task_cpu_figure(task=task)
-            for task in tasks
-        }
+        return self.build_figures_row_el(
+            figs,
+            col_class="col-xl-6",
+            title=task,
+            height=height)
 
-        figs_packet_iface = {
-            task: await self.build_task_packet_iface_figure(task=task)
-            for task in tasks
-        }
-
-        figs_packet_proto = {
-            task: await self.build_task_packet_protocol_figure(task=task)
-            for task in tasks
-        }
-
-        resource_path = '/'.join(("templates", "base.html"))
-        template = pkg_resources.resource_string(__name__, resource_path)
-        tree = ET.fromstring(template.decode())
-
-        root = next(
-            el for el in tree.find("body").iter()
-            if el.attrib.get("id") == "root")
-
+    async def build_main_section(self, height=650):
         serv_traffic_rows = [
             self.build_figure_block_el(
                 await self.build_service_traffic_figure(inbound=True),
                 title="Service traffic heatmap (inbound)",
-                height=service_traffic_height,
+                height=height,
                 with_row=True),
             self.build_figure_block_el(
                 await self.build_service_traffic_figure(inbound=False),
                 title="Service traffic heatmap (outbound)",
-                height=service_traffic_height,
+                height=height,
                 with_row=True)
         ]
 
-        [root.append(row) for row in serv_traffic_rows]
+        container_row = ET.Element("div", attrib={"class": "row"})
+        container_col = ET.Element("div", attrib={"class": "col"})
+        container_row.append(container_col)
+        [container_col.append(item) for item in serv_traffic_rows]
 
-        for task in sorted(figs_mem.keys()):
-            task_figs = [figs_mem[task], figs_cpu[task]]
+        return container_row
 
-            if figs_packet_iface.get(task):
-                task_figs.append(figs_packet_iface[task])
+    async def build_report(self):
+        tasks = await self._reader.get_tasks()
+        tasks = sorted(tasks)
 
-            if figs_packet_proto.get(task):
-                task_figs.append(figs_packet_proto[task])
+        task_pages = {}
 
-            task_row = self.build_figures_row_el(
-                task_figs,
-                col_class="col-xl-6",
-                title=task,
-                height=default_height)
+        for task in tasks:
+            tree, root = self._get_template()
+            task_section = await self.build_task_section(task)
+            root.append(task_section)
+            task_pages[f"{task}.html"] = ET.tostring(tree, method="html")
 
-            root.append(task_row)
+        task_links = []
 
-        return ET.tostring(tree, method="html")
+        for task in tasks:
+            a_el = ET.Element("a", attrib={
+                "class": "list-group-item list-group-item-action text-primary",
+                "href": f"{task}.html"
+            })
+
+            a_el.text = task
+            task_links.append(a_el)
+
+        links_row = ET.Element("div", attrib={"class": "row"})
+        links_col = ET.Element("div", attrib={"class": "col"})
+        links_title = ET.Element("h4")
+        links_title.text = "Task metrics"
+
+        links_div = ET.Element("div", attrib={
+            "class": "list-group list-group-flush mb-3"
+        })
+
+        links_row.append(links_col)
+        links_col.append(links_title)
+        links_col.append(links_div)
+        [links_div.append(item) for item in task_links]
+
+        main_section = await self.build_main_section()
+
+        tree, root = self._get_template()
+        root.append(links_row)
+        root.append(main_section)
+
+        ret = {"index.html": ET.tostring(tree, method="html")}
+        ret.update(task_pages)
+
+        return ret
+
+    async def write_report(self, base_path):
+        report_pages = await self.build_report()
+
+        for file_name, file_bytes in report_pages.items():
+            file_path = os.path.join(base_path, file_name)
+
+            with open(file_path, "wb") as fh:
+                fh.write(file_bytes)

@@ -17,12 +17,20 @@ async def test_build_task_mem_figure(redis_reader, redis_test_data):
 @pytest.mark.asyncio
 async def test_build_report(redis_reader):
     builder = ReportBuilder(reader=redis_reader)
-    report_bytes = await builder.build_report()
-    assert report_bytes
+    report_pages = await builder.build_report()
 
-    with tempfile.TemporaryFile() as fp:
-        fp.write(report_bytes)
-        fp.seek(0)
-        report_bytes_read = fp.read()
-        document = html5lib.parse(report_bytes_read.decode())
-        assert document
+    for file_bytes in report_pages.values():
+        with tempfile.TemporaryFile() as fp:
+            fp.write(file_bytes)
+            fp.seek(0)
+            bytes_read = fp.read()
+            document = html5lib.parse(bytes_read.decode())
+            assert document
+
+
+@pytest.mark.asyncio
+async def test_write_report(redis_reader):
+    builder = ReportBuilder(reader=redis_reader)
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        await builder.write_report(base_path=tmp_dir)
