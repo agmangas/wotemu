@@ -224,7 +224,7 @@ class ReportBuilder:
 
         return 0 if df_where.empty else (df_where.iloc[0]["len"] / 1024.0)
 
-    async def build_service_traffic_figure(self, inbound):
+    async def build_service_traffic_figure(self, inbound, colorscale="Portland"):
         df = await self._reader.get_service_traffic_df(inbound=inbound)
 
         col_service = "dst_service" if inbound else "src_service"
@@ -250,6 +250,7 @@ class ReportBuilder:
         fig = make_subplots()
 
         trace = go.Heatmap(
+            colorscale=colorscale,
             z=heatmap_z,
             x=[self._shorten_name(item) for item in heatmap_x],
             y=[self._shorten_name(item) for item in heatmap_y])
