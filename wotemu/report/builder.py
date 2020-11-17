@@ -2,6 +2,7 @@ import functools
 import io
 import math
 import os
+import re
 import tempfile
 import xml.etree.ElementTree as ET
 
@@ -24,6 +25,13 @@ class ReportBuilder:
             if el.attrib.get("id") == "root")
 
         return tree, root
+
+    @classmethod
+    def _shorten_name(cls, name):
+        return re.sub(
+            r"^(.+\.\d+\..{6})(.+)$",
+            r"\1[...]",
+            name)
 
     @classmethod
     def build_figure_block_el(cls, fig, title=None, height=450, col_class="col", with_row=True):
@@ -240,7 +248,12 @@ class ReportBuilder:
         ]
 
         fig = make_subplots()
-        trace = go.Heatmap(z=heatmap_z, x=heatmap_x, y=heatmap_y)
+
+        trace = go.Heatmap(
+            z=heatmap_z,
+            x=[self._shorten_name(item) for item in heatmap_x],
+            y=[self._shorten_name(item) for item in heatmap_y])
+
         fig.add_trace(trace)
 
         title = "{} traffic (KB) (service {})".format(
