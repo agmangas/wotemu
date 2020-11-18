@@ -11,6 +11,7 @@ import wotemu.cli.chaos
 import wotemu.cli.compose
 import wotemu.cli.limits
 import wotemu.cli.routes
+import wotemu.cli.stop
 import wotemu.cli.waiter
 import wotemu.config
 
@@ -150,3 +151,16 @@ def broker(conf, **kwargs):
     """Runs a MQTT broker."""
 
     wotemu.cli.broker.run_mqtt_broker(conf, **kwargs)
+
+
+@cli.command(**_COMMAND_KWARGS)
+@click.option("--compose-file", required=True)
+@click.option("--stack", required=True)
+@click.pass_obj
+@_catch
+def stop(conf, **kwargs):
+    """Stops a simulation stack that is currently running. 
+    Unlike 'docker stack rm' this keeps the in-memory traces 
+    if necessary and logs other events of interest."""
+
+    wotemu.cli.stop.stop_stack(conf, **kwargs)

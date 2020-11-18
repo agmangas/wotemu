@@ -48,9 +48,9 @@ services:
     - /root/wotemu/examples/app/clock.py
     - --enable-http
     depends_on:
+    - gw_wifi
     - docker_api_proxy
     - redis
-    - gw_wifi
     deploy:
       replicas: 2
     environment:
@@ -82,10 +82,10 @@ services:
     - /root/wotemu/examples/app/clock.py
     - --enable-mqtt
     depends_on:
-    - gw_mobile_3g
-    - docker_api_proxy
-    - redis
     - gw_wifi
+    - docker_api_proxy
+    - gw_mobile_3g
+    - redis
     deploy:
       replicas: 2
     environment:
@@ -124,10 +124,10 @@ services:
     - thing_id
     - urn:org:fundacionctic:thing:clock
     depends_on:
-    - gw_mobile_3g
-    - docker_api_proxy
-    - redis
     - gw_wifi
+    - docker_api_proxy
+    - gw_mobile_3g
+    - redis
     deploy:
       replicas: 4
       resources:
@@ -169,10 +169,10 @@ services:
     - thing_id
     - urn:org:fundacionctic:thing:clock
     depends_on:
-    - gw_mobile_3g
-    - docker_api_proxy
-    - redis
     - gw_wifi
+    - docker_api_proxy
+    - gw_mobile_3g
+    - redis
     deploy:
       replicas: 2
       resources:
@@ -282,9 +282,11 @@ services:
     - /var/run/docker.sock:/var/run/docker.sock
   redis:
     image: redis:5
+    labels:
+      org.fundacionctic.wotemu.redis: ''
     networks:
     - wifi
     - mobile_3g
     ports:
-    - 26379:6379
+    - '6379'
 version: '3.7'

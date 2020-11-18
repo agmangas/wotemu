@@ -6,6 +6,7 @@ class Labels(enum.Enum):
     WOTEMU_GATEWAY = "org.fundacionctic.wotemu.gw"
     WOTEMU_NODE = "org.fundacionctic.wotemu.node"
     WOTEMU_BROKER = "org.fundacionctic.wotemu.broker"
+    WOTEMU_REDIS = "org.fundacionctic.wotemu.redis"
 
 
 class RedisPrefixes(enum.Enum):

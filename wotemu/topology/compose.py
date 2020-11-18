@@ -41,7 +41,8 @@ SERVICE_BASE_DOCKER_PROXY = {
 }
 
 SERVICE_BASE_REDIS = {
-    "image": "redis:5"
+    "image": "redis:5",
+    "labels": {Labels.WOTEMU_REDIS.value: ""}
 }
 
 _ENVIRONMENT_BASE = {
@@ -112,7 +113,7 @@ def get_redis_definition(topology, topology_redis):
 
     service.update({
         "networks": [net.name for net in topology.networks],
-        "ports": [f"{topology_redis.public_port}:6379"]
+        "ports": ["6379"]
     })
 
     return {topology.redis.host: service}
