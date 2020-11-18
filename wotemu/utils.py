@@ -99,6 +99,33 @@ async def wait_node(conf, name, wait=2, timeout=120, find_replicas=True):
     await asyncio.gather(*ping_awaitables)
 
 
+def _find_service_container_hosts(docker_api_client, service_name):
+    task_filters = {
+        "service": service_name,
+        "desired-state": _STATE_RUNNING
+    }
+
+    _logger.debug("Filtering Docker tasks using filters: %s", task_filters)
+
+    try:
+        service_tasks = docker_api_client.tasks(filters=task_filters)
+    except Exception as ex:
+        _logger.warning(
+            "Error finding Docker tasks (filters: %s): %s",
+            task_filters, ex)
+
+        return []
+
+    _logger.debug(
+        "Found %s tasks for service: %s",
+        len(service_tasks), service_name)
+
+    return [
+        task["Status"]["ContainerStatus"]["ContainerID"][:_CID_HOST_LEN]
+        for task in service_tasks
+    ]
+
+
 def get_service_container_hostnames(docker_url, name):
     docker_api_client = docker.APIClient(base_url=docker_url)
 
@@ -109,39 +136,32 @@ def get_service_container_hostnames(docker_url, name):
         network_candidate = service_parts[-1]
         docker_api_client.inspect_network(network_candidate)
         _logger.debug("Found network: %s", network_candidate)
-        inspect_name = ".".join(service_parts[:-1])
+        base_name = ".".join(service_parts[:-1])
     except docker.errors.NotFound:
         _logger.debug("Network not found: %s", network_candidate)
-        inspect_name = name
+        base_name = name
 
     namespace = get_current_stack_namespace(docker_url)
-    namespace_underscore = f"{namespace}_"
+    service_names = [f"{namespace}_" + base_name]
 
-    if not inspect_name.startswith(namespace_underscore):
-        inspect_name = namespace_underscore + inspect_name
+    if base_name.startswith(f"{namespace}_"):
+        service_names.append(base_name)
 
-    task_filters = {
-        "service": inspect_name,
-        "desired-state": _STATE_RUNNING
-    }
-
-    _logger.debug("Filtering tasks using filters: %s", task_filters)
-
-    service_tasks = docker_api_client.tasks(filters=task_filters)
-
-    if not len(service_tasks):
-        raise Exception("Could not find any tasks for %s", inspect_name)
-
-    _logger.debug("Found %s tasks for %s", len(service_tasks), inspect_name)
-
-    cont_hosts = [
-        task["Status"]["ContainerStatus"]["ContainerID"][:_CID_HOST_LEN]
-        for task in service_tasks
+    ret = [
+        _find_service_container_hosts(
+            docker_api_client=docker_api_client,
+            service_name=service_name)
+        for service_name in service_names
     ]
 
-    _logger.debug("Service %s container hosts: %s", inspect_name, cont_hosts)
+    ret = [host for item in ret for host in item]
 
-    return cont_hosts
+    if not len(ret):
+        raise Exception("Could not find container hostnames for: %s", name)
+
+    _logger.debug("Service %s container hostnames: %s", name, ret)
+
+    return ret
 
 
 def ping_docker(docker_url):
