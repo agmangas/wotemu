@@ -14,7 +14,8 @@ import psutil
 import sh
 import wotemu.config
 from wotemu.topology.compose import ENV_KEY_SERVICE_NAME
-from wotemu.utils import get_current_task, get_task_networks
+from wotemu.utils import (get_current_container_id, get_current_task,
+                          get_task_networks)
 
 _PATH_PERIOD = "/sys/fs/cgroup/cpu/cpu.cfs_period_us"
 _PATH_QUOTA = "/sys/fs/cgroup/cpu/cpu.cfs_quota_us"
@@ -116,52 +117,55 @@ async def monitor_system(async_cb, sleep=5.0, group_size=2):
 
 
 def _get_service_vips():
-    try:
-        service_name = os.environ[ENV_KEY_SERVICE_NAME]
-        conf = wotemu.config.get_env_config()
-        docker_url = conf.docker_proxy_url
-        curr_task = get_current_task(docker_url=docker_url)
-        net_ids = get_task_networks(docker_url=docker_url, task=curr_task)
-        docker_api_client = docker.APIClient(base_url=docker_url)
+    service_name = os.environ[ENV_KEY_SERVICE_NAME]
+    conf = wotemu.config.get_env_config()
+    docker_url = conf.docker_proxy_url
+    curr_task = get_current_task(docker_url=docker_url)
+    net_ids = get_task_networks(docker_url=docker_url, task=curr_task)
+    docker_api_client = docker.APIClient(base_url=docker_url)
 
-        net_names = [
-            docker_api_client.inspect_network(nid).get("Name")
-            for nid in net_ids
-        ]
+    net_names = [
+        docker_api_client.inspect_network(nid).get("Name")
+        for nid in net_ids
+    ]
 
-        nslookup = sh.Command("nslookup")
+    nslookup = sh.Command("nslookup")
 
-        nslookup_results = {
-            net_name: nslookup(f"{service_name}.{net_name}")
-            for net_name in net_names
-        }
+    nslookup_results = {
+        net_name: nslookup(f"{service_name}.{net_name}")
+        for net_name in net_names
+    }
 
-        _logger.debug(
-            "VIP nslookup results for service '%s':\n%s",
-            service_name,
-            pprint.pformat(nslookup_results))
+    _logger.debug(
+        "VIP nslookup results for service '%s':\n%s",
+        service_name,
+        pprint.pformat(nslookup_results))
 
-        re_results = {
-            net_name: re.search(_NSLOOKUP_REGEX, str(res))
-            for net_name, res in nslookup_results.items()
-        }
+    re_results = {
+        net_name: re.search(_NSLOOKUP_REGEX, str(res))
+        for net_name, res in nslookup_results.items()
+    }
 
-        assert all(re_results.values())
-        assert all(len(res.groups()) == 1 for res in re_results.values())
+    assert all(re_results.values())
+    assert all(len(res.groups()) == 1 for res in re_results.values())
 
-        vips = {
-            net_name: res.groups()[0]
-            for net_name, res in re_results.items()
-        }
+    vips = {
+        net_name: res.groups()[0]
+        for net_name, res in re_results.items()
+    }
 
-        _logger.debug(
-            "Service '%s' VIPs obtained from nslookup: %s",
-            service_name, vips)
+    _logger.debug(
+        "Service '%s' VIPs obtained from nslookup: %s",
+        service_name, vips)
 
-        return vips
-    except:
-        _logger.warning("Error reading service VIPs", exc_info=True)
-        return None
+    return vips
+
+
+def _get_task_id():
+    conf = wotemu.config.get_env_config()
+    docker_url = conf.docker_proxy_url
+    curr_task = get_current_task(docker_url=docker_url)
+    return curr_task["ID"]
 
 
 def get_node_info():
@@ -183,12 +187,23 @@ def get_node_info():
         "uname": platform.uname()._asdict(),
         "process": procs,
         "boot_time": psutil.boot_time(),
-        "env": dict(os.environ)
+        "env": dict(os.environ),
+        "hostname": socket.gethostname()
     }
 
-    service_vips = _get_service_vips()
+    try:
+        info.update({"service_vips": _get_service_vips()})
+    except:
+        _logger.warning("Error reading service VIPs", exc_info=True)
 
-    if service_vips:
-        info.update({"service_vips": service_vips})
+    try:
+        info.update({"container_id": get_current_container_id()})
+    except:
+        _logger.warning("Error reading container ID", exc_info=True)
+
+    try:
+        info.update({"task_id": _get_task_id()})
+    except:
+        _logger.warning("Error reading task ID", exc_info=True)
 
     return json.loads(json.dumps(info))
