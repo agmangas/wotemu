@@ -67,7 +67,10 @@ async def test_get_info(redis_reader):
         "python_version",
         "time",
         "uname",
-        "service_vips"
+        "service_vips",
+        "hostname",
+        "container_id",
+        "task_id"
     }
 
 
