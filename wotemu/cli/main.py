@@ -156,6 +156,8 @@ def broker(conf, **kwargs):
 @cli.command(**_COMMAND_KWARGS)
 @click.option("--compose-file", required=True)
 @click.option("--stack", required=True)
+@click.option("--redis-url", default=None)
+@click.option("--tail", type=int, default=20)
 @click.pass_obj
 @_catch
 def stop(conf, **kwargs):
