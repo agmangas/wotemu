@@ -11,84 +11,14 @@ import pkg_resources
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+from wotemu.report.components.container import ContainerComponent
+from wotemu.report.components.figure_block import FigureBlockComponent
+from wotemu.report.components.task_list import TaskListComponent
+from wotemu.report.components.task_section import TaskSectionComponent
+from wotemu.report.utils import get_base_template, shorten_task_name
 
 
 class ReportBuilder:
-    @classmethod
-    def _get_template(cls):
-        resource_path = '/'.join(("templates", "base.html"))
-        template = pkg_resources.resource_string(__name__, resource_path)
-        tree = ET.fromstring(template.decode())
-
-        root = next(
-            el for el in tree.find("body").iter()
-            if el.attrib.get("id") == "root")
-
-        return tree, root
-
-    @classmethod
-    def _shorten_name(cls, name):
-        return re.sub(
-            r"^(.+\.\d+\..{6})(.+)$",
-            r"\1[...]",
-            name)
-
-    @classmethod
-    def build_figure_block_el(cls, fig, title=None, height=450, col_class="col", with_row=True):
-        try:
-            fig_io = io.StringIO()
-            fig.write_html(fig_io, include_plotlyjs=False, full_html=False)
-            fig_html = fig_io.getvalue()
-
-            el_plot = ET.fromstring(fig_html)
-            el_plot.set("style", f"height: {height}px;")
-            el_col = ET.Element("div", attrib={"class": col_class})
-
-            if title:
-                el_title = ET.Element("h4")
-                el_title.text = title
-                el_col.append(el_title)
-
-            el_col.append(el_plot)
-
-            if not with_row:
-                return el_col
-
-            el_row = ET.Element("div", attrib={"class": "row"})
-            el_row.append(el_col)
-
-            return el_row
-        finally:
-            try:
-                fig_io.close()
-            except:
-                pass
-
-    @classmethod
-    def build_figures_row_el(cls, figs, title=None, height=450, col_class="col-xl"):
-        fig_elements = [
-            cls.build_figure_block_el(
-                fig,
-                title=None,
-                height=height,
-                col_class=col_class,
-                with_row=False)
-            for fig in figs
-        ]
-
-        el_row = ET.Element("div", attrib={"class": "row"})
-
-        if title:
-            el_title = ET.Element("h4")
-            el_title.text = title
-            el_title_col = ET.Element("div", attrib={"class": "col-xl-12"})
-            el_title_col.append(el_title)
-            el_row.append(el_title_col)
-
-        [el_row.append(item) for item in fig_elements]
-
-        return el_row
-
     def __init__(self, reader):
         self._reader = reader
 
@@ -263,8 +193,8 @@ class ReportBuilder:
         trace = go.Heatmap(
             colorscale=colorscale,
             z=heatmap_z,
-            x=[self._shorten_name(item) for item in heatmap_x],
-            y=[self._shorten_name(item) for item in heatmap_y])
+            x=[shorten_task_name(item) for item in heatmap_x],
+            y=[shorten_task_name(item) for item in heatmap_y])
 
         fig.add_trace(trace)
 
@@ -278,48 +208,38 @@ class ReportBuilder:
 
         return fig
 
-    async def build_task_section(self, task, height=450):
-        figs = [
-            await self.build_task_mem_figure(task=task),
-            await self.build_task_cpu_figure(task=task),
-            await self.build_task_packet_iface_figure(task=task),
-            await self.build_task_packet_protocol_figure(task=task)
-        ]
+    async def _get_task_section_comp(self, task):
+        fig_mem = await self.build_task_mem_figure(task=task)
+        fig_cpu = await self.build_task_cpu_figure(task=task)
+        fig_packet_iface = await self.build_task_packet_iface_figure(task=task)
+        fig_packet_proto = await self.build_task_packet_protocol_figure(task=task)
 
-        figs = [item for item in figs if item is not None]
+        return TaskSectionComponent(
+            fig_mem=fig_mem,
+            fig_cpu=fig_cpu,
+            fig_packet_iface=fig_packet_iface,
+            fig_packet_proto=fig_packet_proto,
+            title=task)
 
-        return self.build_figures_row_el(
-            figs,
-            col_class="col-xl-6",
-            title=task,
-            height=height)
+    async def _get_service_traffic_comp(self, height=650):
+        fig_inbound = await self.build_service_traffic_figure(inbound=True)
+        fig_outbound = await self.build_service_traffic_figure(inbound=False)
 
-    async def build_main_section(self, height=650):
-        fig_inb = await self.build_service_traffic_figure(inbound=True)
-        fig_out = await self.build_service_traffic_figure(inbound=False)
+        elements = []
 
-        serv_traffic_rows = []
-
-        if fig_inb:
-            serv_traffic_rows.append(self.build_figure_block_el(
-                fig_inb,
+        if fig_inbound:
+            elements.append(FigureBlockComponent(
+                fig_inbound,
                 title="Service traffic heatmap (inbound)",
-                height=height,
-                with_row=True))
+                height=height))
 
-        if fig_out:
-            serv_traffic_rows.append(self.build_figure_block_el(
-                fig_out,
+        if fig_outbound:
+            elements.append(FigureBlockComponent(
+                fig_outbound,
                 title="Service traffic heatmap (outbound)",
-                height=height,
-                with_row=True))
+                height=height))
 
-        container_row = ET.Element("div", attrib={"class": "row"})
-        container_col = ET.Element("div", attrib={"class": "col"})
-        container_row.append(container_col)
-        [container_col.append(item) for item in serv_traffic_rows]
-
-        return container_row
+        return ContainerComponent(elements=elements)
 
     async def build_report(self):
         tasks = await self._reader.get_tasks()
@@ -328,43 +248,14 @@ class ReportBuilder:
         task_pages = {}
 
         for task in tasks:
-            tree, root = self._get_template()
-            task_section = await self.build_task_section(task)
-            root.append(task_section)
-            task_pages[f"{task}.html"] = ET.tostring(tree, method="html")
+            task_section = await self._get_task_section_comp(task=task)
+            task_pages[f"{task}.html"] = task_section.to_page_html()
 
-        task_links = []
+        task_list = TaskListComponent(task_keys=tasks)
+        service_traffic = await self._get_service_traffic_comp()
+        container = ContainerComponent(elements=[task_list, service_traffic])
 
-        for task in tasks:
-            a_el = ET.Element("a", attrib={
-                "class": "list-group-item list-group-item-action text-primary",
-                "href": f"{task}.html"
-            })
-
-            a_el.text = task
-            task_links.append(a_el)
-
-        links_row = ET.Element("div", attrib={"class": "row"})
-        links_col = ET.Element("div", attrib={"class": "col"})
-        links_title = ET.Element("h4")
-        links_title.text = "Task metrics"
-
-        links_div = ET.Element("div", attrib={
-            "class": "list-group list-group-flush mb-3"
-        })
-
-        links_row.append(links_col)
-        links_col.append(links_title)
-        links_col.append(links_div)
-        [links_div.append(item) for item in task_links]
-
-        main_section = await self.build_main_section()
-
-        tree, root = self._get_template()
-        root.append(links_row)
-        root.append(main_section)
-
-        ret = {"index.html": ET.tostring(tree, method="html")}
+        ret = {"index.html": container.to_page_html()}
         ret.update(task_pages)
 
         return ret
