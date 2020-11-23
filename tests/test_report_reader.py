@@ -171,3 +171,20 @@ async def test_get_service_traffic_df(redis_reader):
 
     for col in columns_out:
         assert df_out[col].notna().any()
+
+
+@pytest.mark.asyncio
+async def test_get_snapshot_df(redis_reader):
+    df = await redis_reader.get_snapshot_df()
+
+    columns = [
+        "desired_state",
+        "is_running",
+        "is_error",
+        "task_id",
+        "task",
+        "service_id"
+    ]
+
+    for col in columns:
+        assert df[col].notna().any()

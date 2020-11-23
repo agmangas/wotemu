@@ -1,6 +1,7 @@
 import functools
 import json
 import logging
+import re
 import socket
 from datetime import datetime, timezone
 
@@ -11,8 +12,33 @@ from wotemu.enums import RedisPrefixes
 from wotemu.topology.compose import ENV_KEY_SERVICE_NAME
 
 _IFACE_LO = "lo"
+_DOCKER_TIME_REGEX = r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}).\d*Z$"
+_DOCKER_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S"
+_STATE_RUNNING = "running"
 
 _logger = logging.getLogger(__name__)
+
+
+def _parse_docker_time(val):
+    match = re.match(_DOCKER_TIME_REGEX, val)
+
+    if not match:
+        return None
+
+    dtime = datetime.strptime(match.group(1), _DOCKER_TIME_FORMAT)
+    dtime = dtime.replace(tzinfo=timezone.utc)
+
+    return dtime
+
+
+def _is_task_running(task_dict):
+    return task_dict["DesiredState"] == _STATE_RUNNING
+
+
+def _is_task_error(task_dict):
+    is_running = _is_task_running(task_dict)
+    exit_code = task_dict["Status"]["ContainerStatus"].get("ExitCode", 0)
+    return not is_running and exit_code != 0
 
 
 def _explode_mapper(val, key):
@@ -77,7 +103,9 @@ class ReportDataRedisReader:
             row.update({"date": row_date})
 
         df = pd.DataFrame(rows)
-        df.set_index("date", inplace=True)
+
+        if "date" in df:
+            df.set_index("date", inplace=True)
 
         return df
 
@@ -280,3 +308,59 @@ class ReportDataRedisReader:
             df[col_task] = task
 
         return pd.concat(dfs.values(), ignore_index=True)
+
+    async def _get_cid_task_map(self):
+        task_keys = await self.get_tasks()
+
+        task_infos = {
+            task_key: await self.get_info(task_key)
+            for task_key in task_keys
+        }
+
+        task_infos = {
+            task_key: info_items[-1]
+            for task_key, info_items in task_infos.items()
+            if len(info_items) > 0
+        }
+
+        return {
+            info_item["container_id"]: task_key
+            for task_key, info_item in task_infos.items()
+            if info_item.get("container_id")
+        }
+
+    async def get_snapshot_df(self):
+        key = "{}:{}".format(
+            RedisPrefixes.NAMESPACE.value,
+            RedisPrefixes.SNAPSHOT.value)
+
+        members = await self._client.zrange(key=key, start=-1, stop=-1)
+
+        if len(members) == 0:
+            _logger.warning("Could not find snapshot data")
+            return None
+
+        snapshot = json.loads(members[-1])
+
+        cid_map = await self._get_cid_task_map()
+
+        rows = [
+            {
+                "desired_state": item["task"]["DesiredState"],
+                "is_running": _is_task_running(item["task"]),
+                "is_error": _is_task_error(item["task"]),
+                "task": cid_map.get(item["task"]["Status"]["ContainerStatus"]["ContainerID"]),
+                "task_id": task_id,
+                "node_id": item["task"]["NodeID"],
+                "service_id": item["task"]["ServiceID"],
+                "created_at": _parse_docker_time(item["task"]["CreatedAt"]),
+                "updated_at": _parse_docker_time(item["task"]["UpdatedAt"]),
+                "container_id": item["task"]["Status"]["ContainerStatus"]["ContainerID"],
+                "logs": item["logs"]
+            }
+            for task_id, item in snapshot.items()
+        ]
+
+        df = pd.DataFrame(rows)
+
+        return df
