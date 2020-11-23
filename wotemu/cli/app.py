@@ -12,7 +12,6 @@ import tempfile
 import aioredis
 import coloredlogs
 import tornado.httpclient
-
 import wotemu.config
 import wotemu.wotpy.redis
 import wotemu.wotpy.wot
@@ -145,12 +144,13 @@ async def _stop(loop, app_task, wot, redis_pool, monitor, lock):
         loop.stop()
 
 
-def _app_done_cb(fut, stop):
+def _app_done_cb(fut, stop, exit_status):
     if fut.cancelled() or not fut.exception():
         return
 
     err = repr(fut.exception())
     _logger.error("WoT app error: %s", err)
+    exit_status["code"] = 1
     asyncio.ensure_future(stop())
 
 
@@ -241,7 +241,14 @@ def run_app(
         monitor=monitor,
         lock=asyncio.Lock())
 
-    app_task.add_done_callback(functools.partial(_app_done_cb, stop=stop))
+    exit_status = {}
+
+    app_done_cb = functools.partial(
+        _app_done_cb,
+        stop=stop,
+        exit_status=exit_status)
+
+    app_task.add_done_callback(app_done_cb)
 
     def sig_handler():
         _logger.debug("Received stop signal")
@@ -256,3 +263,8 @@ def run_app(
     finally:
         _logger.debug("Closing loop")
         loop.close()
+        exit_code = exit_status.get("code")
+
+        if exit_code:
+            _logger.warning("Exiting with code: %s", exit_code)
+            exit(exit_code)
