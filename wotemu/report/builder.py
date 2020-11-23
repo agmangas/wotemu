@@ -94,6 +94,10 @@ class ReportBuilder:
 
     async def build_task_mem_figure(self, task):
         df_system = await self._reader.get_system_df(task=task)
+
+        if df_system.empty:
+            return None
+
         df_system = df_system.reset_index()
 
         fig = make_subplots(specs=[[{"secondary_y": True}]])
@@ -122,6 +126,10 @@ class ReportBuilder:
 
     async def build_task_cpu_figure(self, task):
         df_system = await self._reader.get_system_df(task=task)
+
+        if df_system.empty:
+            return None
+
         df_system = df_system.reset_index()
 
         has_secondary = "cpu_percent_constraint" in df_system \
@@ -162,7 +170,7 @@ class ReportBuilder:
     async def _build_task_packet_figure(self, task, freq, col):
         df = await self._reader.get_packet_df(task=task, extended=True)
 
-        if df is None:
+        if df is None or df.empty:
             return None
 
         df = df.reset_index()
@@ -227,6 +235,9 @@ class ReportBuilder:
     async def build_service_traffic_figure(self, inbound, colorscale="Portland"):
         df = await self._reader.get_service_traffic_df(inbound=inbound)
 
+        if df.empty:
+            return None
+
         col_service = "dst_service" if inbound else "src_service"
         col_task = "src_task" if inbound else "dst_task"
 
@@ -284,18 +295,24 @@ class ReportBuilder:
             height=height)
 
     async def build_main_section(self, height=650):
-        serv_traffic_rows = [
-            self.build_figure_block_el(
-                await self.build_service_traffic_figure(inbound=True),
+        fig_inb = await self.build_service_traffic_figure(inbound=True)
+        fig_out = await self.build_service_traffic_figure(inbound=False)
+
+        serv_traffic_rows = []
+
+        if fig_inb:
+            serv_traffic_rows.append(self.build_figure_block_el(
+                fig_inb,
                 title="Service traffic heatmap (inbound)",
                 height=height,
-                with_row=True),
-            self.build_figure_block_el(
-                await self.build_service_traffic_figure(inbound=False),
+                with_row=True))
+
+        if fig_out:
+            serv_traffic_rows.append(self.build_figure_block_el(
+                fig_out,
                 title="Service traffic heatmap (outbound)",
                 height=height,
-                with_row=True)
-        ]
+                with_row=True))
 
         container_row = ET.Element("div", attrib={"class": "row"})
         container_col = ET.Element("div", attrib={"class": "col"})
