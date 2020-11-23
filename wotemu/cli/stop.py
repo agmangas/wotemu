@@ -2,7 +2,6 @@ import asyncio
 import json
 import logging
 import pprint
-import re
 import time
 
 import aioredis
@@ -58,6 +57,7 @@ def _get_stack_snapshot(stack, tail):
     return {
         task["ID"]: {
             "task": task,
+            "time": time.time(),
             "logs": _get_task_logs(task, tail=tail)
         }
         for service in services
