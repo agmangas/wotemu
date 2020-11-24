@@ -93,16 +93,17 @@ class TaskSectionComponent(BaseComponent):
 
         card = ET.Element("div", attrib={"class": "card"})
         is_error = self.snapshot.get("is_error", False)
-        body_class = "bg-warning" if is_error else "bg-light"
+        body_class = "bg-danger text-white" if is_error else "bg-light"
         body_class = f"card-body small {body_class}"
         card_body = ET.Element("div", attrib={"class": body_class})
-        card_pre = ET.Element("pre", attrib={"class": "mb-0"})
+        pre_class = "text-light" if is_error else ""
+        pre_class = f"mb-0 {pre_class}"
+        card_pre = ET.Element("pre", attrib={"class": pre_class})
         card_title = ET.Element("h5", attrib={"class": "card-title"})
         card_title.text = self._LOGS_TITLE
-
-        card_subtitle = ET.Element(
-            "h6", attrib={"class": "card-subtitle mb-2 text-muted"})
-
+        sub_class = "" if is_error else "text-muted"
+        sub_class = f"card-subtitle mb-2 {sub_class}"
+        card_subtitle = ET.Element("h6", attrib={"class": sub_class})
         card_subtitle.text = self._LOGS_SUBTITLE
         card.append(card_body)
         card_body.append(card_title)

@@ -267,7 +267,8 @@ class ReportBuilder:
             task_section = await self._get_task_section_component(task=task)
             task_pages[f"{task}.html"] = task_section.to_page_html()
 
-        task_list = TaskListComponent(task_keys=tasks)
+        df_snapshot = await self._reader.get_snapshot_df()
+        task_list = TaskListComponent(task_keys=tasks, df_snapshot=df_snapshot)
         service_traffic = await self._get_service_traffic_component()
         container = ContainerComponent(elements=[task_list, service_traffic])
 
