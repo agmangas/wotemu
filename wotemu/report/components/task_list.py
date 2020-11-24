@@ -35,9 +35,11 @@ class TaskListComponent(BaseComponent):
         return df_snap.iloc[0]["created_at"]
 
     def _get_sorted_task_keys(self):
-        return sorted(
-            self.task_keys,
-            key=lambda task: self._get_created_at(task))
+        def key(task):
+            dtime = self._get_created_at(task)
+            return dtime.timestamp() if dtime else 0
+
+        return sorted(self.task_keys, key=key)
 
     def _get_item_element(self, task_key):
         item = lxml.etree.Element("a", attrib={
