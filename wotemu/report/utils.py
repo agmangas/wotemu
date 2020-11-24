@@ -1,13 +1,13 @@
 import re
-import xml.etree.ElementTree as ET
 
+import lxml.etree
 import pkg_resources
 
 
 def get_base_template():
     resource_path = "/".join(("templates", "base.html"))
     template = pkg_resources.resource_string(__name__, resource_path)
-    tree = ET.fromstring(template.decode())
+    tree = lxml.etree.fromstring(template.decode())
 
     root = next(
         el for el in tree.find("body").iter()

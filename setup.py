@@ -42,7 +42,8 @@ setuptools.setup(
         "pyshark>=0.4.2,<0.5.0",
         "psutil>=5.6.0,<6.0",
         "plotly>=4.11,<5.0",
-        "pandas>=1.1,<2.0"
+        "pandas>=1.1,<2.0",
+        "lxml>=4.5,<5.0"
     ],
     extras_require={
         "dev": [

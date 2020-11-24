@@ -1,5 +1,4 @@
-import xml.etree.ElementTree as ET
-
+import lxml.etree
 from wotemu.report.components.base import BaseComponent
 from wotemu.report.components.figure_block import FigureBlockComponent
 
@@ -22,12 +21,15 @@ class FiguresRowComponent(BaseComponent):
             for fig in self.figs
         ]
 
-        el_row = ET.Element("div", attrib={"class": "row"})
+        el_row = lxml.etree.Element("div", attrib={"class": "row"})
 
         if self.title:
-            el_title = ET.Element("h4")
+            el_title = lxml.etree.Element("h4")
             el_title.text = self.title
-            el_title_col = ET.Element("div", attrib={"class": "col-xl-12"})
+
+            el_title_col = lxml.etree.Element(
+                "div", attrib={"class": "col-xl-12"})
+
             el_title_col.append(el_title)
             el_row.append(el_title_col)
 

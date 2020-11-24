@@ -1,5 +1,4 @@
-import xml.etree.ElementTree as ET
-
+import lxml.etree
 from wotemu.report.components.base import BaseComponent
 from wotemu.report.components.container import ContainerComponent
 from wotemu.report.components.figure_block import FigureBlockComponent
@@ -41,12 +40,12 @@ class TaskListComponent(BaseComponent):
             key=lambda task: self._get_created_at(task))
 
     def _get_item_element(self, task_key):
-        item = ET.Element("a", attrib={
+        item = lxml.etree.Element("a", attrib={
             "class": self._get_item_class(task_key),
             "href": self.to_href(task_key)
         })
 
-        span = ET.Element("span")
+        span = lxml.etree.Element("span")
         span.text = task_key
         item.append(span)
 
@@ -55,9 +54,11 @@ class TaskListComponent(BaseComponent):
         if not created_at:
             return item
 
-        dtime = ET.Element("span", attrib={"class": "text-muted small"})
+        dtime = lxml.etree.Element(
+            "span", attrib={"class": "text-muted small"})
+
         dtime.text = created_at.isoformat()
-        item.append(ET.Element("br"))
+        item.append(lxml.etree.Element("br"))
         item.append(dtime)
 
         return item
@@ -68,10 +69,10 @@ class TaskListComponent(BaseComponent):
             for task_key in self._get_sorted_task_keys()
         ]
 
-        title = ET.Element("h4")
+        title = lxml.etree.Element("h4")
         title.text = self.title
 
-        list_group = ET.Element("div", attrib={"class": "list-group"})
+        list_group = lxml.etree.Element("div", attrib={"class": "list-group"})
         [list_group.append(item) for item in task_links]
 
         return ContainerComponent(elements=[title, list_group]).to_element()

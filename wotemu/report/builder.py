@@ -5,7 +5,6 @@ import math
 import os
 import re
 import tempfile
-import xml.etree.ElementTree as ET
 
 import pandas as pd
 import pkg_resources
@@ -211,29 +210,54 @@ class ReportBuilder:
 
         return fig
 
+    async def build_thing_counts_figure(self, task, facet_col_wrap=2):
+        df = await self._reader.get_thing_df(task=task)
+
+        if df.empty:
+            return None
+
+        df = df.groupby(["thing", "verb", "class"]).count()
+        df.reset_index(inplace=True)
+
+        fig = px.bar(
+            df,
+            x="verb",
+            y="host",
+            color="class",
+            barmode="stack",
+            facet_col="thing",
+            facet_col_wrap=facet_col_wrap)
+
+        fig.update_layout(title_text="Total interaction counts")
+        fig.update_yaxes(title_text="Total count")
+        fig.update_xaxes(title_text="Interaction verb")
+
+        return fig
+
     async def _get_task_section_component(self, task):
         fig_mem = await self.build_task_mem_figure(task=task)
         fig_cpu = await self.build_task_cpu_figure(task=task)
         fig_packet_iface = await self.build_task_packet_iface_figure(task=task)
         fig_packet_proto = await self.build_task_packet_protocol_figure(task=task)
+        fig_thing_counts = await self.build_thing_counts_figure(task=task)
 
         df_snap = await self._reader.get_snapshot_df()
         snapshot = df_snap[df_snap["task"] == task].to_dict("records")
 
         if len(snapshot) == 0:
             _logger.warning("Undefined snapshot data for: %s", task)
-            snapshot = None
-        elif len(snapshot) > 1:
+
+        if len(snapshot) > 1:
             _logger.warning("Multiple snapshot rows for: %s", task)
-            snapshot = snapshot[-1]
-        else:
-            snapshot = snapshot[0]
+
+        snapshot = snapshot[-1] if len(snapshot) > 0 else None
 
         return TaskSectionComponent(
             fig_mem=fig_mem,
             fig_cpu=fig_cpu,
             fig_packet_iface=fig_packet_iface,
             fig_packet_proto=fig_packet_proto,
+            fig_thing_counts=fig_thing_counts,
             snapshot=snapshot,
             title=task)
 

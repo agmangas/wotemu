@@ -1,5 +1,4 @@
-import xml.etree.ElementTree as ET
-
+import lxml.etree
 from wotemu.report.components.base import BaseComponent
 from wotemu.report.components.figure_block import FigureBlockComponent
 
@@ -18,12 +17,12 @@ class ContainerComponent(BaseComponent):
             except AttributeError:
                 elements.append(item)
 
-        container = ET.Element("div")
+        container = lxml.etree.Element("div")
 
         for idx, el in enumerate(elements):
             row_class = f"row {self.margin}" if idx > 0 else "row"
-            row = ET.Element("div", attrib={"class": row_class})
-            col = ET.Element("div", attrib={"class": "col"})
+            row = lxml.etree.Element("div", attrib={"class": row_class})
+            col = lxml.etree.Element("div", attrib={"class": "col"})
             col.append(el)
             row.append(col)
             container.append(row)

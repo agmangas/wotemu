@@ -1,7 +1,10 @@
 import io
-import xml.etree.ElementTree as ET
+import logging
 
+import lxml.etree
 from wotemu.report.components.base import BaseComponent
+
+_logger = logging.getLogger(__name__)
 
 
 class FigureBlockComponent(BaseComponent):
@@ -23,12 +26,20 @@ class FigureBlockComponent(BaseComponent):
 
             fig_html = fig_io.getvalue()
 
-            el_plot = ET.fromstring(fig_html)
+            try:
+                el_plot = lxml.etree.fromstring(fig_html)
+            except lxml.etree.XMLSyntaxError as ex:
+                parser = lxml.etree.HTMLParser()
+                _logger.debug("Using %s: %s", parser, ex)
+                el_plot = lxml.etree.fromstring(fig_html, parser=parser)
+
             el_plot.set("style", f"height: {self.height}px;")
-            el_col = ET.Element("div", attrib={"class": self.col_class})
+
+            el_col = lxml.etree.Element(
+                "div", attrib={"class": self.col_class})
 
             if self.title:
-                el_title = ET.Element("h4")
+                el_title = lxml.etree.Element("h4")
                 el_title.text = self.title
                 el_col.append(el_title)
 
@@ -37,7 +48,7 @@ class FigureBlockComponent(BaseComponent):
             if not self.with_row:
                 return el_col
 
-            el_row = ET.Element("div", attrib={"class": "row"})
+            el_row = lxml.etree.Element("div", attrib={"class": "row"})
             el_row.append(el_col)
 
             return el_row

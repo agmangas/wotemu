@@ -1,7 +1,7 @@
-import xml.etree.ElementTree as ET
-
+import lxml.etree
 from wotemu.report.components.base import BaseComponent
 from wotemu.report.components.container import ContainerComponent
+from wotemu.report.components.figure_block import FigureBlockComponent
 from wotemu.report.components.figures_row import FiguresRowComponent
 
 
@@ -19,25 +19,28 @@ class TaskSectionComponent(BaseComponent):
     _UPDATED_AT = "Updated at"
     _STATUS = "Desired state"
 
-    def __init__(self, fig_mem, fig_cpu, fig_packet_iface, fig_packet_proto, snapshot, title=None, height=450):
+    def __init__(
+            self, fig_mem, fig_cpu, fig_packet_iface, fig_packet_proto, fig_thing_counts,
+            snapshot, title=None, height=450):
         self.fig_mem = fig_mem
         self.fig_cpu = fig_cpu
         self.fig_packet_iface = fig_packet_iface
         self.fig_packet_proto = fig_packet_proto
+        self.fig_thing_counts = fig_thing_counts
         self.snapshot = snapshot
         self.title = title
         self.height = height
 
     def _get_dt(self, text):
-        dt = ET.Element("dt", attrib={"class": "col-sm-3 text-muted"})
+        dt = lxml.etree.Element("dt", attrib={"class": "col-sm-3 text-muted"})
         dt.text = text
         return dt
 
     def _get_dd(self, text, is_code=False):
-        dd = ET.Element("dd", attrib={"class": "col-sm-9"})
+        dd = lxml.etree.Element("dd", attrib={"class": "col-sm-9"})
 
         if is_code:
-            code = ET.Element("code")
+            code = lxml.etree.Element("code")
             code.text = text
             dd.append(code)
         else:
@@ -49,14 +52,14 @@ class TaskSectionComponent(BaseComponent):
         if not self.snapshot:
             return None
 
-        card = ET.Element("div", attrib={"class": "card"})
-        card_body = ET.Element("div", attrib={"class": "card-body"})
-        card_title = ET.Element("h5", attrib={"class": "card-title"})
+        card = lxml.etree.Element("div", attrib={"class": "card"})
+        card_body = lxml.etree.Element("div", attrib={"class": "card-body"})
+        card_title = lxml.etree.Element("h5", attrib={"class": "card-title"})
         card_title.text = self._INFO_TITLE
         card.append(card_body)
         card_body.append(card_title)
 
-        dl = ET.Element("dl", attrib={"class": "row mb-0"})
+        dl = lxml.etree.Element("dl", attrib={"class": "row mb-0"})
 
         snap = self.snapshot
 
@@ -96,19 +99,19 @@ class TaskSectionComponent(BaseComponent):
         if not self.snapshot:
             return None
 
-        card = ET.Element("div", attrib={"class": "card"})
+        card = lxml.etree.Element("div", attrib={"class": "card"})
         is_error = self.snapshot.get("is_error", False)
         body_class = "bg-danger text-white" if is_error else "bg-light"
         body_class = f"card-body small {body_class}"
-        card_body = ET.Element("div", attrib={"class": body_class})
+        card_body = lxml.etree.Element("div", attrib={"class": body_class})
         pre_class = "text-light" if is_error else ""
         pre_class = f"mb-0 {pre_class}"
-        card_pre = ET.Element("pre", attrib={"class": pre_class})
-        card_title = ET.Element("h5", attrib={"class": "card-title"})
+        card_pre = lxml.etree.Element("pre", attrib={"class": pre_class})
+        card_title = lxml.etree.Element("h5", attrib={"class": "card-title"})
         card_title.text = self._LOGS_TITLE
         sub_class = "" if is_error else "text-muted"
         sub_class = f"card-subtitle mb-2 {sub_class}"
-        card_subtitle = ET.Element("h6", attrib={"class": sub_class})
+        card_subtitle = lxml.etree.Element("h6", attrib={"class": sub_class})
         card_subtitle.text = self._LOGS_SUBTITLE
         card.append(card_body)
         card_body.append(card_title)
@@ -125,7 +128,9 @@ class TaskSectionComponent(BaseComponent):
         if self.snapshot.get("is_running", True):
             return None
 
-        alert = ET.Element("div", attrib={"class": f"alert alert-warning"})
+        alert = lxml.etree.Element(
+            "div", attrib={"class": f"alert alert-warning"})
+
         alert.text = self._NOT_RUNNING
 
         return alert
@@ -137,10 +142,18 @@ class TaskSectionComponent(BaseComponent):
         if not self.snapshot.get("is_error", False):
             return None
 
-        alert = ET.Element("div", attrib={"class": f"alert alert-danger"})
+        alert = lxml.etree.Element(
+            "div", attrib={"class": f"alert alert-danger"})
+
         alert.text = self._ERROR
 
         return alert
+
+    def _get_thing_counts_element(self):
+        if not self.fig_thing_counts:
+            return None
+
+        return FigureBlockComponent(self.fig_thing_counts).to_element()
 
     def to_element(self):
         figs = [
@@ -160,7 +173,7 @@ class TaskSectionComponent(BaseComponent):
         title = None
 
         if self.title:
-            title = ET.Element("h4")
+            title = lxml.etree.Element("h4")
             title.text = self.title
 
         elements = [
@@ -169,6 +182,7 @@ class TaskSectionComponent(BaseComponent):
             self._get_error_element(),
             self._get_info_element(),
             figs_row,
+            self._get_thing_counts_element(),
             self._get_logs_element()
         ]
 
