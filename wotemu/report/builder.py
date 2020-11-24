@@ -270,7 +270,7 @@ class ReportBuilder:
         df_snapshot = await self._reader.get_snapshot_df()
         task_list = TaskListComponent(task_keys=tasks, df_snapshot=df_snapshot)
         service_traffic = await self._get_service_traffic_component()
-        container = ContainerComponent(elements=[task_list, service_traffic])
+        container = ContainerComponent(elements=[service_traffic, task_list])
 
         ret = {"index.html": container.to_page_html()}
         ret.update(task_pages)
