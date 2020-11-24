@@ -12,7 +12,7 @@ from wotemu.enums import RedisPrefixes
 from wotemu.topology.compose import ENV_KEY_SERVICE_NAME
 
 _IFACE_LO = "lo"
-_DOCKER_TIME_REGEX = r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}).\d*Z$"
+_DOCKER_TIME_REGEX = r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}).(\d+)Z$"
 _DOCKER_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S"
 _STATE_RUNNING = "running"
 
@@ -27,6 +27,7 @@ def _parse_docker_time(val):
 
     dtime = datetime.strptime(match.group(1), _DOCKER_TIME_FORMAT)
     dtime = dtime.replace(tzinfo=timezone.utc)
+    dtime = dtime.replace(microsecond=int(match.group(2)[:6]))
 
     return dtime
 

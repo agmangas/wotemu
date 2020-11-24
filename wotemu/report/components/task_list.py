@@ -5,7 +5,7 @@ from wotemu.report.components.figure_block import FigureBlockComponent
 
 
 class TaskListComponent(BaseComponent):
-    DEFAULT_TITLE = "Task metrics"
+    DEFAULT_TITLE = "List of tasks in the emulation stack"
 
     def __init__(self, task_keys, df_snapshot, title=DEFAULT_TITLE, to_href=None):
         self.task_keys = task_keys
@@ -55,8 +55,10 @@ class TaskListComponent(BaseComponent):
             created_at = self._get_created_at(task)
 
             if created_at:
-                dtime = ET.Element("span", attrib={"class": "ml-3 text-muted"})
+                dtime = ET.Element(
+                    "span", attrib={"class": "text-muted small"})
                 dtime.text = created_at.isoformat()
+                item.append(ET.Element("br"))
                 item.append(dtime)
 
             task_links.append(item)
