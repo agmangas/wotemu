@@ -38,7 +38,12 @@ def _is_task_running(task_dict):
 
 def _is_task_error(task_dict):
     is_running = _is_task_running(task_dict)
-    exit_code = task_dict["Status"]["ContainerStatus"].get("ExitCode", 0)
+
+    exit_code = task_dict.\
+        get("Status", {}).\
+        get("ContainerStatus", {}).\
+        get("ExitCode", 0)
+
     return not is_running and exit_code != 0
 
 
@@ -313,7 +318,7 @@ class ReportDataRedisReader:
 
         return pd.concat(dfs.values(), ignore_index=True)
 
-    async def _get_cid_task_map(self):
+    async def _get_task_id_map(self):
         task_keys = await self.get_tasks()
 
         task_infos = {
@@ -328,7 +333,7 @@ class ReportDataRedisReader:
         }
 
         return {
-            info_item["container_id"]: task_key
+            info_item["task_id"]: task_key
             for task_key, info_item in task_infos.items()
             if info_item.get("container_id")
         }
@@ -346,20 +351,20 @@ class ReportDataRedisReader:
 
         snapshot = json.loads(members[-1])
 
-        cid_map = await self._get_cid_task_map()
+        tid_map = await self._get_task_id_map()
 
         rows = [
             {
-                "desired_state": item["task"]["DesiredState"],
+                "desired_state": item["task"].get("DesiredState"),
                 "is_running": _is_task_running(item["task"]),
                 "is_error": _is_task_error(item["task"]),
-                "task": cid_map.get(item["task"]["Status"]["ContainerStatus"]["ContainerID"]),
+                "task": tid_map.get(task_id),
                 "task_id": task_id,
-                "node_id": item["task"]["NodeID"],
-                "service_id": item["task"]["ServiceID"],
-                "created_at": _parse_docker_time(item["task"]["CreatedAt"]),
-                "updated_at": _parse_docker_time(item["task"]["UpdatedAt"]),
-                "container_id": item["task"]["Status"]["ContainerStatus"]["ContainerID"],
+                "node_id": item["task"].get("NodeID"),
+                "service_id": item["task"].get("ServiceID"),
+                "created_at": _parse_docker_time(item["task"].get("CreatedAt")),
+                "updated_at": _parse_docker_time(item["task"].get("UpdatedAt")),
+                "container_id": item["task"].get("Status", {}).get("ContainerStatus", {}).get("ContainerID"),
                 "logs": item["logs"]
             }
             for task_id, item in snapshot.items()
