@@ -1,6 +1,7 @@
 import xml.etree.ElementTree as ET
 
 from wotemu.report.components.base import BaseComponent
+from wotemu.report.components.container import ContainerComponent
 from wotemu.report.components.figure_block import FigureBlockComponent
 
 
@@ -39,38 +40,38 @@ class TaskListComponent(BaseComponent):
             self.task_keys,
             key=lambda task: self._get_created_at(task))
 
+    def _get_item_element(self, task_key):
+        item = ET.Element("a", attrib={
+            "class": self._get_item_class(task_key),
+            "href": self.to_href(task_key)
+        })
+
+        span = ET.Element("span")
+        span.text = task_key
+        item.append(span)
+
+        created_at = self._get_created_at(task_key)
+
+        if not created_at:
+            return item
+
+        dtime = ET.Element("span", attrib={"class": "text-muted small"})
+        dtime.text = created_at.isoformat()
+        item.append(ET.Element("br"))
+        item.append(dtime)
+
+        return item
+
     def to_element(self):
-        task_links = []
+        task_links = [
+            self._get_item_element(task_key)
+            for task_key in self._get_sorted_task_keys()
+        ]
 
-        for task in self._get_sorted_task_keys():
-            item = ET.Element("a", attrib={
-                "class": self._get_item_class(task),
-                "href": self.to_href(task)
-            })
-
-            task_span = ET.Element("span")
-            task_span.text = task
-            item.append(task_span)
-
-            created_at = self._get_created_at(task)
-
-            if created_at:
-                dtime = ET.Element(
-                    "span", attrib={"class": "text-muted small"})
-                dtime.text = created_at.isoformat()
-                item.append(ET.Element("br"))
-                item.append(dtime)
-
-            task_links.append(item)
-
-        row = ET.Element("div", attrib={"class": "row"})
-        col = ET.Element("div", attrib={"class": "col"})
         title = ET.Element("h4")
         title.text = self.title
+
         list_group = ET.Element("div", attrib={"class": "list-group"})
-        row.append(col)
-        col.append(title)
-        col.append(list_group)
         [list_group.append(item) for item in task_links]
 
-        return row
+        return ContainerComponent(elements=[title, list_group]).to_element()

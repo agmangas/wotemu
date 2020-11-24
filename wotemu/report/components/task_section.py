@@ -7,8 +7,8 @@ from wotemu.report.components.figures_row import FiguresRowComponent
 
 class TaskSectionComponent(BaseComponent):
     _LOGS_TITLE = "Logs"
-    _LOGS_SUBTITLE = "Snapshot of the logs taken before stopping the stack"
-    _NOT_RUNNING = "The task was already shutdown when the stack was stopped"
+    _LOGS_SUBTITLE = "Snapshot of the most recent log entries"
+    _NOT_RUNNING = "The task was shut down prematurely (before the stack was manually stopped)"
     _ERROR = "It seems there was an error during the task execution"
     _INFO_TITLE = "Task details"
     _CONTAINER_ID = "Container ID"
@@ -17,6 +17,7 @@ class TaskSectionComponent(BaseComponent):
     _TASK_ID = "Task ID"
     _CREATED_AT = "Created at"
     _UPDATED_AT = "Updated at"
+    _STATUS = "Desired state"
 
     def __init__(self, fig_mem, fig_cpu, fig_packet_iface, fig_packet_proto, snapshot, title=None, height=450):
         self.fig_mem = fig_mem
@@ -33,7 +34,7 @@ class TaskSectionComponent(BaseComponent):
         return dt
 
     def _get_dd(self, text, is_code=False):
-        dd = ET.Element("dd", attrib={"class": "col-sm-9 mb-0"})
+        dd = ET.Element("dd", attrib={"class": "col-sm-9"})
 
         if is_code:
             code = ET.Element("code")
@@ -58,6 +59,10 @@ class TaskSectionComponent(BaseComponent):
         dl = ET.Element("dl", attrib={"class": "row mb-0"})
 
         snap = self.snapshot
+
+        if snap.get("desired_state"):
+            dl.append(self._get_dt(self._STATUS))
+            dl.append(self._get_dd(snap["desired_state"]))
 
         if snap.get("node_id"):
             dl.append(self._get_dt(self._NODE_ID))
