@@ -235,7 +235,10 @@ class ReportDataRedisReader:
             task)
 
         df = await self._get_zrange_df(key=key)
-        df.set_index(["thing", "name", "verb"], append=True, inplace=True)
+
+        for col in ["thing", "name", "verb"]:
+            if col in df:
+                df.set_index([col], append=True, inplace=True)
 
         return df
 
