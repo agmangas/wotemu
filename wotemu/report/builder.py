@@ -1,5 +1,6 @@
 import functools
 import io
+import logging
 import math
 import os
 import re
@@ -16,6 +17,8 @@ from wotemu.report.components.figure_block import FigureBlockComponent
 from wotemu.report.components.task_list import TaskListComponent
 from wotemu.report.components.task_section import TaskSectionComponent
 from wotemu.report.utils import get_base_template, shorten_task_name
+
+_logger = logging.getLogger(__name__)
 
 
 class ReportBuilder:
@@ -208,20 +211,33 @@ class ReportBuilder:
 
         return fig
 
-    async def _get_task_section_comp(self, task):
+    async def _get_task_section_component(self, task):
         fig_mem = await self.build_task_mem_figure(task=task)
         fig_cpu = await self.build_task_cpu_figure(task=task)
         fig_packet_iface = await self.build_task_packet_iface_figure(task=task)
         fig_packet_proto = await self.build_task_packet_protocol_figure(task=task)
+
+        df_snap = await self._reader.get_snapshot_df()
+        snapshot = df_snap[df_snap["task"] == task].to_dict("records")
+
+        if len(snapshot) == 0:
+            _logger.warning("Undefined snapshot data for: %s", task)
+            snapshot = None
+        elif len(snapshot) > 1:
+            _logger.warning("Multiple snapshot rows for: %s", task)
+            snapshot = snapshot[-1]
+        else:
+            snapshot = snapshot[0]
 
         return TaskSectionComponent(
             fig_mem=fig_mem,
             fig_cpu=fig_cpu,
             fig_packet_iface=fig_packet_iface,
             fig_packet_proto=fig_packet_proto,
+            snapshot=snapshot,
             title=task)
 
-    async def _get_service_traffic_comp(self, height=650):
+    async def _get_service_traffic_component(self, height=650):
         fig_inbound = await self.build_service_traffic_figure(inbound=True)
         fig_outbound = await self.build_service_traffic_figure(inbound=False)
 
@@ -248,11 +264,11 @@ class ReportBuilder:
         task_pages = {}
 
         for task in tasks:
-            task_section = await self._get_task_section_comp(task=task)
+            task_section = await self._get_task_section_component(task=task)
             task_pages[f"{task}.html"] = task_section.to_page_html()
 
         task_list = TaskListComponent(task_keys=tasks)
-        service_traffic = await self._get_service_traffic_comp()
+        service_traffic = await self._get_service_traffic_component()
         container = ContainerComponent(elements=[task_list, service_traffic])
 
         ret = {"index.html": container.to_page_html()}

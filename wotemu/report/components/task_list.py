@@ -28,11 +28,7 @@ class TaskListComponent(BaseComponent):
         col = ET.Element("div", attrib={"class": "col"})
         title = ET.Element("h4")
         title.text = self.title
-
-        list_group = ET.Element("div", attrib={
-            "class": "list-group list-group-flush"
-        })
-
+        list_group = ET.Element("div", attrib={"class": "list-group"})
         row.append(col)
         col.append(title)
         col.append(list_group)

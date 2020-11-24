@@ -5,7 +5,7 @@ from wotemu.report.components.figure_block import FigureBlockComponent
 
 
 class ContainerComponent(BaseComponent):
-    def __init__(self, elements, margin="mt-3"):
+    def __init__(self, elements, margin="mt-2"):
         self.elements = elements
         self.margin = margin
 
