@@ -45,7 +45,7 @@ def _get_cpu(cpu_constraint, cpu_count):
     if cpu_constraint:
         ratio = cpu_count * cpu_percent * 1e-2
         constraint_ratio = float(ratio) / cpu_constraint
-        constraint_percent = round(min(constraint_ratio, 1.0) * 1e2, 1)
+        constraint_percent = round(constraint_ratio * 1e2, 1)
         ret.update({"cpu_percent_constraint": constraint_percent})
 
     return ret
