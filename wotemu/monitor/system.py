@@ -14,28 +14,32 @@ import psutil
 import sh
 import wotemu.config
 from wotemu.topology.compose import ENV_KEY_SERVICE_NAME
-from wotemu.utils import (get_current_container_id, get_current_task,
+from wotemu.utils import (cgget, get_current_container_id, get_current_task,
                           get_task_networks)
 
-_PATH_PERIOD = "/sys/fs/cgroup/cpu/cpu.cfs_period_us"
-_PATH_QUOTA = "/sys/fs/cgroup/cpu/cpu.cfs_quota_us"
+_CPU_PERIOD = "cpu.cfs_period_us"
+_CPU_QUOTA = "cpu.cfs_quota_us"
+_MEM_LIMIT = "memory.limit_in_bytes"
+_MEM_USAGE = "memory.usage_in_bytes"
 _NSLOOKUP_REGEX = r"Name:\s.+\..+\nAddress:\s(.+)"
 
 _logger = logging.getLogger(__name__)
 
 
 def _get_cpu_constraint():
-    try:
-        with open(_PATH_PERIOD, "r") as fh:
-            period = float(fh.read().strip())
+    period = cgget(_CPU_PERIOD)
 
-        with open(_PATH_QUOTA, "r") as fh:
-            quota = float(fh.read().strip())
-
-        return (quota / period) if quota > 0 else None
-    except Exception as ex:
-        _logger.debug("Error reading container CPU constraint: %s", ex)
+    if period is None:
+        _logger.warning("Undefined %s", _CPU_PERIOD)
         return None
+
+    quota = cgget(_CPU_QUOTA)
+
+    if quota is None:
+        _logger.warning("Undefined %s", _CPU_QUOTA)
+        return None
+
+    return (float(quota) / float(period)) if quota > 0 else None
 
 
 def _get_cpu(cpu_constraint, cpu_count):
@@ -51,10 +55,42 @@ def _get_cpu(cpu_constraint, cpu_count):
     return ret
 
 
+def _get_memory_limit():
+    limit_bytes = cgget(_MEM_LIMIT)
+
+    if limit_bytes is None:
+        _logger.warning("Undefined %s", _MEM_LIMIT)
+        return None
+
+    return None if limit_bytes > psutil.virtual_memory().total else limit_bytes
+
+
+def _get_memory_psutil():
+    vmem = psutil.virtual_memory()
+    mem_mb = float(vmem.total - vmem.available) / (1024 * 1024)
+    mem_percent = vmem.percent
+
+    return {
+        "mem_mb": round(mem_mb, 1),
+        "mem_percent": round(mem_percent, 1)
+    }
+
+
 def _get_memory():
-    mem = psutil.virtual_memory()
-    mem_mb = float(mem.total - mem.available) / (1024 * 1024)
-    mem_percent = (float(mem.total - mem.available) / mem.total) * 1e2
+    memory_limit = _get_memory_limit()
+
+    if memory_limit is None:
+        return _get_memory_psutil()
+
+    mem_usage = cgget(_MEM_USAGE)
+
+    if mem_usage is None:
+        _logger.warning("Undefined %s", _MEM_USAGE)
+        return _get_memory_psutil()
+
+    mem_mb = mem_usage / (1024.0 * 1024.0)
+    mem_limit_mb = memory_limit / (1024.0 * 1024.0)
+    mem_percent = (mem_mb / mem_limit_mb) * 100.0
 
     return {
         "mem_mb": round(mem_mb, 1),

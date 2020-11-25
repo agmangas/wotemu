@@ -7,7 +7,8 @@ apt-get update -y
 apt-get install -y \
 sshpass \
 jq \
-python3-pip
+python3-pip \
+cgroup-tools
 
 # RVM
 

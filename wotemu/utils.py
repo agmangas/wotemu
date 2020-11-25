@@ -11,6 +11,7 @@ import time
 import docker
 import netaddr
 import netifaces
+import sh
 import tornado.httpclient
 
 from wotemu.enums import Labels
@@ -360,3 +361,16 @@ async def consume_from_catalogue(wot, port_catalogue, servient_host, thing_id):
     _logger.debug("Consuming from URL: %s", td_url)
 
     return await wot.consume_from_url(td_url)
+
+
+def cgget(name):
+    try:
+        sh_cgget = sh.Command("cgget")
+        cmd_parts = ["-v", "-r", name, "/"]
+        proc = sh_cgget(cmd_parts, _err_to_out=True)
+        _logger.debug("%s: %s", proc.ran, proc.stdout)
+        match = re.search(r"(-?\d+)\n", proc.stdout.decode("utf8"))
+        return int(match.group(1)) if match else None
+    except:
+        _logger.warning("Error running cgget for: %s", exc_info=True)
+        return None
