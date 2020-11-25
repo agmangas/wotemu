@@ -251,6 +251,7 @@ class ReportBuilder:
             _logger.warning("Multiple snapshot rows for: %s", task)
 
         snapshot = snapshot[-1] if len(snapshot) > 0 else None
+        info = await self._reader.get_info(task, latest=True)
 
         return TaskSectionComponent(
             fig_mem=fig_mem,
@@ -259,6 +260,7 @@ class ReportBuilder:
             fig_packet_proto=fig_packet_proto,
             fig_thing_counts=fig_thing_counts,
             snapshot=snapshot,
+            info=info,
             title=task)
 
     async def _get_service_traffic_component(self, height=650):
@@ -292,7 +294,13 @@ class ReportBuilder:
             task_pages[f"{task}.html"] = task_section.to_page_html()
 
         df_snapshot = await self._reader.get_snapshot_df()
-        task_list = TaskListComponent(task_keys=tasks, df_snapshot=df_snapshot)
+        task_infos = await self._reader.get_info_map()
+
+        task_list = TaskListComponent(
+            task_keys=tasks,
+            task_infos=task_infos,
+            df_snapshot=df_snapshot)
+
         service_traffic = await self._get_service_traffic_component()
         container = ContainerComponent(elements=[service_traffic, task_list])
 

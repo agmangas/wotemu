@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 import lxml.etree
 from wotemu.report.components.base import BaseComponent
 from wotemu.report.components.container import ContainerComponent
@@ -18,16 +20,18 @@ class TaskSectionComponent(BaseComponent):
     _CREATED_AT = "Created at"
     _UPDATED_AT = "Updated at"
     _STATUS = "Desired state"
+    _STARTED_AT = "Started at"
 
     def __init__(
             self, fig_mem, fig_cpu, fig_packet_iface, fig_packet_proto, fig_thing_counts,
-            snapshot, title=None, height=450):
+            snapshot, info, title=None, height=450):
         self.fig_mem = fig_mem
         self.fig_cpu = fig_cpu
         self.fig_packet_iface = fig_packet_iface
         self.fig_packet_proto = fig_packet_proto
         self.fig_thing_counts = fig_thing_counts
         self.snapshot = snapshot
+        self.info = info
         self.title = title
         self.height = height
 
@@ -62,6 +66,7 @@ class TaskSectionComponent(BaseComponent):
         dl = lxml.etree.Element("dl", attrib={"class": "row mb-0"})
 
         snap = self.snapshot
+        info = self.info
 
         if snap.get("desired_state"):
             dl.append(self._get_dt(self._STATUS))
@@ -90,6 +95,11 @@ class TaskSectionComponent(BaseComponent):
         if snap.get("updated_at"):
             dl.append(self._get_dt(self._UPDATED_AT))
             dl.append(self._get_dd(snap["updated_at"].isoformat()))
+
+        if info.get("time"):
+            start_dtime = datetime.fromtimestamp(info["time"], timezone.utc)
+            dl.append(self._get_dt(self._STARTED_AT))
+            dl.append(self._get_dd(start_dtime.isoformat()))
 
         card_body.append(dl)
 

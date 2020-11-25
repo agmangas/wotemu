@@ -124,7 +124,7 @@ class ReportDataRedisReader:
 
         return {key.decode().split(":")[-1] for key in keys}
 
-    async def get_info(self, task):
+    async def get_info(self, task, latest=False):
         key = "{}:{}:{}".format(
             RedisPrefixes.NAMESPACE.value,
             RedisPrefixes.INFO.value,
@@ -134,7 +134,20 @@ class ReportDataRedisReader:
         rows = [json.loads(item) for item in members]
         rows.sort(key=lambda row: row["time"])
 
-        return rows
+        if latest:
+            return rows[-1] if len(rows) > 0 else None
+        else:
+            return rows
+
+    async def get_info_map(self):
+        task_keys = await self.get_tasks()
+
+        ret = {
+            task_key: await self.get_info(task_key, latest=True)
+            for task_key in task_keys
+        }
+
+        return {task_key: info for task_key, info in ret.items() if info}
 
     async def get_system_df(self, task):
         key = "{}:{}:{}".format(
@@ -318,7 +331,7 @@ class ReportDataRedisReader:
 
         return pd.concat(dfs.values(), ignore_index=True)
 
-    async def _get_task_id_map(self):
+    async def _get_task_key_map(self):
         task_keys = await self.get_tasks()
 
         task_infos = {
@@ -351,14 +364,14 @@ class ReportDataRedisReader:
 
         snapshot = json.loads(members[-1])
 
-        tid_map = await self._get_task_id_map()
+        task_key_map = await self._get_task_key_map()
 
         rows = [
             {
                 "desired_state": item["task"].get("DesiredState"),
                 "is_running": _is_task_running(item["task"]),
                 "is_error": _is_task_error(item["task"]),
-                "task": tid_map.get(task_id),
+                "task": task_key_map.get(task_id),
                 "task_id": task_id,
                 "node_id": item["task"].get("NodeID"),
                 "service_id": item["task"].get("ServiceID"),
