@@ -1,11 +1,6 @@
 import asyncio
-import functools
-import json
 import logging
-import pprint
-import sys
 
-import tornado.httpclient
 from wotemu.utils import consume_from_catalogue, wait_node
 
 _logger = logging.getLogger("wotemu.reader.app")

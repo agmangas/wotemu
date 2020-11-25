@@ -5,6 +5,7 @@ from wotemu.topology.models import (Broker, Network, Node, NodeApp,
 APP_CLOCK = "/root/wotemu/examples/app/clock.py"
 APP_SUBSCRIBER = "/root/wotemu/examples/app/subscriber.py"
 APP_READER = "/root/wotemu/examples/app/reader.py"
+APP_ERROR = "/root/wotemu/examples/app/error.py"
 PARAM_SERVIENT_HOST = "servient_host"
 PARAM_THING_ID = "thing_id"
 THING_ID_CLOCK = "urn:org:fundacionctic:thing:clock"
@@ -89,18 +90,11 @@ def topology():
         networks=[network_wifi],
         scale=2)
 
-    app_sub_broken = NodeApp(
-        path=APP_SUBSCRIBER,
-        params={
-            PARAM_SERVIENT_HOST: host_clock_mqtt,
-            PARAM_THING_ID: "urn:undefined:thing"
-        })
-
-    node_sub_broken = Node(
-        name="clock_sub_broken",
-        app=app_sub_broken,
-        networks=[network_wifi, network_3g],
-        scale=1)
+    node_error = Node(
+        name="clock_error",
+        app=NodeApp(path=APP_ERROR),
+        networks=[network_wifi],
+        scale=2)
 
     topology = Topology(nodes=[
         node_clock_mqtt,
@@ -108,7 +102,7 @@ def topology():
         node_sub_mqtt,
         node_sub_http,
         node_reader,
-        node_sub_broken
+        node_error
     ])
 
     return topology
