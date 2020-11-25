@@ -82,15 +82,95 @@ services:
     - /root/wotemu/examples/app/clock.py
     - --enable-mqtt
     depends_on:
+    - gw_mobile_3g
     - gw_wifi
     - docker_api_proxy
-    - gw_mobile_3g
     - redis
     deploy:
       replicas: 2
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       MQTT_BROKER_HOST: broker.mobile_3g
+      NODE_HOSTNAME: '{{.Node.Hostname}}'
+      NODE_ID: '{{.Node.ID}}'
+      PATCH_PRIVILEGED: '1'
+      PORT_CATALOGUE: '9090'
+      PORT_COAP: '5683'
+      PORT_HTTP: '80'
+      PORT_MQTT: '1883'
+      PORT_WS: '81'
+      REDIS_URL: redis://redis
+      SERVICE_ID: '{{.Service.ID}}'
+      SERVICE_NAME: '{{.Service.Name}}'
+    hostname: '{{.Task.Name}}'
+    image: wotemu
+    labels:
+      org.fundacionctic.wotemu.node: ''
+    networks:
+    - wifi
+    - mobile_3g
+    privileged: true
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+  clock_property_reader:
+    command:
+    - app
+    - --path
+    - /root/wotemu/examples/app/reader.py
+    - --func-param
+    - servient_host
+    - clock_http.wifi
+    - --func-param
+    - thing_id
+    - urn:org:fundacionctic:thing:clock
+    depends_on:
+    - gw_wifi
+    - docker_api_proxy
+    - redis
+    deploy:
+      replicas: 2
+    environment:
+      DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
+      NODE_HOSTNAME: '{{.Node.Hostname}}'
+      NODE_ID: '{{.Node.ID}}'
+      PATCH_PRIVILEGED: '1'
+      PORT_CATALOGUE: '9090'
+      PORT_COAP: '5683'
+      PORT_HTTP: '80'
+      PORT_MQTT: '1883'
+      PORT_WS: '81'
+      REDIS_URL: redis://redis
+      SERVICE_ID: '{{.Service.ID}}'
+      SERVICE_NAME: '{{.Service.Name}}'
+    hostname: '{{.Task.Name}}'
+    image: wotemu
+    labels:
+      org.fundacionctic.wotemu.node: ''
+    networks:
+    - wifi
+    privileged: true
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+  clock_sub_broken:
+    command:
+    - app
+    - --path
+    - /root/wotemu/examples/app/subscriber.py
+    - --func-param
+    - servient_host
+    - clock_mqtt.wifi
+    - --func-param
+    - thing_id
+    - urn:undefined:thing
+    depends_on:
+    - gw_mobile_3g
+    - gw_wifi
+    - docker_api_proxy
+    - redis
+    deploy:
+      replicas: 1
+    environment:
+      DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       NODE_HOSTNAME: '{{.Node.Hostname}}'
       NODE_ID: '{{.Node.ID}}'
       PATCH_PRIVILEGED: '1'
@@ -124,9 +204,9 @@ services:
     - thing_id
     - urn:org:fundacionctic:thing:clock
     depends_on:
+    - gw_mobile_3g
     - gw_wifi
     - docker_api_proxy
-    - gw_mobile_3g
     - redis
     deploy:
       replicas: 4
@@ -169,9 +249,9 @@ services:
     - thing_id
     - urn:org:fundacionctic:thing:clock
     depends_on:
+    - gw_mobile_3g
     - gw_wifi
     - docker_api_proxy
-    - gw_mobile_3g
     - redis
     deploy:
       replicas: 2
