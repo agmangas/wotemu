@@ -52,7 +52,7 @@ class ReportBuilder:
         fig.update_layout(title_text="Memory usage")
         fig.update_xaxes(title_text="Date (UTC)")
         fig.update_yaxes(title_text="MB", secondary_y=False)
-        fig.update_yaxes(title_text="%", secondary_y=True, range=[0.0, 100.0])
+        fig.update_yaxes(title_text="%", secondary_y=True)
 
         return fig
 
@@ -94,8 +94,7 @@ class ReportBuilder:
 
             fig.update_yaxes(
                 title_text="% over constraint",
-                secondary_y=True,
-                range=[0.0, 100.0])
+                secondary_y=True)
 
         return fig
 
