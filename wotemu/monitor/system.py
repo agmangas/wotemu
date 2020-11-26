@@ -17,6 +17,7 @@ from wotemu.topology.compose import ENV_KEY_SERVICE_NAME
 from wotemu.utils import (cgget, get_current_container_id, get_current_task,
                           get_task_networks)
 
+_CPU_USAGE = "cpuacct.usage"
 _CPU_PERIOD = "cpu.cfs_period_us"
 _CPU_QUOTA = "cpu.cfs_quota_us"
 _MEM_LIMIT = "memory.limit_in_bytes"
@@ -24,6 +25,55 @@ _MEM_USAGE = "memory.usage_in_bytes"
 _NSLOOKUP_REGEX = r"Name:\s.+\..+\nAddress:\s(.+)"
 
 _logger = logging.getLogger(__name__)
+
+_times = {
+    "system": None,
+    "cgroup": None
+}
+
+
+def _get_cpu_nanos_system():
+    cput = psutil.cpu_times()
+    return (cput.user + cput.system + cput.idle) * 1e9
+
+
+def _get_cpu_nanos():
+    usage = cgget(_CPU_USAGE)
+
+    if not usage:
+        _logger.warning("Undefined %s", _CPU_USAGE)
+        return None
+
+    return usage
+
+
+def _get_cpu_percent():
+    if _times["system"] is None:
+        _times.update({
+            "system": _get_cpu_nanos_system(),
+            "cgroup": _get_cpu_nanos()
+        })
+
+        return None
+
+    curr_cpu = _get_cpu_nanos()
+    curr_sys = _get_cpu_nanos_system()
+
+    if curr_cpu is None or curr_sys is None or _times["cgroup"] is None:
+        return psutil.cpu_percent()
+
+    delta_cpu = float(curr_cpu - _times["cgroup"])
+    delta_sys = float(curr_sys - _times["system"])
+
+    _times.update({
+        "system": curr_sys,
+        "cgroup": curr_cpu
+    })
+
+    if delta_cpu > 0 and delta_sys > 0:
+        return (delta_cpu / delta_sys) * psutil.cpu_count() * 100.0
+    else:
+        return 0.0
 
 
 def _get_cpu_constraint():
@@ -42,13 +92,18 @@ def _get_cpu_constraint():
     return (float(quota) / float(period)) if quota > 0 else None
 
 
-def _get_cpu(cpu_constraint, cpu_count):
-    cpu_percent = psutil.cpu_percent()
-    ret = {"cpu_percent": cpu_percent}
+def _get_cpu():
+    cpu_percent = _get_cpu_percent()
+
+    if cpu_percent is None:
+        return None
+
+    ret = {"cpu_percent": round(cpu_percent, 1)}
+
+    cpu_constraint = _get_cpu_constraint()
 
     if cpu_constraint:
-        ratio = cpu_count * cpu_percent * 1e-2
-        constraint_ratio = float(ratio) / cpu_constraint
+        constraint_ratio = (cpu_percent * 1e-2) / cpu_constraint
         constraint_percent = round(constraint_ratio * 1e2, 1)
         ret.update({"cpu_percent_constraint": constraint_percent})
 
@@ -100,10 +155,8 @@ def _get_memory():
 
 def _read_system(data, read_funcs):
     datum = {"time": time.time()}
-
-    for func in read_funcs:
-        datum.update(func())
-
+    read_results = [func() for func in read_funcs]
+    [datum.update(item) for item in read_results if item]
     data.append(datum)
 
 
@@ -114,23 +167,12 @@ async def _invoke_callback(data, group_size, async_cb):
 
 
 async def monitor_system(async_cb, sleep=5.0, group_size=2):
-    cpu_constraint = _get_cpu_constraint()
-    cpu_count = psutil.cpu_count()
-
-    _logger.debug("CPU constraint ratio: %s", cpu_constraint)
-    _logger.debug("CPU count: %s", cpu_count)
-
-    get_cpu = functools.partial(
-        _get_cpu,
-        cpu_constraint=cpu_constraint,
-        cpu_count=cpu_count)
-
     data = []
 
     read_system = functools.partial(
         _read_system,
         data=data,
-        read_funcs=(get_cpu, _get_memory))
+        read_funcs=(_get_cpu, _get_memory))
 
     invoke_callback = functools.partial(
         _invoke_callback,
@@ -139,9 +181,7 @@ async def monitor_system(async_cb, sleep=5.0, group_size=2):
         async_cb=async_cb)
 
     try:
-        # First CPU usage call to set reference:
-        # https://psutil.readthedocs.io/en/latest/#psutil.cpu_percent
-        get_cpu()
+        _get_cpu()
         await asyncio.sleep(sleep)
 
         while True:
