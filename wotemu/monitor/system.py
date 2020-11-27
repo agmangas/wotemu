@@ -32,6 +32,17 @@ _times = {
 }
 
 
+class CggetError(RuntimeError):
+    def __init__(self, key):
+        msg = (
+            "Could not read cgroup parameter '{}'"
+            "using the cgget command. Please make "
+            "sure that cgget is installed on your system."
+        ).format(key)
+
+        super().__init__(msg)
+
+
 def _get_cpu_nanos_system():
     cput = psutil.cpu_times()
     return (cput.user + cput.system + cput.idle) * 1e9
@@ -40,27 +51,30 @@ def _get_cpu_nanos_system():
 def _get_cpu_nanos():
     usage = cgget(_CPU_USAGE)
 
-    if not usage:
-        _logger.warning("Undefined %s", _CPU_USAGE)
-        return None
+    if usage is None:
+        raise CggetError(_CPU_USAGE)
 
     return usage
 
 
-def _get_cpu_percent():
-    if _times["system"] is None:
-        _times.update({
-            "system": _get_cpu_nanos_system(),
-            "cgroup": _get_cpu_nanos()
-        })
+def _is_times_state_empty():
+    return _times["system"] is None or _times["cgroup"] is None
 
+
+def _update_times_state():
+    _times.update({
+        "system": _get_cpu_nanos_system(),
+        "cgroup": _get_cpu_nanos()
+    })
+
+
+def _get_cpu_percent():
+    if _is_times_state_empty():
+        _update_times_state()
         return None
 
     curr_cpu = _get_cpu_nanos()
     curr_sys = _get_cpu_nanos_system()
-
-    if curr_cpu is None or curr_sys is None or _times["cgroup"] is None:
-        return psutil.cpu_percent()
 
     delta_cpu = float(curr_cpu - _times["cgroup"])
     delta_sys = float(curr_sys - _times["system"])
@@ -80,14 +94,12 @@ def _get_cpu_constraint():
     period = cgget(_CPU_PERIOD)
 
     if period is None:
-        _logger.warning("Undefined %s", _CPU_PERIOD)
-        return None
+        raise CggetError(_CPU_PERIOD)
 
     quota = cgget(_CPU_QUOTA)
 
     if quota is None:
-        _logger.warning("Undefined %s", _CPU_QUOTA)
-        return None
+        raise CggetError(_CPU_QUOTA)
 
     return (float(quota) / float(period)) if quota > 0 else None
 
@@ -112,51 +124,47 @@ def _get_cpu():
 
 def _get_memory_limit():
     limit_bytes = cgget(_MEM_LIMIT)
+    total_bytes_system = psutil.virtual_memory().total
 
-    if limit_bytes is None:
-        _logger.warning("Undefined %s", _MEM_LIMIT)
-        return None
-
-    return None if limit_bytes > psutil.virtual_memory().total else limit_bytes
-
-
-def _get_memory_psutil():
-    vmem = psutil.virtual_memory()
-    mem_mb = float(vmem.total - vmem.available) / (1024 * 1024)
-    mem_percent = vmem.percent
-
-    return {
-        "mem_mb": round(mem_mb, 1),
-        "mem_percent": round(mem_percent, 1)
-    }
+    if limit_bytes and limit_bytes < total_bytes_system:
+        return limit_bytes
+    else:
+        return total_bytes_system
 
 
 def _get_memory():
-    memory_limit = _get_memory_limit()
-
-    if memory_limit is None:
-        return _get_memory_psutil()
-
     mem_usage = cgget(_MEM_USAGE)
 
     if mem_usage is None:
-        _logger.warning("Undefined %s", _MEM_USAGE)
-        return _get_memory_psutil()
+        raise CggetError(_MEM_USAGE)
 
-    mem_mb = mem_usage / (1024.0 * 1024.0)
-    mem_limit_mb = memory_limit / (1024.0 * 1024.0)
-    mem_percent = (mem_mb / mem_limit_mb) * 100.0
+    mem_limit = _get_memory_limit()
+    mem_usage_mb = mem_usage / (1024.0 ** 2)
+    mem_limit_mb = mem_limit / (1024.0 ** 2)
+    mem_percent = (mem_usage_mb / mem_limit_mb) * 100.0
 
     return {
-        "mem_mb": round(mem_mb, 1),
+        "mem_mb": round(mem_usage_mb, 2),
         "mem_percent": round(mem_percent, 1)
     }
 
 
 def _read_system(data, read_funcs):
     datum = {"time": time.time()}
-    read_results = [func() for func in read_funcs]
-    [datum.update(item) for item in read_results if item]
+
+    read_results = []
+
+    for func in read_funcs:
+        try:
+            read_results.append(func())
+        except Exception as ex:
+            _logger.warning("System monitor error: %s", repr(ex))
+
+    [
+        datum.update(item)
+        for item in read_results if item
+    ]
+
     data.append(datum)
 
 
