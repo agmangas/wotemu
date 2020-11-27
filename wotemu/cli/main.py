@@ -132,7 +132,7 @@ def limits(conf, **kwargs):
 
 @cli.command(**_COMMAND_KWARGS)
 @click.option("--sleep", type=float, default=1.0)
-@click.option("--timeout", type=float, default=30.0)
+@click.option("--timeout", type=float, default=60.0)
 @click.option("--waiter-base", is_flag=True)
 @click.option("--waiter-mqtt", is_flag=True)
 @click.pass_obj
