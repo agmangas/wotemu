@@ -10,12 +10,15 @@ import pandas as pd
 import pkg_resources
 import plotly.express as px
 import plotly.graph_objects as go
+import wotpy.wot.consumed.thing
+import wotpy.wot.exposed.thing
 from plotly.subplots import make_subplots
 from wotemu.report.components.container import ContainerComponent
 from wotemu.report.components.figure_block import FigureBlockComponent
 from wotemu.report.components.task_list import TaskListComponent
 from wotemu.report.components.task_section import TaskSectionComponent
 from wotemu.report.utils import get_base_template, shorten_task_name
+from wotpy.protocols.enums import InteractionVerbs
 
 _logger = logging.getLogger(__name__)
 
@@ -233,12 +236,75 @@ class ReportBuilder:
 
         return fig
 
+    async def _build_req_latency_fig(self, task, facet_col_wrap, cls_name):
+        df = await self._reader.get_thing_df(task=task)
+
+        if df.empty:
+            return None
+
+        df.reset_index(inplace=True)
+
+        df = df[df["verb"].isin([
+            InteractionVerbs.INVOKE_ACTION,
+            InteractionVerbs.WRITE_PROPERTY,
+            InteractionVerbs.READ_PROPERTY
+        ])]
+
+        df = df[df["class"] == cls_name]
+
+        df["name_ext"] = df["name"] + " (" + df["verb"] + ")"
+
+        if df.empty:
+            return None
+
+        fig = px.box(
+            df,
+            x="name_ext",
+            y="latency",
+            facet_col="thing",
+            facet_col_wrap=facet_col_wrap)
+
+        fig.update_yaxes(title_text="Latency (s)")
+        fig.update_xaxes(title_text="Interaction name")
+
+        return fig
+
+    async def build_consumed_request_latency_figure(self, task, facet_col_wrap=2):
+        fig = await self._build_req_latency_fig(
+            task=task,
+            facet_col_wrap=facet_col_wrap,
+            cls_name=wotpy.wot.consumed.thing.ConsumedThing.__name__)
+
+        if not fig:
+            return None
+
+        fig.update_layout(
+            title_text="Latency distribution of consumed properties and actions")
+
+        return fig
+
+    async def build_exposed_request_latency_figure(self, task, facet_col_wrap=2):
+        fig = await self._build_req_latency_fig(
+            task=task,
+            facet_col_wrap=facet_col_wrap,
+            cls_name=wotpy.wot.exposed.thing.ExposedThing.__name__)
+
+        if not fig:
+            return None
+
+        fig.update_layout(
+            title_text="Local latency distribution of exposed properties and actions")
+
+        return fig
+
     async def _get_task_section_component(self, task):
         fig_mem = await self.build_task_mem_figure(task=task)
         fig_cpu = await self.build_task_cpu_figure(task=task)
         fig_packet_iface = await self.build_task_packet_iface_figure(task=task)
         fig_packet_proto = await self.build_task_packet_protocol_figure(task=task)
         fig_thing_counts = await self.build_thing_counts_figure(task=task)
+        fig_cons_req_lat = await self.build_consumed_request_latency_figure(task=task)
+        fig_exps_req_lat = await self.build_exposed_request_latency_figure(task=task)
 
         df_snap = await self._reader.get_snapshot_df()
         snapshot = df_snap[df_snap["task"] == task].to_dict("records")
@@ -258,6 +324,8 @@ class ReportBuilder:
             fig_packet_iface=fig_packet_iface,
             fig_packet_proto=fig_packet_proto,
             fig_thing_counts=fig_thing_counts,
+            fig_cons_req_lat=fig_cons_req_lat,
+            fig_exps_req_lat=fig_exps_req_lat,
             snapshot=snapshot,
             info=info,
             title=task)

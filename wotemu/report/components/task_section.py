@@ -24,12 +24,14 @@ class TaskSectionComponent(BaseComponent):
 
     def __init__(
             self, fig_mem, fig_cpu, fig_packet_iface, fig_packet_proto, fig_thing_counts,
-            snapshot, info, title=None, height=450):
+            fig_cons_req_lat, fig_exps_req_lat, snapshot, info, title=None, height=450):
         self.fig_mem = fig_mem
         self.fig_cpu = fig_cpu
         self.fig_packet_iface = fig_packet_iface
         self.fig_packet_proto = fig_packet_proto
         self.fig_thing_counts = fig_thing_counts
+        self.fig_cons_req_lat = fig_cons_req_lat
+        self.fig_exps_req_lat = fig_exps_req_lat
         self.snapshot = snapshot
         self.info = info
         self.title = title
@@ -159,11 +161,11 @@ class TaskSectionComponent(BaseComponent):
 
         return alert
 
-    def _get_thing_counts_element(self):
-        if not self.fig_thing_counts:
+    def _build_fig_element_ifdef(self, fig):
+        if not fig:
             return None
 
-        return FigureBlockComponent(self.fig_thing_counts).to_element()
+        return FigureBlockComponent(fig).to_element()
 
     def to_element(self):
         figs = [
@@ -192,7 +194,9 @@ class TaskSectionComponent(BaseComponent):
             self._get_error_element(),
             self._get_info_element(),
             figs_row,
-            self._get_thing_counts_element(),
+            self._build_fig_element_ifdef(self.fig_thing_counts),
+            self._build_fig_element_ifdef(self.fig_cons_req_lat),
+            self._build_fig_element_ifdef(self.fig_exps_req_lat),
             self._get_logs_element()
         ]
 
