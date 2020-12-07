@@ -6,6 +6,7 @@ import os
 import re
 import tempfile
 
+import numpy as np
 import pandas as pd
 import pkg_resources
 import plotly.express as px
@@ -218,14 +219,28 @@ class ReportBuilder:
         if df.empty:
             return None
 
-        df = df.groupby(["thing", "verb", "class"]).count()
+        df.reset_index(inplace=True)
+
+        df["error_sub"] = (df["verb"] == "subscribeevent") \
+            & (df["event"] == "on_error") \
+            if "event" in df else False
+
+        df["error_req"] = (df["verb"] != "subscribeevent") \
+            & (df["error"].notna()) \
+            if "error" in df else False
+
+        df["error"] = df["error_req"] | df["error_sub"]
+        df["thing"] = df["thing"] + " (" + df["class"] + ")"
+
+        df = df.groupby(["thing", "verb", "error"]).count()
+
         df.reset_index(inplace=True)
 
         fig = px.bar(
             df,
             x="verb",
             y="host",
-            color="class",
+            color="error",
             barmode="stack",
             facet_col="thing",
             facet_col_wrap=facet_col_wrap)
