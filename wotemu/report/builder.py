@@ -229,10 +229,15 @@ class ReportBuilder:
             & (df["error"].notna()) \
             if "error" in df else False
 
-        df["error"] = df["error_req"] | df["error_sub"]
+        cat_ok = "OK"
+        cat_er = "Error"
+
+        df["success"] = df["error_req"] | df["error_sub"]
+        df["success"].replace(False, cat_ok, inplace=True)
+        df["success"].replace(True, cat_er, inplace=True)
         df["thing"] = df["thing"] + " (" + df["class"] + ")"
 
-        df = df.groupby(["thing", "verb", "error"]).count()
+        df = df.groupby(["thing", "verb", "success"]).count()
 
         df.reset_index(inplace=True)
 
@@ -240,10 +245,11 @@ class ReportBuilder:
             df,
             x="verb",
             y="host",
-            color="error",
+            color="success",
             barmode="stack",
             facet_col="thing",
-            facet_col_wrap=facet_col_wrap)
+            facet_col_wrap=facet_col_wrap,
+            category_orders={"success": [cat_ok, cat_er]})
 
         fig.update_layout(title_text="Total interaction counts")
         fig.update_yaxes(title_text="Total count")
@@ -280,7 +286,7 @@ class ReportBuilder:
             facet_col_wrap=facet_col_wrap)
 
         fig.update_yaxes(title_text="Latency (s)")
-        fig.update_xaxes(title_text="Interaction name")
+        fig.update_xaxes(title_text="Interaction name & verb")
 
         return fig
 
@@ -308,9 +314,24 @@ class ReportBuilder:
             return None
 
         fig.update_layout(
-            title_text="Local latency distribution of exposed properties and actions")
+            title_text="Local handler latency distribution of exposed properties and actions")
 
         return fig
+
+    async def build_events_figure(self, task):
+        df = await self._reader.get_thing_df(task=task)
+
+        if df.empty:
+            return None
+
+        df.reset_index(inplace=True)
+
+        df = df[df["verb"].isin([
+            InteractionVerbs.SUBSCRIBE_EVENT,
+            InteractionVerbs.UNSUBSCRIBE_EVENT
+        ])]
+
+        print(df)
 
     async def _get_task_section_component(self, task):
         fig_mem = await self.build_task_mem_figure(task=task)
@@ -320,6 +341,7 @@ class ReportBuilder:
         fig_thing_counts = await self.build_thing_counts_figure(task=task)
         fig_cons_req_lat = await self.build_consumed_request_latency_figure(task=task)
         fig_exps_req_lat = await self.build_exposed_request_latency_figure(task=task)
+        fig_events = await self.build_events_figure(task=task)
 
         df_snap = await self._reader.get_snapshot_df()
         snapshot = df_snap[df_snap["task"] == task].to_dict("records")
