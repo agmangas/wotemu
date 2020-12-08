@@ -32,5 +32,7 @@ async def test_build_report(redis_reader):
 async def test_write_report(redis_reader):
     builder = ReportBuilder(reader=redis_reader)
 
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        await builder.write_report(base_path=tmp_dir)
+    await builder.write_report(base_path="/Users/agmangas/Desktop/report")
+
+    # with tempfile.TemporaryDirectory() as tmp_dir:
+    #     await builder.write_report(base_path=tmp_dir)

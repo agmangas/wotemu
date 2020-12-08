@@ -318,7 +318,7 @@ class ReportBuilder:
 
         return fig
 
-    async def build_events_figure(self, task):
+    async def _build_events_figure(self, task, cls_name, freq, facet_col_wrap, base_height):
         df = await self._reader.get_thing_df(task=task)
 
         if df.empty:
@@ -327,11 +327,79 @@ class ReportBuilder:
         df.reset_index(inplace=True)
 
         df = df[df["verb"].isin([
-            InteractionVerbs.SUBSCRIBE_EVENT,
-            InteractionVerbs.UNSUBSCRIBE_EVENT
+            InteractionVerbs.SUBSCRIBE_EVENT
         ])]
 
-        print(df)
+        df = df[df["class"] == cls_name]
+
+        if df.empty:
+            return None
+
+        event_types = df["event"].unique()
+
+        for event_type in event_types:
+            df[event_type] = df["event"] == event_type
+            df[event_type].replace(False, np.nan, inplace=True)
+
+        df["name"] = df["name"] + " (" + df["thing"] + ")"
+
+        df.set_index(["date"], inplace=True)
+
+        df = df.groupby([
+            pd.Grouper(freq=freq),
+            pd.Grouper("name")
+        ]).count()
+
+        df = df.filter(event_types)
+        df.reset_index(inplace=True)
+
+        num_facets = len(df["name"].unique())
+
+        height = math.ceil(float(num_facets) / facet_col_wrap) * base_height
+        height = int(height)
+
+        fig = px.line(
+            df,
+            x="date",
+            y=event_types,
+            facet_col="name",
+            facet_col_wrap=facet_col_wrap,
+            height=height)
+
+        fig.update_yaxes(title_text="Total count")
+        fig.update_xaxes(title_text="Date (UTC)")
+
+        return fig
+
+    async def build_consumed_events_figure(self, task, freq="10s", facet_col_wrap=2, base_height=400):
+        fig = await self._build_events_figure(
+            task=task,
+            cls_name=wotpy.wot.consumed.thing.ConsumedThing.__name__,
+            freq=freq,
+            facet_col_wrap=facet_col_wrap,
+            base_height=base_height)
+
+        if not fig:
+            return None
+
+        fig.update_layout(title_text="Timeline of consumed events")
+
+        return fig
+
+    async def build_exposed_events_figure(self, task, freq="10s", facet_col_wrap=2, base_height=400):
+        fig = await self._build_events_figure(
+            task=task,
+            cls_name=wotpy.wot.exposed.thing.ExposedThing.__name__,
+            freq=freq,
+            facet_col_wrap=facet_col_wrap,
+            base_height=base_height)
+
+        if not fig:
+            return None
+
+        fig.update_layout(title_text="Timeline of exposed events")
+
+        return fig
 
     async def _get_task_section_component(self, task):
         fig_mem = await self.build_task_mem_figure(task=task)
@@ -341,7 +409,8 @@ class ReportBuilder:
         fig_thing_counts = await self.build_thing_counts_figure(task=task)
         fig_cons_req_lat = await self.build_consumed_request_latency_figure(task=task)
         fig_exps_req_lat = await self.build_exposed_request_latency_figure(task=task)
-        fig_events = await self.build_events_figure(task=task)
+        fig_cons_events = await self.build_consumed_events_figure(task=task)
+        fig_exps_events = await self.build_exposed_events_figure(task=task)
 
         df_snap = await self._reader.get_snapshot_df()
         snapshot = df_snap[df_snap["task"] == task].to_dict("records")
@@ -363,6 +432,8 @@ class ReportBuilder:
             fig_thing_counts=fig_thing_counts,
             fig_cons_req_lat=fig_cons_req_lat,
             fig_exps_req_lat=fig_exps_req_lat,
+            fig_cons_events=fig_cons_events,
+            fig_exps_events=fig_exps_events,
             snapshot=snapshot,
             info=info,
             title=task)
