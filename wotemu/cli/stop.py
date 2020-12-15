@@ -8,25 +8,14 @@ import aioredis
 import docker
 import sh
 import yaml
+from wotemu.cli.utils import find_stack_redis_port, find_stack_services
 from wotemu.enums import Labels, RedisPrefixes
-
-_REDIS_PORT = 6379
-_STACK_NAMESPACE = "com.docker.stack.namespace"
 
 _logger = logging.getLogger(__name__)
 
 
-def _find_stack_services(stack):
-    docker_api_client = docker.APIClient()
-
-    return [
-        item for item in docker_api_client.services()
-        if item.get("Spec", {}).get("Labels", {}).get(_STACK_NAMESPACE) == stack
-    ]
-
-
 def _assert_stack_exists(stack):
-    services = _find_stack_services(stack=stack)
+    services = find_stack_services(stack=stack)
 
     if len(services) == 0:
         raise Exception(f"No services found for stack: {stack}")
@@ -48,7 +37,7 @@ def _get_task_logs(task, tail=30):
 
 def _get_stack_snapshot(stack, tail):
     docker_api_client = docker.APIClient()
-    services = _find_stack_services(stack=stack)
+    services = find_stack_services(stack=stack)
 
     _logger.info(
         "Inspecting tasks for %s services found on stack: %s",
@@ -90,28 +79,6 @@ async def _write_snapshot(redis_url, data):
             _logger.warning("Error closing Redis", exc_info=True)
 
 
-def _find_stack_redis_port(stack):
-    _logger.info("Finding publicly exposed Redis port for stack: %s", stack)
-
-    services = _find_stack_services(stack=stack)
-
-    redis_service = next(
-        item
-        for item in services
-        if item.get("Spec", {}).
-        get("TaskTemplate", {}).
-        get("ContainerSpec", {}).
-        get("Labels", {}).
-        get(Labels.WOTEMU_REDIS.value, None) is not None)
-
-    _logger.debug("Found Redis service:\n%s", pprint.pformat(redis_service))
-
-    return next(
-        item["PublishedPort"]
-        for item in redis_service["Endpoint"]["Ports"]
-        if item["TargetPort"] == _REDIS_PORT and item["Protocol"] == "tcp")
-
-
 def stop_stack(conf, compose_file, stack, redis_url, tail):
     _assert_stack_exists(stack=stack)
 
@@ -146,7 +113,7 @@ def stop_stack(conf, compose_file, stack, redis_url, tail):
     _logger.info("%s\n%s", proc.ran, str(proc).strip())
 
     if not redis_url:
-        redis_port = _find_stack_redis_port(stack=stack)
+        redis_port = find_stack_redis_port(stack=stack)
         redis_url = f"redis://127.0.0.1:{redis_port}"
 
     _logger.info("Using Redis URL: %s", redis_url)
