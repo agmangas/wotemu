@@ -401,6 +401,55 @@ class ReportBuilder:
 
         return fig
 
+    async def build_system_ranking_figure(self, key="cpu_percent", height_task=30):
+        task_keys = await self._reader.get_tasks()
+
+        if not task_keys or len(task_keys) == 0:
+            return None
+
+        dfs = []
+
+        for task in task_keys:
+            df = await self._reader.get_system_df(task=task)
+            df.reset_index(inplace=True)
+            df["task"] = shorten_task_name(task)
+            dfs.append(df)
+
+        df_ranking = pd.concat(dfs)
+
+        if df_ranking.empty:
+            return None
+
+        df_sorted = df_ranking.groupby(["task"]).median()
+        df_sorted.sort_values(by=key, ascending=False, inplace=True)
+
+        height = height_task * len(task_keys)
+
+        fig = px.box(
+            df_ranking,
+            category_orders={"task": df_sorted.index.tolist()},
+            x=key,
+            y="task",
+            height=height)
+
+        xaxes_titles = {
+            "cpu_percent": "CPU (%)",
+            "mem_mb": "Memory (MB)"
+        }
+
+        fig.update_yaxes(title_text="Task")
+        fig.update_xaxes(title_text=xaxes_titles.get(key, key))
+
+        titles = {
+            "cpu_percent": "CPU distribution (sorted by median)",
+            "mem_mb": "Memory distribution (sorted by median)"
+        }
+
+        if titles.get(key):
+            fig.update_layout(title_text=titles[key])
+
+        return fig
+
     async def _get_task_section_component(self, task):
         fig_mem = await self.build_task_mem_figure(task=task)
         fig_cpu = await self.build_task_cpu_figure(task=task)
@@ -458,6 +507,22 @@ class ReportBuilder:
 
         return ContainerComponent(elements=elements)
 
+    async def _get_system_ranking_component(self):
+        fig_cpu = await self.build_system_ranking_figure(key="cpu_percent")
+        fig_mem = await self.build_system_ranking_figure(key="mem_mb")
+
+        elements = []
+
+        if fig_cpu:
+            elements.append(FigureBlockComponent(
+                fig_cpu, title="CPU usage ranking"))
+
+        if fig_mem:
+            elements.append(FigureBlockComponent(
+                fig_mem, title="Memory usage ranking"))
+
+        return ContainerComponent(elements=elements)
+
     async def build_report(self):
         tasks = await self._reader.get_tasks()
         tasks = sorted(tasks)
@@ -477,7 +542,13 @@ class ReportBuilder:
             df_snapshot=df_snapshot)
 
         service_traffic = await self._get_service_traffic_component()
-        container = ContainerComponent(elements=[service_traffic, task_list])
+        system_ranking = await self._get_system_ranking_component()
+
+        container = ContainerComponent(elements=[
+            service_traffic,
+            system_ranking,
+            task_list
+        ])
 
         ret = {"index.html": container.to_page_html()}
         ret.update(task_pages)
