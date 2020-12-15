@@ -33,7 +33,8 @@ class FigureBlockComponent(BaseComponent):
                 _logger.debug("Using %s: %s", parser, ex)
                 el_plot = lxml.etree.fromstring(fig_html, parser=parser)
 
-            el_plot.set("style", f"height: {self.height}px;")
+            if self.height:
+                el_plot.set("style", f"height: {self.height}px;")
 
             el_col = lxml.etree.Element(
                 "div", attrib={"class": self.col_class})

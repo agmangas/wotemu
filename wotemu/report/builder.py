@@ -167,7 +167,7 @@ class ReportBuilder:
 
         return 0 if df_where.empty else (df_where.iloc[0]["len"] / 1024.0)
 
-    async def build_service_traffic_figure(self, inbound, colorscale="Portland"):
+    async def build_service_traffic_figure(self, inbound, colorscale="Portland", height_task=50):
         df = await self._reader.get_service_traffic_df(inbound=inbound)
 
         if df.empty:
@@ -207,9 +207,11 @@ class ReportBuilder:
             "Task - service" if inbound else "Service - task",
             "inbound" if inbound else "outbound")
 
+        height = height_task * len(heatmap_y)
+
         fig.update_xaxes(title_text="Service")
         fig.update_yaxes(title_text="Task")
-        fig.update_layout(title_text=title)
+        fig.update_layout(title_text=title, height=height)
 
         return fig
 
@@ -401,7 +403,7 @@ class ReportBuilder:
 
         return fig
 
-    async def build_system_ranking_figure(self, key="cpu_percent", height_task=30):
+    async def build_system_ranking_figure(self, key="cpu_percent", height_task=32):
         task_keys = await self._reader.get_tasks()
 
         if not task_keys or len(task_keys) == 0:
@@ -487,7 +489,7 @@ class ReportBuilder:
             info=info,
             title=task)
 
-    async def _get_service_traffic_component(self, height=650):
+    async def _get_service_traffic_component(self):
         fig_inbound = await self.build_service_traffic_figure(inbound=True)
         fig_outbound = await self.build_service_traffic_figure(inbound=False)
 
@@ -497,13 +499,13 @@ class ReportBuilder:
             elements.append(FigureBlockComponent(
                 fig_inbound,
                 title="Service traffic heatmap (inbound)",
-                height=height))
+                height=None))
 
         if fig_outbound:
             elements.append(FigureBlockComponent(
                 fig_outbound,
                 title="Service traffic heatmap (outbound)",
-                height=height))
+                height=None))
 
         return ContainerComponent(elements=elements)
 
@@ -515,11 +517,15 @@ class ReportBuilder:
 
         if fig_cpu:
             elements.append(FigureBlockComponent(
-                fig_cpu, title="CPU usage ranking"))
+                fig_cpu, 
+                title="CPU usage ranking",
+                height=None))
 
         if fig_mem:
             elements.append(FigureBlockComponent(
-                fig_mem, title="Memory usage ranking"))
+                fig_mem, 
+                title="Memory usage ranking",
+                height=None))
 
         return ContainerComponent(elements=elements)
 
