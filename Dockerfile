@@ -1,4 +1,4 @@
-FROM ubuntu:19.10
+FROM ubuntu:20.04
 
 ENV PATH_WOTEMU /root/wotemu
 ENV WAIT_GATEWAYS 5
