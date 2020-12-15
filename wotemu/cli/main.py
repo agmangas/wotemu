@@ -10,6 +10,7 @@ import wotemu.cli.broker
 import wotemu.cli.chaos
 import wotemu.cli.compose
 import wotemu.cli.limits
+import wotemu.cli.report
 import wotemu.cli.routes
 import wotemu.cli.stop
 import wotemu.cli.waiter
@@ -166,3 +167,15 @@ def stop(conf, **kwargs):
     if necessary and logs other events of interest."""
 
     wotemu.cli.stop.stop_stack(conf, **kwargs)
+
+
+@cli.command(**_COMMAND_KWARGS)
+@click.option("--out", required=True)
+@click.option("--stack", default=None)
+@click.option("--redis-url", default=None)
+@click.pass_obj
+@_catch
+def report(conf, **kwargs):
+    """Builds an emulation stack report."""
+
+    wotemu.cli.report.build_report(conf, **kwargs)
