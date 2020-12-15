@@ -75,7 +75,13 @@ class TaskListComponent(BaseComponent):
         ]
 
         title = lxml.etree.Element("h4")
-        title.text = self.title
+        title_main = lxml.etree.Element("span")
+        title_main.text = self.title
+        sm_class = "ml-2 text-muted"
+        title_small = lxml.etree.Element("small", attrib={"class": sm_class})
+        title_small.text = "Sorted by start time"
+        title.append(title_main)
+        title.append(title_small)
 
         list_group = lxml.etree.Element("div", attrib={"class": "list-group"})
         [list_group.append(item) for item in task_links]

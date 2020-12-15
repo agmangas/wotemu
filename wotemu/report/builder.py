@@ -1,3 +1,4 @@
+import datetime
 import functools
 import io
 import logging
@@ -6,6 +7,7 @@ import os
 import re
 import tempfile
 
+import lxml.etree
 import numpy as np
 import pandas as pd
 import pkg_resources
@@ -517,17 +519,26 @@ class ReportBuilder:
 
         if fig_cpu:
             elements.append(FigureBlockComponent(
-                fig_cpu, 
+                fig_cpu,
                 title="CPU usage ranking",
                 height=None))
 
         if fig_mem:
             elements.append(FigureBlockComponent(
-                fig_mem, 
+                fig_mem,
                 title="Memory usage ranking",
                 height=None))
 
         return ContainerComponent(elements=elements)
+
+    async def _get_header_component(self):
+        title = lxml.etree.Element("h1", attrib={"class": "display-4"})
+        title.text = "WoTemu report"
+        sub = lxml.etree.Element("p", attrib={"class": "text-muted lead mb-0"})
+        now = datetime.datetime.utcnow()
+        sub.text = "Built at UTC {}".format(now.isoformat())
+
+        return ContainerComponent(elements=[title, sub, lxml.etree.Element("hr")])
 
     async def build_report(self):
         tasks = await self._reader.get_tasks()
@@ -549,8 +560,10 @@ class ReportBuilder:
 
         service_traffic = await self._get_service_traffic_component()
         system_ranking = await self._get_system_ranking_component()
+        header = await self._get_header_component()
 
         container = ContainerComponent(elements=[
+            header,
             service_traffic,
             system_ranking,
             task_list
