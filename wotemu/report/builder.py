@@ -25,6 +25,9 @@ from wotpy.protocols.enums import InteractionVerbs
 
 _logger = logging.getLogger(__name__)
 
+_SYSTEM_CPU_PERCENT = "cpu_percent"
+_SYSTEM_MEM_MB = "mem_mb"
+
 
 class ReportBuilder:
     def __init__(self, reader):
@@ -405,11 +408,15 @@ class ReportBuilder:
 
         return fig
 
-    async def build_system_ranking_figure(self, key="cpu_percent", height_task=32):
+    async def build_system_ranking_figure(self, key=_SYSTEM_CPU_PERCENT, height_task=32, height_facet=60):
+        assert key in [_SYSTEM_CPU_PERCENT, _SYSTEM_MEM_MB]
+
         task_keys = await self._reader.get_tasks()
 
         if not task_keys or len(task_keys) == 0:
             return None
+
+        info_map = await self._reader.get_info_map()
 
         dfs = []
 
@@ -417,6 +424,9 @@ class ReportBuilder:
             df = await self._reader.get_system_df(task=task)
             df.reset_index(inplace=True)
             df["task"] = shorten_task_name(task)
+            df["task_short"] = shorten_task_name(task)
+            task_info = info_map.get(task, {})
+            df["cpu_model"] = task_info.get("cpu_model", "Unknown CPU")
             dfs.append(df)
 
         df_ranking = pd.concat(dfs)
@@ -429,24 +439,39 @@ class ReportBuilder:
 
         height = height_task * len(task_keys)
 
+        box_kwargs = {}
+
+        if key == _SYSTEM_CPU_PERCENT:
+            box_kwargs = {
+                "facet_col": "cpu_model",
+                "color": "cpu_model",
+                "facet_col_wrap": 1,
+                "facet_row_spacing": 0.04
+            }
+
+            num_cpu_models = len(df_ranking["cpu_model"].unique())
+            height = height * num_cpu_models
+            height += height_facet * (num_cpu_models - 1)
+
         fig = px.box(
             df_ranking,
-            category_orders={"task": df_sorted.index.tolist()},
+            category_orders={"task_short": df_sorted.index.tolist()},
             x=key,
-            y="task",
-            height=height)
+            y="task_short",
+            height=height,
+            **box_kwargs)
 
         xaxes_titles = {
-            "cpu_percent": "CPU (%)",
-            "mem_mb": "Memory (MB)"
+            _SYSTEM_CPU_PERCENT: "CPU (%)",
+            _SYSTEM_MEM_MB: "Memory (MB)"
         }
 
         fig.update_yaxes(title_text="Task")
         fig.update_xaxes(title_text=xaxes_titles.get(key, key))
 
         titles = {
-            "cpu_percent": "CPU distribution (sorted by median)",
-            "mem_mb": "Memory distribution (sorted by median)"
+            _SYSTEM_CPU_PERCENT: "CPU distribution (sorted by median)",
+            _SYSTEM_MEM_MB: "Memory distribution (sorted by median)"
         }
 
         if titles.get(key):
@@ -512,8 +537,8 @@ class ReportBuilder:
         return ContainerComponent(elements=elements)
 
     async def _get_system_ranking_component(self):
-        fig_cpu = await self.build_system_ranking_figure(key="cpu_percent")
-        fig_mem = await self.build_system_ranking_figure(key="mem_mb")
+        fig_cpu = await self.build_system_ranking_figure(key=_SYSTEM_CPU_PERCENT)
+        fig_mem = await self.build_system_ranking_figure(key=_SYSTEM_MEM_MB)
 
         elements = []
 
