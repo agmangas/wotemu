@@ -60,6 +60,7 @@ async def test_get_info(redis_reader):
     assert set(info_item.keys()) == {
         "boot_time",
         "cpu_count",
+        "cpu_model",
         "env",
         "mem_total",
         "net",
