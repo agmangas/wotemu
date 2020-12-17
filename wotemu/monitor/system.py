@@ -23,6 +23,8 @@ _CPU_QUOTA = "cpu.cfs_quota_us"
 _MEM_LIMIT = "memory.limit_in_bytes"
 _MEM_USAGE = "memory.usage_in_bytes"
 _NSLOOKUP_REGEX = r"Name:\s.+\..+\nAddress:\s(.+)"
+_LSCPU_REGEX = r"Model\sname:[\s\t]*(.+)"
+_UNKNOWN_CPU = "Unknown CPU"
 
 _logger = logging.getLogger(__name__)
 
@@ -252,6 +254,37 @@ def _get_task_id():
     return curr_task["ID"]
 
 
+def _get_cpu_model_lscpu():
+    lscpu = sh.Command("lscpu")
+    result = lscpu()
+    match = re.search(_LSCPU_REGEX, str(result))
+    assert match
+    assert len(match.groups()) == 1
+    return match.groups()[0]
+
+
+def _get_cpu_model_psutil():
+    arch = platform.processor()
+    cores = psutil.cpu_count(logical=False)
+    freq = psutil.cpu_freq().max or psutil.cpu_freq().current
+    freq = round(freq / 1024.0, 1)
+    return "CPU {} {} cores {}GHz".format(arch, cores, freq)
+
+
+def _get_cpu_model():
+    try:
+        return _get_cpu_model_lscpu()
+    except:
+        _logger.warning("Error reading CPU model", exc_info=True)
+
+    try:
+        return _get_cpu_model_psutil()
+    except:
+        _logger.warning("Error reading CPU model", exc_info=True)
+
+    return _UNKNOWN_CPU
+
+
 def get_node_info():
     net_addrs = {
         key: [item._asdict() for item in val]
@@ -265,6 +298,7 @@ def get_node_info():
 
     info = {
         "cpu_count": psutil.cpu_count(),
+        "cpu_model": _get_cpu_model(),
         "mem_total": psutil.virtual_memory().total,
         "net": net_addrs,
         "python_version": platform.python_version(),
