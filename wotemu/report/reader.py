@@ -333,7 +333,7 @@ class ReportDataRedisReader:
             df.reset_index(inplace=True)
             df[col_task] = task
 
-        return pd.concat(dfs.values(), ignore_index=True)
+        return pd.concat(dfs.values(), ignore_index=True) if len(dfs) else None
 
     async def _get_task_key_map(self):
         task_keys = await self.get_tasks()
