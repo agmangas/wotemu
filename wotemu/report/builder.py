@@ -1,3 +1,4 @@
+import copy
 import datetime
 import functools
 import io
@@ -6,6 +7,7 @@ import math
 import os
 import re
 import tempfile
+import time
 
 import lxml.etree
 import numpy as np
@@ -26,12 +28,96 @@ from wotpy.protocols.enums import InteractionVerbs
 _logger = logging.getLogger(__name__)
 
 
+class CacheMiss(Exception):
+    pass
+
+
 class ReportBuilder:
-    def __init__(self, reader):
+    def __init__(self, reader, use_cache=True):
         self._reader = reader
+        self._cache = {}
+        self.use_cache = use_cache
+
+    def _serialize_params(self, args, kwargs):
+        return (args, frozenset(kwargs.items()))
+
+    def _get_copy(self, result):
+        try:
+            assert isinstance(result, (pd.DataFrame, pd.Series))
+            return result.copy(deep=True)
+        except:
+            return copy.deepcopy(result)
+
+    def _cache_get(self, func, args, kwargs):
+        params_key = self._serialize_params(args, kwargs)
+
+        if func not in self._cache or params_key not in self._cache[func]:
+            raise CacheMiss
+
+        return self._cache[func][params_key]
+
+    def _cache_set(self, func, args, kwargs, result):
+        params_key = self._serialize_params(args, kwargs)
+        self._cache[func] = self._cache.get(func, {})
+        self._cache[func][params_key] = result
+
+    async def _reader_exec(self, func, *args, **kwargs):
+        if not self.use_cache:
+            return await func(*args, **kwargs)
+
+        try:
+            result = self._cache_get(func, args, kwargs)
+        except CacheMiss:
+            result = await func(*args, **kwargs)
+            self._cache_set(func, args, kwargs, result)
+
+        return self._get_copy(result)
+
+    async def _get_system_df(self, *args, **kwargs):
+        return await self._reader_exec(
+            self._reader.get_system_df,
+            *args, **kwargs)
+
+    async def _get_packet_df(self, *args, **kwargs):
+        return await self._reader_exec(
+            self._reader.get_packet_df,
+            *args, **kwargs)
+
+    async def _get_service_traffic_df(self, *args, **kwargs):
+        return await self._reader_exec(
+            self._reader.get_service_traffic_df,
+            *args, **kwargs)
+
+    async def _get_thing_df(self, *args, **kwargs):
+        return await self._reader_exec(
+            self._reader.get_thing_df,
+            *args, **kwargs)
+
+    async def _get_tasks(self, *args, **kwargs):
+        return await self._reader_exec(
+            self._reader.get_tasks,
+            *args, **kwargs)
+
+    async def _get_info_map(self, *args, **kwargs):
+        return await self._reader_exec(
+            self._reader.get_info_map,
+            *args, **kwargs)
+
+    async def _get_info(self, *args, **kwargs):
+        return await self._reader_exec(
+            self._reader.get_info,
+            *args, **kwargs)
+
+    async def _get_snapshot_df(self, *args, **kwargs):
+        return await self._reader_exec(
+            self._reader.get_snapshot_df,
+            *args, **kwargs)
+
+    def reset_cache(self):
+        self._cache = {}
 
     async def build_task_mem_figure(self, task):
-        df_system = await self._reader.get_system_df(task=task)
+        df_system = await self._get_system_df(task=task)
 
         if df_system.empty:
             return None
@@ -63,7 +149,7 @@ class ReportBuilder:
         return fig
 
     async def build_task_cpu_figure(self, task):
-        df_system = await self._reader.get_system_df(task=task)
+        df_system = await self._get_system_df(task=task)
 
         if df_system.empty:
             return None
@@ -105,7 +191,7 @@ class ReportBuilder:
         return fig
 
     async def _build_task_packet_figure(self, task, freq, col):
-        df = await self._reader.get_packet_df(task=task, extended=True)
+        df = await self._get_packet_df(task=task, extended=True)
 
         if df is None or df.empty:
             return None
@@ -170,7 +256,7 @@ class ReportBuilder:
         return 0 if df_where.empty else (df_where.iloc[0]["len"] / 1024.0)
 
     async def build_service_traffic_figure(self, inbound, colorscale="Portland", height_task=50):
-        df = await self._reader.get_service_traffic_df(inbound=inbound)
+        df = await self._get_service_traffic_df(inbound=inbound)
 
         if df.empty:
             return None
@@ -218,7 +304,7 @@ class ReportBuilder:
         return fig
 
     async def build_thing_counts_figure(self, task, facet_col_wrap=2):
-        df = await self._reader.get_thing_df(task=task)
+        df = await self._get_thing_df(task=task)
 
         if df.empty:
             return None
@@ -262,7 +348,7 @@ class ReportBuilder:
         return fig
 
     async def _build_req_latency_fig(self, task, facet_col_wrap, cls_name):
-        df = await self._reader.get_thing_df(task=task)
+        df = await self._get_thing_df(task=task)
 
         if df.empty:
             return None
@@ -323,7 +409,7 @@ class ReportBuilder:
         return fig
 
     async def _build_events_figure(self, task, cls_name, freq, facet_col_wrap, base_height):
-        df = await self._reader.get_thing_df(task=task)
+        df = await self._get_thing_df(task=task)
 
         if df.empty:
             return None
@@ -406,17 +492,17 @@ class ReportBuilder:
         return fig
 
     async def build_cpu_ranking_figure(self, height_task=32, height_facet=50):
-        task_keys = await self._reader.get_tasks()
+        task_keys = await self._get_tasks()
 
         if not task_keys or len(task_keys) == 0:
             return None
 
-        info_map = await self._reader.get_info_map()
+        info_map = await self._get_info_map()
 
         dfs = []
 
         for task in task_keys:
-            df = await self._reader.get_system_df(task=task)
+            df = await self._get_system_df(task=task)
             df.reset_index(inplace=True)
             df["task"] = shorten_task_name(task)
             df["task_short"] = shorten_task_name(task)
@@ -470,7 +556,7 @@ class ReportBuilder:
         return fig
 
     async def build_mem_ranking_figure(self, height_task=32):
-        task_keys = await self._reader.get_tasks()
+        task_keys = await self._get_tasks()
 
         if not task_keys or len(task_keys) == 0:
             return None
@@ -478,7 +564,7 @@ class ReportBuilder:
         dfs = []
 
         for task in task_keys:
-            df = await self._reader.get_system_df(task=task)
+            df = await self._get_system_df(task=task)
             df.reset_index(inplace=True)
             df["task"] = shorten_task_name(task)
             df["task_short"] = shorten_task_name(task)
@@ -508,7 +594,7 @@ class ReportBuilder:
         return fig
 
     async def build_task_timeline_figure(self, height_task=30):
-        df_snap = await self._reader.get_snapshot_df()
+        df_snap = await self._get_snapshot_df()
 
         df_snap["finish"] = np.where(
             df_snap["is_running"] == True,
@@ -526,7 +612,8 @@ class ReportBuilder:
             y="task_short",
             color="is_error",
             height=height,
-            labels={"is_error": "Error"})
+            labels={"is_error": "Error"},
+            category_orders={"is_error": [False, True]})
 
         fig.update_yaxes(title_text="Task")
         fig.update_xaxes(title_text="Date")
@@ -545,7 +632,7 @@ class ReportBuilder:
         fig_cons_events = await self.build_consumed_events_figure(task=task)
         fig_exps_events = await self.build_exposed_events_figure(task=task)
 
-        df_snap = await self._reader.get_snapshot_df()
+        df_snap = await self._get_snapshot_df()
         snapshot = df_snap[df_snap["task"] == task].to_dict("records")
 
         if len(snapshot) == 0:
@@ -555,7 +642,7 @@ class ReportBuilder:
             _logger.warning("Multiple snapshot rows for: %s", task)
 
         snapshot = snapshot[-1] if len(snapshot) > 0 else None
-        info = await self._reader.get_info(task, latest=True)
+        info = await self._get_info(task, latest=True)
 
         return TaskSectionComponent(
             fig_mem=fig_mem,
@@ -629,7 +716,9 @@ class ReportBuilder:
         return ContainerComponent(elements=elements)
 
     async def build_report(self):
-        tasks = await self._reader.get_tasks()
+        ini = time.time()
+
+        tasks = await self._get_tasks()
         tasks = sorted(tasks)
 
         task_pages = {}
@@ -638,8 +727,8 @@ class ReportBuilder:
             task_section = await self._get_task_section_component(task=task)
             task_pages[f"{task}.html"] = task_section.to_page_html()
 
-        df_snapshot = await self._reader.get_snapshot_df()
-        task_infos = await self._reader.get_info_map()
+        df_snapshot = await self._get_snapshot_df()
+        task_infos = await self._get_info_map()
 
         task_list = TaskListComponent(
             task_keys=tasks,
@@ -661,6 +750,8 @@ class ReportBuilder:
 
         ret = {"index.html": container.to_page_html()}
         ret.update(task_pages)
+
+        _logger.info("Report built in %s s.", round(time.time() - ini, 2))
 
         return ret
 
