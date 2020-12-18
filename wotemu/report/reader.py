@@ -240,9 +240,13 @@ class ReportDataRedisReader:
         df = df.drop(columns=["src_vip_service", "dst_vip_service"])
         df.set_index(["date", "iface"], inplace=True)
 
-        _logger.debug(
-            "NaN ratio for extended packet DF (len: %s):\n%s",
-            len(df), df.isna().sum() / len(df))
+        nan_series = df.isna().sum() / len(df)
+        nan_series = nan_series[nan_series > 0]
+
+        if len(nan_series) > 0:
+            _logger.debug(
+                "NaN ratio for extended packet DF (len: %s):\n%s",
+                len(df), nan_series)
 
         return df
 
