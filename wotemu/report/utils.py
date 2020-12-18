@@ -17,6 +17,9 @@ def get_base_template():
 
 
 def shorten_task_name(name):
+    if not name:
+        return name
+
     return re.sub(
         r"^(.+\.\d+\..{6})(.+)$",
         r"\1",

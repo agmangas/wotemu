@@ -507,6 +507,33 @@ class ReportBuilder:
 
         return fig
 
+    async def build_task_timeline_figure(self, height_task=30):
+        df_snap = await self._reader.get_snapshot_df()
+
+        df_snap["finish"] = np.where(
+            df_snap["is_running"] == True,
+            df_snap["stopped_at"],
+            df_snap["updated_at"])
+
+        df_snap["task_short"] = df_snap["task"].apply(shorten_task_name)
+
+        height = height_task * len(df_snap["task"].unique())
+
+        fig = px.timeline(
+            df_snap,
+            x_start="created_at",
+            x_end="finish",
+            y="task_short",
+            color="is_error",
+            height=height,
+            labels={"is_error": "Error"})
+
+        fig.update_yaxes(title_text="Task")
+        fig.update_xaxes(title_text="Date")
+        fig.update_layout(title_text="Timeline of task containers")
+
+        return fig
+
     async def _get_task_section_component(self, task):
         fig_mem = await self.build_task_mem_figure(task=task)
         fig_cpu = await self.build_task_cpu_figure(task=task)
@@ -593,6 +620,14 @@ class ReportBuilder:
 
         return ContainerComponent(elements=[title, sub, lxml.etree.Element("hr")])
 
+    async def _get_timeline_component(self):
+        fig = await self.build_task_timeline_figure()
+
+        elements = [FigureBlockComponent(fig, title="Tasks lifetime")] \
+            if fig else []
+
+        return ContainerComponent(elements=elements)
+
     async def build_report(self):
         tasks = await self._reader.get_tasks()
         tasks = sorted(tasks)
@@ -614,11 +649,13 @@ class ReportBuilder:
         service_traffic = await self._get_service_traffic_component()
         system_ranking = await self._get_system_ranking_component()
         header = await self._get_header_component()
+        timeline = await self._get_timeline_component()
 
         container = ContainerComponent(elements=[
             header,
             service_traffic,
             system_ranking,
+            timeline,
             task_list
         ])
 

@@ -356,13 +356,14 @@ class ReportDataRedisReader:
             RedisPrefixes.NAMESPACE.value,
             RedisPrefixes.SNAPSHOT.value)
 
-        members = await self._client.zrange(key=key, start=-1, stop=-1)
+        members = await self._client.zrange(key=key, start=-1, stop=-1, withscores=True)
 
         if len(members) == 0:
             _logger.warning("Could not find snapshot data")
             return None
 
-        snapshot = json.loads(members[-1])
+        snapshot = json.loads(members[-1][0])
+        snapshot_dtime = datetime.fromtimestamp(members[-1][1], timezone.utc)
 
         task_key_map = await self._get_task_key_map()
 
@@ -378,7 +379,8 @@ class ReportDataRedisReader:
                 "created_at": _parse_docker_time(item["task"].get("CreatedAt")),
                 "updated_at": _parse_docker_time(item["task"].get("UpdatedAt")),
                 "container_id": item["task"].get("Status", {}).get("ContainerStatus", {}).get("ContainerID"),
-                "logs": item["logs"]
+                "logs": item["logs"],
+                "stopped_at": snapshot_dtime
             }
             for task_id, item in snapshot.items()
         ]
