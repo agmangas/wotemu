@@ -25,9 +25,6 @@ from wotpy.protocols.enums import InteractionVerbs
 
 _logger = logging.getLogger(__name__)
 
-_SYSTEM_CPU_PERCENT = "cpu_percent"
-_SYSTEM_MEM_MB = "mem_mb"
-
 
 class ReportBuilder:
     def __init__(self, reader):
@@ -408,9 +405,7 @@ class ReportBuilder:
 
         return fig
 
-    async def build_system_ranking_figure(self, key=_SYSTEM_CPU_PERCENT, height_task=32, height_facet=60):
-        assert key in [_SYSTEM_CPU_PERCENT, _SYSTEM_MEM_MB]
-
+    async def build_cpu_ranking_figure(self, height_task=32, height_facet=50):
         task_keys = await self._reader.get_tasks()
 
         if not task_keys or len(task_keys) == 0:
@@ -434,48 +429,81 @@ class ReportBuilder:
         if df_ranking.empty:
             return None
 
+        models = df_ranking["cpu_model"].unique()
+
+        df_models = [
+            df_ranking[df_ranking["cpu_model"] == model]
+            for model in models
+        ]
+
+        num_tasks = len(df_ranking["task"].unique())
+
+        row_heights = [
+            float(len(df_model["task"].unique())) / num_tasks
+            for df_model in df_models
+        ]
+
+        fig = make_subplots(rows=len(models), cols=1, row_heights=row_heights)
+
+        for idx, model in enumerate(models):
+            df_model = df_models[idx]
+
+            trace = go.Box(
+                x=df_model["cpu_percent"],
+                y=df_model["task_short"],
+                name=model)
+
+            fig.append_trace(trace, row=(idx + 1), col=1)
+
+        fig.update_traces(orientation="h")
+
+        height = (len(task_keys) * height_task) + (height_facet * len(models))
+
+        fig.update_layout(
+            height=height,
+            title_text="CPU distribution (by CPU model)",
+            showlegend=True)
+
+        fig.update_yaxes(title_text="Task")
+        fig.update_xaxes(title_text="CPU (%)")
+
+        return fig
+
+    async def build_mem_ranking_figure(self, height_task=32):
+        task_keys = await self._reader.get_tasks()
+
+        if not task_keys or len(task_keys) == 0:
+            return None
+
+        dfs = []
+
+        for task in task_keys:
+            df = await self._reader.get_system_df(task=task)
+            df.reset_index(inplace=True)
+            df["task"] = shorten_task_name(task)
+            df["task_short"] = shorten_task_name(task)
+            dfs.append(df)
+
+        df_ranking = pd.concat(dfs)
+
+        if df_ranking.empty:
+            return None
+
         df_sorted = df_ranking.groupby(["task"]).median()
-        df_sorted.sort_values(by=key, ascending=False, inplace=True)
+        df_sorted.sort_values(by="mem_mb", ascending=False, inplace=True)
 
         height = height_task * len(task_keys)
-
-        box_kwargs = {}
-
-        if key == _SYSTEM_CPU_PERCENT:
-            box_kwargs = {
-                "facet_col": "cpu_model",
-                "color": "cpu_model",
-                "facet_col_wrap": 1,
-                "facet_row_spacing": 0.04
-            }
-
-            num_cpu_models = len(df_ranking["cpu_model"].unique())
-            height = height * num_cpu_models
-            height += height_facet * (num_cpu_models - 1)
 
         fig = px.box(
             df_ranking,
             category_orders={"task_short": df_sorted.index.tolist()},
-            x=key,
+            x="mem_mb",
             y="task_short",
-            height=height,
-            **box_kwargs)
-
-        xaxes_titles = {
-            _SYSTEM_CPU_PERCENT: "CPU (%)",
-            _SYSTEM_MEM_MB: "Memory (MB)"
-        }
+            height=height)
 
         fig.update_yaxes(title_text="Task")
-        fig.update_xaxes(title_text=xaxes_titles.get(key, key))
-
-        titles = {
-            _SYSTEM_CPU_PERCENT: "CPU distribution (sorted by median)",
-            _SYSTEM_MEM_MB: "Memory distribution (sorted by median)"
-        }
-
-        if titles.get(key):
-            fig.update_layout(title_text=titles[key])
+        fig.update_xaxes(title_text="Memory (MB)")
+        fig.update_layout(title_text="Memory distribution")
 
         return fig
 
@@ -537,8 +565,8 @@ class ReportBuilder:
         return ContainerComponent(elements=elements)
 
     async def _get_system_ranking_component(self):
-        fig_cpu = await self.build_system_ranking_figure(key=_SYSTEM_CPU_PERCENT)
-        fig_mem = await self.build_system_ranking_figure(key=_SYSTEM_MEM_MB)
+        fig_cpu = await self.build_cpu_ranking_figure()
+        fig_mem = await self.build_mem_ranking_figure()
 
         elements = []
 
