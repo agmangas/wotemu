@@ -111,7 +111,7 @@ class TaskSectionComponent(BaseComponent):
         return card
 
     def _get_logs_element(self):
-        if not self.snapshot:
+        if not self.snapshot or not self.snapshot.get("logs"):
             return None
 
         card = lxml.etree.Element("div", attrib={"class": "card"})
