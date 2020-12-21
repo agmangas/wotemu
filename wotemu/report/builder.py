@@ -550,7 +550,7 @@ class ReportBuilder:
             title_text="CPU distribution (by CPU model)",
             showlegend=True)
 
-        fig.update_yaxes(title_text="Task")
+        fig.update_yaxes(title_text="Task", categoryorder="median ascending")
         fig.update_xaxes(title_text="CPU (%)")
 
         return fig
@@ -575,19 +575,15 @@ class ReportBuilder:
         if df_ranking.empty:
             return None
 
-        df_sorted = df_ranking.groupby(["task"]).median()
-        df_sorted.sort_values(by="mem_mb", ascending=False, inplace=True)
-
         height = height_task * len(task_keys)
 
         fig = px.box(
             df_ranking,
-            category_orders={"task_short": df_sorted.index.tolist()},
             x="mem_mb",
             y="task_short",
             height=height)
 
-        fig.update_yaxes(title_text="Task")
+        fig.update_yaxes(title_text="Task", categoryorder="median ascending")
         fig.update_xaxes(title_text="Memory (MB)")
         fig.update_layout(title_text="Memory distribution")
 
