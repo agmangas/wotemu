@@ -16,13 +16,13 @@ def topology():
         name="wifi",
         conditions=NetworkConditions.WIFI)
 
-    network_3g = Network(
-        name="mobile_3g",
-        conditions=NetworkConditions.THREEG)
+    network_2g = Network(
+        name="mobile_2g",
+        conditions=NetworkConditions.EDGE)
 
     broker = Broker(
         name="broker",
-        networks=[network_3g])
+        networks=[network_2g])
 
     node_clock_mqtt = Node(
         name="clock_mqtt",
@@ -66,14 +66,14 @@ def topology():
     node_sub_mqtt = Node(
         name="clock_sub_mqtt",
         app=app_sub_mqtt,
-        networks=[network_wifi, network_3g],
+        networks=[network_wifi, network_2g],
         resources=sub_resources,
         scale=2)
 
     node_sub_http = Node(
         name="clock_sub_http",
         app=app_sub_http,
-        networks=[network_wifi, network_3g],
+        networks=[network_wifi],
         resources=sub_resources,
         scale=4)
 

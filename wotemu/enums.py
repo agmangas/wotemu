@@ -20,7 +20,11 @@ class RedisPrefixes(enum.Enum):
 
 
 class NetworkConditions(enum.Enum):
-    THREEG = "3G"
+    GPRS = "GPRS"
+    EDGE = "GPRS"
+    REGULAR_3G = "REGULAR_3G"
+    FAST_3G = "FAST_3G"
+    LTE = "LTE"
     WIFI = "WIFI"
     CABLE = "CABLE"
 
@@ -32,16 +36,37 @@ class NodePlatforms(enum.Enum):
     UNCONSTRAINED = "UNCONSTRAINED"
 
 
+_DELAY = "delay --time {latency} --jitter {jitter} --distribution normal"
+_RATE = "rate --rate {rate}"
+
 NETEM_CONDITIONS = {
-    NetworkConditions.THREEG: [
-        "delay --time 100 --jitter 50 --distribution normal",
-        "rate --rate 200kbit"
+    NetworkConditions.GPRS: [
+        _DELAY.format(latency=700, jitter=100),
+        _RATE.format(rate="50kbit")
+    ],
+    NetworkConditions.EDGE: [
+        _DELAY.format(latency=700, jitter=100),
+        _RATE.format(rate="100kbit")
+    ],
+    NetworkConditions.REGULAR_3G: [
+        _DELAY.format(latency=300, jitter=150),
+        _RATE.format(rate="1500kbit")
+    ],
+    NetworkConditions.FAST_3G: [
+        _DELAY.format(latency=150, jitter=50),
+        _RATE.format(rate="4000kbit")
+    ],
+    NetworkConditions.LTE: [
+        _DELAY.format(latency=40, jitter=10),
+        _RATE.format(rate="15mbit")
     ],
     NetworkConditions.WIFI: [
-        "delay --time 15 --jitter 10 --distribution normal"
+        _DELAY.format(latency=25, jitter=5),
+        _RATE.format(rate="50mbit")
     ],
     NetworkConditions.CABLE: [
-        "delay --time 5 --jitter 1 --distribution normal"
+        _DELAY.format(latency=5, jitter=5),
+        _RATE.format(rate="100mbit")
     ]
 }
 
