@@ -17,6 +17,7 @@ class RedisPrefixes(enum.Enum):
     INFO = "info"
     BENCHMARK = "benchmark"
     SNAPSHOT = "snapshot"
+    COMPOSE = "compose"
 
 
 class NetworkConditions(enum.Enum):

@@ -58,19 +58,15 @@ def _is_redis(service):
     return service.get("labels", {}).get(Labels.WOTEMU_REDIS.value, None) is not None
 
 
-async def _write_snapshot(redis_url, data):
-    key = "{}:{}".format(
-        RedisPrefixes.NAMESPACE.value,
-        RedisPrefixes.SNAPSHOT.value)
-
+async def _zadd_json(redis_url, key, data):
     try:
         redis = await aioredis.create_redis_pool(redis_url)
         score = time.time()
         member = json.dumps(data)
-        _logger.info("Writing snapshot (%s bytes)", len(member))
+        _logger.debug("ZADD key=%s score=%s", key, score)
         await redis.zadd(key=key, score=score, member=member)
     except:
-        _logger.warning("Error writing snapshot", exc_info=True)
+        _logger.warning("Error on ZADD", exc_info=True)
     finally:
         try:
             redis.close()
@@ -79,25 +75,43 @@ async def _write_snapshot(redis_url, data):
             _logger.warning("Error closing Redis", exc_info=True)
 
 
+async def _write_snapshot(redis_url, data):
+    key = "{}:{}".format(
+        RedisPrefixes.NAMESPACE.value,
+        RedisPrefixes.SNAPSHOT.value)
+
+    await _zadd_json(redis_url=redis_url, key=key, data=data)
+
+
+async def _write_compose(redis_url, data):
+    key = "{}:{}".format(
+        RedisPrefixes.NAMESPACE.value,
+        RedisPrefixes.COMPOSE.value)
+
+    await _zadd_json(redis_url=redis_url, key=key, data=data)
+
+
 def stop_stack(conf, compose_file, stack, redis_url, tail):
     _assert_stack_exists(stack=stack)
 
     _logger.info("Opening Compose file: %s", compose_file)
 
     with open(compose_file, "r") as fh:
-        content = yaml.load(fh.read(), Loader=yaml.FullLoader)
+        compose_content = yaml.load(fh.read(), Loader=yaml.FullLoader)
 
-    _logger.debug("Compose file:\n%s", pprint.pformat(content))
+    _logger.debug("Compose file:\n%s", pprint.pformat(compose_content))
 
-    services = content.get("services", {})
+    services = compose_content.get("services", {})
 
     for service in services.values():
         if not _is_redis(service):
             service.update({"deploy": {"replicas": 0}})
 
-    content["services"] = services
+    compose_content["services"] = services
 
-    _logger.debug("Compose file (target):\n%s", pprint.pformat(content))
+    _logger.debug(
+        "Compose file (target):\n%s",
+        pprint.pformat(compose_content))
 
     stack_snapshot = _get_stack_snapshot(stack=stack, tail=tail)
 
@@ -108,7 +122,7 @@ def stop_stack(conf, compose_file, stack, redis_url, tail):
     proc = sh_docker(
         ["stack", "deploy", "-c", "-", stack],
         _err_to_out=True,
-        _in=yaml.dump(content))
+        _in=yaml.dump(compose_content))
 
     _logger.info("%s\n%s", proc.ran, str(proc).strip())
 
@@ -120,5 +134,6 @@ def stop_stack(conf, compose_file, stack, redis_url, tail):
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(_write_snapshot(redis_url, stack_snapshot))
+    loop.run_until_complete(_write_compose(redis_url, compose_content))
 
     _logger.info("Stack stopped successfully: %s", stack)
