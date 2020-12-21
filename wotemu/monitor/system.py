@@ -285,6 +285,23 @@ def _get_cpu_model():
     return _UNKNOWN_CPU
 
 
+def _get_constraints():
+    mem_limit_bytes = _get_memory_limit()
+
+    ret = {
+        "mem_limit_mb": round(mem_limit_bytes / (1024.0 ** 2), 3)
+    }
+
+    cpu_constraint = _get_cpu_constraint()
+
+    if cpu_constraint:
+        ret.update({
+            "cpu_percent": round(cpu_constraint * 1e2, 2)
+        })
+
+    return ret
+
+
 def get_node_info():
     net_addrs = {
         key: [item._asdict() for item in val]
@@ -323,5 +340,10 @@ def get_node_info():
         info.update({"task_id": _get_task_id()})
     except:
         _logger.warning("Error reading task ID", exc_info=True)
+
+    try:
+        info.update({"constraints": _get_constraints()})
+    except:
+        _logger.warning("Error reading constraints", exc_info=True)
 
     return json.loads(json.dumps(info))
