@@ -21,6 +21,8 @@ class TaskSectionComponent(BaseComponent):
     _UPDATED_AT = "Updated at"
     _STATUS = "Desired state"
     _STARTED_AT = "Started at"
+    _LIM_MEM = "Memory limit (MB)"
+    _LIM_CPU = "CPU limit (%)"
 
     def __init__(
             self, fig_mem, fig_cpu, fig_packet_iface, fig_packet_proto, fig_thing_counts,
@@ -105,6 +107,14 @@ class TaskSectionComponent(BaseComponent):
             start_dtime = datetime.fromtimestamp(info["time"], timezone.utc)
             dl.append(self._get_dt(self._STARTED_AT))
             dl.append(self._get_dd(start_dtime.isoformat()))
+
+        if info.get("constraints", {}).get("cpu_percent"):
+            dl.append(self._get_dt(self._LIM_CPU))
+            dl.append(self._get_dd(str(info["constraints"]["cpu_percent"])))
+
+        if info.get("constraints", {}).get("mem_limit_mb"):
+            dl.append(self._get_dt(self._LIM_MEM))
+            dl.append(self._get_dd(str(info["constraints"]["mem_limit_mb"])))
 
         card_body.append(dl)
 
