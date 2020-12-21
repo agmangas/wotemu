@@ -5,6 +5,7 @@ import io
 import logging
 import math
 import os
+import pprint
 import re
 import tempfile
 import time
@@ -18,6 +19,7 @@ import plotly.graph_objects as go
 import wotpy.wot.consumed.thing
 import wotpy.wot.exposed.thing
 from plotly.subplots import make_subplots
+from wotemu.report.components.code_block import CodeBlockComponent
 from wotemu.report.components.container import ContainerComponent
 from wotemu.report.components.figure_block import FigureBlockComponent
 from wotemu.report.components.task_list import TaskListComponent
@@ -711,8 +713,20 @@ class ReportBuilder:
 
         return ContainerComponent(elements=elements)
 
+    async def _get_compose_component(self):
+        compose_dict = await self._reader.get_compose_dict()
+
+        if not compose_dict:
+            return None
+
+        return CodeBlockComponent(
+            pprint.pformat(compose_dict),
+            title="Emulation stack Compose file")
+
     async def build_report(self):
         ini = time.time()
+
+        ret = {}
 
         tasks = await self._get_tasks()
         tasks = sorted(tasks)
@@ -744,8 +758,13 @@ class ReportBuilder:
             task_list
         ])
 
-        ret = {"index.html": container.to_page_html()}
+        ret.update({"index.html": container.to_page_html()})
         ret.update(task_pages)
+
+        compose_comp = await self._get_compose_component()
+
+        if compose_comp:
+            ret.update({"compose.html": compose_comp.to_page_html()})
 
         _logger.info("Report built in %s s.", round(time.time() - ini, 2))
 

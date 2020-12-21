@@ -149,6 +149,18 @@ class ReportDataRedisReader:
 
         return {task_key: info for task_key, info in ret.items() if info}
 
+    async def get_compose_dict(self):
+        key = "{}:{}".format(
+            RedisPrefixes.NAMESPACE.value,
+            RedisPrefixes.COMPOSE.value)
+
+        members = await self._client.zrange(key=key, start=-1, stop=-1)
+
+        if not members or not len(members):
+            return None
+
+        return json.loads(members[-1])
+
     async def get_system_df(self, task):
         key = "{}:{}:{}".format(
             RedisPrefixes.NAMESPACE.value,
