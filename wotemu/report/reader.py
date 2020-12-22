@@ -6,6 +6,7 @@ import socket
 from datetime import datetime, timezone
 
 import aioredis
+import netaddr
 import numpy as np
 import pandas as pd
 from wotemu.enums import RedisPrefixes
@@ -215,7 +216,8 @@ class ReportDataRedisReader:
 
         df = df.drop(columns=["address"]).rename(columns={
             "task": "src_task",
-            "service": "src_service"
+            "service": "src_service",
+            "network": "src_network"
         })
 
         df = pd.merge(
@@ -224,7 +226,8 @@ class ReportDataRedisReader:
 
         df = df.drop(columns=["address"]).rename(columns={
             "task": "dst_task",
-            "service": "dst_service"
+            "service": "dst_service",
+            "network": "dst_network"
         })
 
         df = pd.merge(
@@ -249,14 +252,25 @@ class ReportDataRedisReader:
         df["dst_service"] = df["dst_service"].fillna(
             value=df["dst_vip_service"])
 
-        df = df.drop(columns=["src_vip_service", "dst_vip_service"])
+        df["network"] = df["src_network"].combine_first(df["dst_network"])
+
+        df = df.drop(columns=[
+            "src_vip_service",
+            "dst_vip_service",
+            "src_network",
+            "dst_network"
+        ])
+
         df.set_index(["date", "iface"], inplace=True)
 
         nan_series = df.isna().sum() / len(df)
         nan_series = nan_series[nan_series > 0]
 
         if len(nan_series) > 0:
-            _logger.debug(
+            log_level = logging.WARNING if "network" in nan_series else logging.DEBUG
+
+            _logger.log(
+                log_level,
                 "NaN ratio for extended packet DF (len: %s):\n%s",
                 len(df), nan_series)
 
@@ -276,6 +290,19 @@ class ReportDataRedisReader:
 
         return df
 
+    def _find_network(self, info_item, address):
+        ip_addr = netaddr.IPAddress(address)
+        networks_cidr = info_item.get("networks_cidr", {})
+
+        try:
+            return next(
+                net_name
+                for net_name, cidr_list in networks_cidr.items()
+                for cidr in cidr_list
+                if ip_addr in netaddr.IPNetwork(cidr))
+        except StopIteration:
+            return np.nan
+
     async def get_address_df(self, tasks=None):
         tasks = tasks if tasks else await self.get_tasks()
 
@@ -285,7 +312,8 @@ class ReportDataRedisReader:
                 "task": task,
                 "service": info_item.get("env", {}).get(ENV_KEY_SERVICE_NAME),
                 "iface": iface,
-                "address": iface_item["address"]
+                "address": iface_item["address"],
+                "network": self._find_network(info_item, iface_item["address"])
             }
             for task in tasks
             for info_item in await self.get_info(task=task)
