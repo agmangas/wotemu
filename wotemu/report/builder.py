@@ -305,6 +305,44 @@ class ReportBuilder:
 
         return fig
 
+    async def build_network_traffic_figure(self, freq="10s", height=500):
+        tasks = await self._get_tasks()
+
+        df_packets = [
+            await self._get_packet_df(task=task, extended=True)
+            for task in tasks
+        ]
+
+        df = pd.concat([item for item in df_packets if item is not None])
+
+        if df.empty:
+            return None
+
+        df = df.groupby([
+            pd.Grouper(freq=freq, level="date"),
+            pd.Grouper("network")
+        ]).sum()
+
+        df.reset_index(inplace=True)
+
+        df["len_kb"] = df["len"] / 1024.0
+
+        fig = px.bar(
+            df,
+            x="date",
+            y="len_kb",
+            color="network",
+            height=height,
+            color_discrete_sequence=px.colors.qualitative.Dark24)
+
+        fig.update_xaxes(title_text="Date")
+        fig.update_yaxes(title_text="KB")
+
+        fig.update_layout(
+            title_text="Traffic by network (groups of {})".format(freq))
+
+        return fig
+
     async def build_thing_counts_figure(self, task, facet_col_wrap=2):
         df = await self._get_thing_df(task=task)
 
@@ -707,10 +745,8 @@ class ReportBuilder:
 
     async def _get_timeline_component(self):
         fig = await self.build_task_timeline_figure()
-
-        elements = [FigureBlockComponent(fig, title="Tasks lifetime")] \
-            if fig else []
-
+        title = "Tasks lifetime"
+        elements = [FigureBlockComponent(fig, title=title)] if fig else []
         return ContainerComponent(elements=elements)
 
     async def _get_compose_component(self):
@@ -722,6 +758,12 @@ class ReportBuilder:
         return CodeBlockComponent(
             compose_dict,
             title="Compose file of the emulation stack")
+
+    async def _get_network_traffic_component(self):
+        fig = await self.build_network_traffic_figure()
+        title = "Network traffic"
+        elements = [FigureBlockComponent(fig, title=title)] if fig else []
+        return ContainerComponent(elements=elements)
 
     async def build_report(self):
         ini = time.time()
@@ -746,6 +788,7 @@ class ReportBuilder:
             df_snapshot=df_snapshot)
 
         service_traffic = await self._get_service_traffic_component()
+        network_traffic = await self._get_network_traffic_component()
         system_ranking = await self._get_system_ranking_component()
         header = await self._get_header_component()
         timeline = await self._get_timeline_component()
@@ -768,6 +811,7 @@ class ReportBuilder:
 
         elements.extend([
             service_traffic,
+            network_traffic,
             system_ranking,
             timeline,
             task_list
