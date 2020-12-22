@@ -201,6 +201,29 @@ class ReportDataRedisReader:
 
         return df
 
+    async def get_network_traffic_df(self, freq="10s"):
+        tasks = await self.get_tasks()
+
+        df_packets = [
+            await self.get_packet_df(task=task, extended=True)
+            for task in tasks
+        ]
+
+        df = pd.concat(df_packets)
+
+        df = df.groupby([
+            pd.Grouper(freq=freq, level="date"),
+            pd.Grouper("network")
+        ]).sum()
+
+        df = df.drop(columns=[
+            "time",
+            "srcport",
+            "dstport"
+        ])
+
+        return df
+
     async def extend_packet_df(self, df_packet, df_address=None, df_vip=None):
         df_address = df_address if df_address else await self.get_address_df()
         df_address = df_address.reset_index().drop(columns=["iface", "date"])
