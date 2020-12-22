@@ -202,17 +202,40 @@ async def monitor_system(async_cb, sleep=5.0, group_size=2):
         _logger.debug("Cancelled system usage task")
 
 
-def _get_service_vips():
-    service_name = os.environ[ENV_KEY_SERVICE_NAME]
+def _inspect_current_networks():
     conf = wotemu.config.get_env_config()
     docker_url = conf.docker_proxy_url
     curr_task = get_current_task(docker_url=docker_url)
     net_ids = get_task_networks(docker_url=docker_url, task=curr_task)
     docker_api_client = docker.APIClient(base_url=docker_url)
 
-    net_names = [
-        docker_api_client.inspect_network(nid).get("Name")
+    return [
+        docker_api_client.inspect_network(nid)
         for nid in net_ids
+    ]
+
+
+def _get_subnets_cidr():
+    networks_data = _inspect_current_networks()
+
+    return {
+        net["Name"]: [
+            item["Subnet"]
+            for item in net.get("IPAM", {}).get("Config", [])
+        ]
+        for net in networks_data
+    }
+
+
+def _get_service_vips():
+    assert ENV_KEY_SERVICE_NAME in os.environ
+    service_name = os.environ[ENV_KEY_SERVICE_NAME]
+
+    networks_data = _inspect_current_networks()
+
+    net_names = [
+        net["Name"]
+        for net in networks_data
     ]
 
     nslookup = sh.Command("nslookup")
@@ -287,17 +310,13 @@ def _get_cpu_model():
 
 def _get_constraints():
     mem_limit_bytes = _get_memory_limit()
-
-    ret = {
-        "mem_limit_mb": round(mem_limit_bytes / (1024.0 ** 2), 3)
-    }
-
+    mem_limit_mb = round(mem_limit_bytes / (1024.0 ** 2), 3)
+    ret = {"mem_limit_mb": mem_limit_mb}
     cpu_constraint = _get_cpu_constraint()
 
     if cpu_constraint:
-        ret.update({
-            "cpu_percent": round(cpu_constraint * 1e2, 2)
-        })
+        cpu_percent = round(cpu_constraint * 1e2, 2)
+        ret.update({"cpu_percent": cpu_percent})
 
     return ret
 
@@ -330,6 +349,11 @@ def get_node_info():
         info.update({"service_vips": _get_service_vips()})
     except:
         _logger.warning("Error reading service VIPs", exc_info=True)
+
+    try:
+        info.update({"networks_cidr": _get_subnets_cidr()})
+    except:
+        _logger.warning("Error reading subnetworks CIDR", exc_info=True)
 
     try:
         info.update({"container_id": get_current_container_id()})
