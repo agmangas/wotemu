@@ -1,6 +1,7 @@
 import logging
 
 import lxml.etree
+import yaml
 from wotemu.report.components.base import BaseComponent
 
 _logger = logging.getLogger(__name__)
@@ -15,7 +16,9 @@ class CodeBlockComponent(BaseComponent):
     def to_element(self):
         card = lxml.etree.Element("div", attrib={"class": "card"})
         card_body = lxml.etree.Element("div", attrib={"class": "card-body"})
-        card_pre = lxml.etree.Element("pre", attrib={"class": "mb-0"})
+
+        card_pre = lxml.etree.Element(
+            "pre", attrib={"class": "mb-0 text-muted"})
 
         card.append(card_body)
 
@@ -34,6 +37,6 @@ class CodeBlockComponent(BaseComponent):
             card_body.append(card_subtitle)
 
         card_body.append(card_pre)
-        card_pre.text = self.content
+        card_pre.text = yaml.dump(self.content)
 
         return card

@@ -720,13 +720,13 @@ class ReportBuilder:
             return None
 
         return CodeBlockComponent(
-            pprint.pformat(compose_dict),
-            title="Emulation stack Compose file")
+            compose_dict,
+            title="Compose file of the emulation stack")
 
     async def build_report(self):
         ini = time.time()
 
-        ret = {}
+        pages = {}
 
         tasks = await self._get_tasks()
         tasks = sorted(tasks)
@@ -749,26 +749,38 @@ class ReportBuilder:
         system_ranking = await self._get_system_ranking_component()
         header = await self._get_header_component()
         timeline = await self._get_timeline_component()
+        compose_comp = await self._get_compose_component()
 
-        container = ContainerComponent(elements=[
-            header,
+        elements = [header]
+
+        if compose_comp:
+            pages.update({"compose.html": compose_comp.to_page_html()})
+
+            compose_link = lxml.etree.Element("a", attrib={
+                "class": "btn btn-outline-primary mb-3",
+                "href": "compose.html",
+                "target": "_blank"
+            })
+
+            compose_link.text = "Compose file"
+
+            elements.append(compose_link)
+
+        elements.extend([
             service_traffic,
             system_ranking,
             timeline,
             task_list
         ])
 
-        ret.update({"index.html": container.to_page_html()})
-        ret.update(task_pages)
+        container = ContainerComponent(elements=elements)
 
-        compose_comp = await self._get_compose_component()
-
-        if compose_comp:
-            ret.update({"compose.html": compose_comp.to_page_html()})
+        pages.update({"index.html": container.to_page_html()})
+        pages.update(task_pages)
 
         _logger.info("Report built in %s s.", round(time.time() - ini, 2))
 
-        return ret
+        return pages
 
     async def write_report(self, base_path):
         report_pages = await self.build_report()

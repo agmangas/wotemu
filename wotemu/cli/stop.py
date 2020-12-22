@@ -1,4 +1,5 @@
 import asyncio
+import copy
 import json
 import logging
 import pprint
@@ -98,6 +99,7 @@ def stop_stack(conf, compose_file, stack, redis_url, tail):
 
     with open(compose_file, "r") as fh:
         compose_content = yaml.load(fh.read(), Loader=yaml.FullLoader)
+        compose_content_clone = copy.deepcopy(compose_content)
 
     _logger.debug("Compose file:\n%s", pprint.pformat(compose_content))
 
@@ -134,6 +136,6 @@ def stop_stack(conf, compose_file, stack, redis_url, tail):
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(_write_snapshot(redis_url, stack_snapshot))
-    loop.run_until_complete(_write_compose(redis_url, compose_content))
+    loop.run_until_complete(_write_compose(redis_url, compose_content_clone))
 
     _logger.info("Stack stopped successfully: %s", stack)
