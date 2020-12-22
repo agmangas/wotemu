@@ -22,7 +22,7 @@ class RedisPrefixes(enum.Enum):
 
 class NetworkConditions(enum.Enum):
     GPRS = "GPRS"
-    EDGE = "GPRS"
+    EDGE = "EDGE"
     REGULAR_3G = "REGULAR_3G"
     FAST_3G = "FAST_3G"
     LTE = "LTE"
