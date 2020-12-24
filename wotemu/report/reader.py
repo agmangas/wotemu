@@ -267,10 +267,11 @@ class ReportDataRedisReader:
         nan_series = nan_series[nan_series > 0]
 
         if len(nan_series) > 0:
-            log_level = logging.WARNING if "network" in nan_series else logging.DEBUG
+            warn_cols = {"network", "len", "src", "dst", "proto", "transport"}
+            is_warn = len(warn_cols.intersection(set(nan_series.index))) > 0
 
             _logger.log(
-                log_level,
+                logging.WARNING if is_warn else logging.DEBUG,
                 "NaN ratio for extended packet DF (len: %s):\n%s",
                 len(df), nan_series)
 

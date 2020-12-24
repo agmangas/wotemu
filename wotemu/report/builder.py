@@ -211,12 +211,13 @@ class ReportBuilder:
             col_series[key] = ser
 
         iface_traces = {
-            key: go.Scatter(x=ser.index, y=ser, name=key)
+            key: go.Bar(x=ser.index, y=ser, name=key)
             for key, ser in col_series.items()
         }
 
         fig = make_subplots()
         [fig.add_trace(trace) for trace in iface_traces.values()]
+        fig.update_layout(barmode="stack", showlegend=True)
         fig.update_xaxes(title_text="Date (UTC)")
         fig.update_yaxes(title_text="KB")
 
@@ -231,7 +232,8 @@ class ReportBuilder:
         if not fig:
             return None
 
-        fig.update_layout(title_text="Data transfer (by interface)")
+        fig.update_layout(
+            title_text="Task data transfer by interface ({} windows)".format(freq))
 
         return fig
 
@@ -244,7 +246,8 @@ class ReportBuilder:
         if not fig:
             return None
 
-        fig.update_layout(title_text="Data transfer (by protocol)")
+        fig.update_layout(
+            title_text="Task data transfer by protocol ({} windows)".format(freq))
 
         return fig
 
@@ -335,11 +338,12 @@ class ReportBuilder:
             height=height,
             color_discrete_sequence=px.colors.qualitative.Dark24)
 
-        fig.update_xaxes(title_text="Date")
+        fig.update_xaxes(title_text="Date (UTC)")
         fig.update_yaxes(title_text="KB")
 
         fig.update_layout(
-            title_text="Traffic by network (groups of {})".format(freq))
+            showlegend=True,
+            title_text="Data transfer by network ({} windows)".format(freq))
 
         return fig
 
