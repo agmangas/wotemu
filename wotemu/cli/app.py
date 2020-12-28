@@ -1,5 +1,6 @@
 import asyncio
 import functools
+import importlib
 import inspect
 import logging
 import os
@@ -15,6 +16,7 @@ import tornado.httpclient
 import wotemu.config
 import wotemu.wotpy.redis
 import wotemu.wotpy.wot
+from wotemu.enums import BUILTIN_APPS_MODULES, BuiltinApps
 from wotemu.monitor.base import NodeMonitor
 from wotemu.utils import (get_current_task, get_network_gateway_task,
                           get_output_iface_for_task, get_task_networks,
@@ -52,8 +54,37 @@ def _remove_tempfile(fpath):
         _logger.warning("Error removing tempfile", exc_info=True)
 
 
+def _is_builtin_app(app_id):
+    try:
+        assert app_id in BuiltinApps
+        return True
+    except:
+        pass
+
+    return app_id in [item.value for item in BuiltinApps]
+
+
+def _import_builtin_app_func(app_id, func_name):
+    bapp = next(item for item in BuiltinApps if item.value == app_id)
+    mod_name = BUILTIN_APPS_MODULES[bapp]
+    mod_import = importlib.import_module(mod_name)
+    mod_dir = dir(mod_import)
+
+    _logger.info("Imported: %s", mod_import)
+    _logger.debug("dir(%s): %s", mod_import, mod_dir)
+
+    if func_name not in mod_dir:
+        raise Exception("Builtin app module {} does not contain {}".format(
+            mod_import, func_name))
+
+    return getattr(mod_import, func_name)
+
+
 def _import_app_func(module_path, func_name):
     _logger.debug("Attempting to import from: %s", module_path)
+
+    if _is_builtin_app(app_id=module_path):
+        return _import_builtin_app_func(app_id=module_path, func_name=func_name)
 
     if re.match(_HTTP_REGEX, module_path):
         module_path = _fetch_app_file(module_path)

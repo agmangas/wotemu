@@ -3,7 +3,7 @@ import logging
 
 from wotemu.utils import consume_from_catalogue, wait_node
 
-_logger = logging.getLogger("wotemu.reader.app")
+_logger = logging.getLogger(__name__)
 
 
 async def _read(consumed_thing, name):

@@ -3,10 +3,10 @@ import logging
 import random
 from datetime import datetime
 
-_logger = logging.getLogger("wotemu.error.app")
+_logger = logging.getLogger(__name__)
 
 
-async def app(wot, conf, loop, mean_time=30.0):
+async def app(wot, conf, loop, mean_time=60.0):
     lambd = 1.0 / mean_time
     sleep_time = random.expovariate(lambd)
 

@@ -72,3 +72,20 @@ NETEM_CONDITIONS = {
 }
 
 assert set(NETEM_CONDITIONS.keys()) == set(NetworkConditions)
+
+
+class BuiltinApps(enum.Enum):
+    CLOCK = "wotemu_clock"
+    ERROR = "wotemu_error"
+    READER = "wotemu_reader"
+    SUBSCRIBER = "wotemu_subscriber"
+
+
+BUILTIN_APPS_MODULES = {
+    BuiltinApps.CLOCK: "wotemu.apps.clock",
+    BuiltinApps.ERROR: "wotemu.apps.error",
+    BuiltinApps.READER: "wotemu.apps.reader",
+    BuiltinApps.SUBSCRIBER: "wotemu.apps.subscriber"
+}
+
+assert set(BUILTIN_APPS_MODULES.keys()) == set(BuiltinApps)

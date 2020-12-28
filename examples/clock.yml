@@ -45,11 +45,11 @@ services:
     command:
     - app
     - --path
-    - /root/wotemu/examples/app/error.py
+    - wotemu_error
     depends_on:
-    - docker_api_proxy
-    - redis
     - gw_wifi
+    - redis
+    - docker_api_proxy
     deploy:
       replicas: 2
     environment:
@@ -78,12 +78,12 @@ services:
     command:
     - app
     - --path
-    - /root/wotemu/examples/app/clock.py
+    - wotemu_clock
     - --enable-http
     depends_on:
-    - docker_api_proxy
-    - redis
     - gw_wifi
+    - redis
+    - docker_api_proxy
     deploy:
       replicas: 2
     environment:
@@ -112,13 +112,13 @@ services:
     command:
     - app
     - --path
-    - /root/wotemu/examples/app/clock.py
+    - wotemu_clock
     - --enable-mqtt
     depends_on:
-    - docker_api_proxy
-    - redis
-    - gw_wifi
     - gw_mobile_2g
+    - gw_wifi
+    - redis
+    - docker_api_proxy
     deploy:
       replicas: 2
     environment:
@@ -140,8 +140,8 @@ services:
     labels:
       org.fundacionctic.wotemu.node: ''
     networks:
-    - wifi
     - mobile_2g
+    - wifi
     privileged: true
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
@@ -149,7 +149,7 @@ services:
     command:
     - app
     - --path
-    - /root/wotemu/examples/app/reader.py
+    - wotemu_reader
     - --func-param
     - servient_host
     - clock_http.wifi
@@ -157,9 +157,9 @@ services:
     - thing_id
     - urn:org:fundacionctic:thing:clock
     depends_on:
-    - docker_api_proxy
-    - redis
     - gw_wifi
+    - redis
+    - docker_api_proxy
     deploy:
       replicas: 2
     environment:
@@ -188,7 +188,7 @@ services:
     command:
     - app
     - --path
-    - /root/wotemu/examples/app/subscriber.py
+    - wotemu_subscriber
     - --func-param
     - servient_host
     - clock_http.wifi
@@ -196,9 +196,9 @@ services:
     - thing_id
     - urn:org:fundacionctic:thing:clock
     depends_on:
-    - docker_api_proxy
-    - redis
     - gw_wifi
+    - redis
+    - docker_api_proxy
     deploy:
       replicas: 4
       resources:
@@ -231,7 +231,7 @@ services:
     command:
     - app
     - --path
-    - /root/wotemu/examples/app/subscriber.py
+    - wotemu_subscriber
     - --func-param
     - servient_host
     - clock_mqtt.wifi
@@ -239,10 +239,10 @@ services:
     - thing_id
     - urn:org:fundacionctic:thing:clock
     depends_on:
-    - docker_api_proxy
-    - redis
-    - gw_wifi
     - gw_mobile_2g
+    - gw_wifi
+    - redis
+    - docker_api_proxy
     deploy:
       replicas: 2
       resources:
@@ -267,8 +267,8 @@ services:
     labels:
       org.fundacionctic.wotemu.node: ''
     networks:
-    - wifi
     - mobile_2g
+    - wifi
     privileged: true
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
@@ -286,8 +286,8 @@ services:
       TASKS: '1'
     image: tecnativa/docker-socket-proxy
     networks:
-    - wifi
     - mobile_2g
+    - wifi
     privileged: true
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
@@ -325,7 +325,7 @@ services:
     command:
     - gateway
     - delay --time 25 --jitter 5 --distribution normal
-    - rate --rate 100000kbit
+    - rate --rate 50mbit
     depends_on:
     - docker_api_proxy
     - redis
@@ -356,8 +356,8 @@ services:
     labels:
       org.fundacionctic.wotemu.redis: ''
     networks:
-    - wifi
     - mobile_2g
+    - wifi
     ports:
     - '6379'
 version: '3.7'

@@ -6,7 +6,8 @@ import inflection
 import yaml
 from wotemu.config import (DEFAULT_CONFIG_VARS, DEFAULT_HOST_DOCKER_PROXY,
                            DEFAULT_HOST_REDIS, ConfigVars)
-from wotemu.enums import NETEM_CONDITIONS, NetworkConditions, NodePlatforms
+from wotemu.enums import (NETEM_CONDITIONS, BuiltinApps, NetworkConditions,
+                          NodePlatforms)
 from wotemu.topology.compose import (BASE_IMAGE, get_broker_definition,
                                      get_docker_proxy_definition,
                                      get_network_definition,
@@ -66,12 +67,16 @@ class NodeApp:
     ARG_COAP = "--enable-coap"
 
     def __init__(self, path, http=False, ws=False, mqtt=False, coap=False, params=None):
-        self.path = path
+        self._path = path
         self.params = params if params else {}
         self._http = http
         self._ws = ws
         self._mqtt = mqtt
         self._coap = coap
+
+    @property
+    def path(self):
+        return self._path.value if self._path in BuiltinApps else self._path
 
     @property
     def app_args(self):

@@ -8,7 +8,7 @@ import sys
 import tornado.httpclient
 from wotemu.utils import consume_from_catalogue, wait_node
 
-_logger = logging.getLogger("wotemu.subscriber.app")
+_logger = logging.getLogger(__name__)
 
 
 def _on_next(item, interaction):

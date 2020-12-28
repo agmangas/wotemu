@@ -33,10 +33,9 @@ _DESCRIPTION = {
     }
 }
 
-_EVENT_MEAN_WAIT = 5
 _TIMEOUT = 10
 
-_logger = logging.getLogger("wotemu.clock.app")
+_logger = logging.getLogger(__name__)
 
 
 def _time_millis():
@@ -45,11 +44,6 @@ def _time_millis():
 
 async def _time_handler():
     return _time_millis()
-
-
-async def _event_wait():
-    lambd = 1.0 / float(_EVENT_MEAN_WAIT)
-    await asyncio.sleep(random.expovariate(lambd))
 
 
 def _emit_time(exposed_thing):
@@ -64,17 +58,23 @@ def _emit_date(exposed_thing):
     exposed_thing.emit_event("dateEvent", payload)
 
 
-async def _emitter(emit_func):
+async def _emitter(emit_func, interval):
+    interval = float(interval)
+
     try:
         while True:
+            next_time = time.time() + interval
             emit_func()
-            await _event_wait()
+            sleep = next_time - time.time()
+            await asyncio.sleep(max(0, sleep))
     except asyncio.CancelledError:
         _logger.debug("One last event before cancelling: %s", emit_func)
         emit_func()
 
 
-async def app(wot, conf, loop):
+async def app(wot, conf, loop, interval=2):
+    _logger.info("Starting clock app with interval: %s seconds", interval)
+
     _logger.info(
         "Producing Thing:\n%s",
         pprint.pformat(_DESCRIPTION))
@@ -90,8 +90,8 @@ async def app(wot, conf, loop):
     emit_time = functools.partial(_emit_time, exposed_thing)
     emit_date = functools.partial(_emit_date, exposed_thing)
 
-    time_task = asyncio.ensure_future(_emitter(emit_time))
-    date_task = asyncio.ensure_future(_emitter(emit_date))
+    time_task = asyncio.ensure_future(_emitter(emit_time, interval=interval))
+    date_task = asyncio.ensure_future(_emitter(emit_date, interval=interval))
 
     try:
         await asyncio.gather(time_task, date_task)
