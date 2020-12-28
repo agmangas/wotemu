@@ -76,7 +76,8 @@ class NodeApp:
 
     @property
     def path(self):
-        return self._path.value if self._path in BuiltinApps else self._path
+        bapp_members = [item for item in BuiltinApps]
+        return self._path.value if self._path in bapp_members else self._path
 
     @property
     def app_args(self):
