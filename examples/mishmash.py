@@ -1,3 +1,6 @@
+import logging
+import time
+
 from wotemu.enums import NetworkConditions
 from wotemu.topology.models import (Broker, BuiltinApps, Network, Node,
                                     NodeApp, NodeResources, Topology)
@@ -5,6 +8,7 @@ from wotemu.topology.models import (Broker, BuiltinApps, Network, Node,
 PARAM_SERVIENT_HOST = "servient_host"
 PARAM_THING_ID = "thing_id"
 THING_ID_CLOCK = "urn:org:fundacionctic:thing:clock"
+THING_ID_WORKER = "urn:org:fundacionctic:thing:worker"
 
 
 def topology():
@@ -87,9 +91,36 @@ def topology():
         scale=2)
 
     node_error = Node(
-        name="clock_error",
+        name="error",
         app=NodeApp(path=BuiltinApps.ERROR),
         networks=[network_wifi],
+        scale=2)
+
+    app_worker = NodeApp(
+        path=BuiltinApps.WORKER,
+        ws=True)
+
+    node_worker = Node(
+        name="worker",
+        app=app_worker,
+        networks=[network_2g],
+        scale=1)
+
+    host_worker = "{}.{}".format(
+        node_worker.name,
+        network_2g.name)
+
+    app_caller = NodeApp(
+        path=BuiltinApps.CALLER,
+        params={
+            PARAM_SERVIENT_HOST: host_worker,
+            PARAM_THING_ID: THING_ID_WORKER
+        })
+
+    node_caller = Node(
+        name="worker_caller",
+        app=app_caller,
+        networks=[network_2g],
         scale=2)
 
     topology = Topology(nodes=[
@@ -98,7 +129,9 @@ def topology():
         node_sub_mqtt,
         node_sub_http,
         node_reader,
-        node_error
+        node_error,
+        node_worker,
+        node_caller
     ])
 
     return topology

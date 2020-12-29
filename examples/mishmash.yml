@@ -41,39 +41,6 @@ services:
     privileged: true
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
-  clock_error:
-    command:
-    - app
-    - --path
-    - wotemu_error
-    depends_on:
-    - gw_wifi
-    - redis
-    - docker_api_proxy
-    deploy:
-      replicas: 2
-    environment:
-      DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
-      NODE_HOSTNAME: '{{.Node.Hostname}}'
-      NODE_ID: '{{.Node.ID}}'
-      PATCH_PRIVILEGED: '1'
-      PORT_CATALOGUE: '9090'
-      PORT_COAP: '5683'
-      PORT_HTTP: '80'
-      PORT_MQTT: '1883'
-      PORT_WS: '81'
-      REDIS_URL: redis://redis
-      SERVICE_ID: '{{.Service.ID}}'
-      SERVICE_NAME: '{{.Service.Name}}'
-    hostname: '{{.Task.Name}}'
-    image: wotemu
-    labels:
-      org.fundacionctic.wotemu.node: ''
-    networks:
-    - wifi
-    privileged: true
-    volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
   clock_http:
     command:
     - app
@@ -81,9 +48,9 @@ services:
     - wotemu_clock
     - --enable-http
     depends_on:
+    - docker_api_proxy
     - gw_wifi
     - redis
-    - docker_api_proxy
     deploy:
       replicas: 2
     environment:
@@ -116,9 +83,9 @@ services:
     - --enable-mqtt
     depends_on:
     - gw_mobile_2g
+    - docker_api_proxy
     - gw_wifi
     - redis
-    - docker_api_proxy
     deploy:
       replicas: 2
     environment:
@@ -157,9 +124,9 @@ services:
     - thing_id
     - urn:org:fundacionctic:thing:clock
     depends_on:
+    - docker_api_proxy
     - gw_wifi
     - redis
-    - docker_api_proxy
     deploy:
       replicas: 2
     environment:
@@ -196,9 +163,9 @@ services:
     - thing_id
     - urn:org:fundacionctic:thing:clock
     depends_on:
+    - docker_api_proxy
     - gw_wifi
     - redis
-    - docker_api_proxy
     deploy:
       replicas: 4
       resources:
@@ -240,9 +207,9 @@ services:
     - urn:org:fundacionctic:thing:clock
     depends_on:
     - gw_mobile_2g
+    - docker_api_proxy
     - gw_wifi
     - redis
-    - docker_api_proxy
     deploy:
       replicas: 2
       resources:
@@ -287,6 +254,39 @@ services:
     image: tecnativa/docker-socket-proxy
     networks:
     - mobile_2g
+    - wifi
+    privileged: true
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+  error:
+    command:
+    - app
+    - --path
+    - wotemu_error
+    depends_on:
+    - docker_api_proxy
+    - gw_wifi
+    - redis
+    deploy:
+      replicas: 2
+    environment:
+      DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
+      NODE_HOSTNAME: '{{.Node.Hostname}}'
+      NODE_ID: '{{.Node.ID}}'
+      PATCH_PRIVILEGED: '1'
+      PORT_CATALOGUE: '9090'
+      PORT_COAP: '5683'
+      PORT_HTTP: '80'
+      PORT_MQTT: '1883'
+      PORT_WS: '81'
+      REDIS_URL: redis://redis
+      SERVICE_ID: '{{.Service.ID}}'
+      SERVICE_NAME: '{{.Service.Name}}'
+    hostname: '{{.Task.Name}}'
+    image: wotemu
+    labels:
+      org.fundacionctic.wotemu.node: ''
+    networks:
     - wifi
     privileged: true
     volumes:
@@ -360,4 +360,77 @@ services:
     - wifi
     ports:
     - '6379'
+  worker:
+    command:
+    - app
+    - --path
+    - wotemu_worker
+    - --enable-ws
+    depends_on:
+    - gw_mobile_2g
+    - docker_api_proxy
+    - redis
+    deploy:
+      replicas: 1
+    environment:
+      DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
+      NODE_HOSTNAME: '{{.Node.Hostname}}'
+      NODE_ID: '{{.Node.ID}}'
+      PATCH_PRIVILEGED: '1'
+      PORT_CATALOGUE: '9090'
+      PORT_COAP: '5683'
+      PORT_HTTP: '80'
+      PORT_MQTT: '1883'
+      PORT_WS: '81'
+      REDIS_URL: redis://redis
+      SERVICE_ID: '{{.Service.ID}}'
+      SERVICE_NAME: '{{.Service.Name}}'
+    hostname: '{{.Task.Name}}'
+    image: wotemu
+    labels:
+      org.fundacionctic.wotemu.node: ''
+    networks:
+    - mobile_2g
+    privileged: true
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+  worker_caller:
+    command:
+    - app
+    - --path
+    - wotemu_caller
+    - --func-param
+    - servient_host
+    - worker.mobile_2g
+    - --func-param
+    - thing_id
+    - urn:org:fundacionctic:thing:worker
+    depends_on:
+    - gw_mobile_2g
+    - docker_api_proxy
+    - redis
+    deploy:
+      replicas: 2
+    environment:
+      DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
+      NODE_HOSTNAME: '{{.Node.Hostname}}'
+      NODE_ID: '{{.Node.ID}}'
+      PATCH_PRIVILEGED: '1'
+      PORT_CATALOGUE: '9090'
+      PORT_COAP: '5683'
+      PORT_HTTP: '80'
+      PORT_MQTT: '1883'
+      PORT_WS: '81'
+      REDIS_URL: redis://redis
+      SERVICE_ID: '{{.Service.ID}}'
+      SERVICE_NAME: '{{.Service.Name}}'
+    hostname: '{{.Task.Name}}'
+    image: wotemu
+    labels:
+      org.fundacionctic.wotemu.node: ''
+    networks:
+    - mobile_2g
+    privileged: true
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
 version: '3.7'

@@ -211,7 +211,7 @@ class ReportBuilder:
             col_series[key] = ser
 
         iface_traces = {
-            key: go.Bar(x=ser.index, y=ser, name=key)
+            key: go.Scatter(x=ser.index, y=ser, name=key)
             for key, ser in col_series.items()
         }
 
@@ -330,7 +330,7 @@ class ReportBuilder:
 
         df["len_kb"] = df["len"] / 1024.0
 
-        fig = px.bar(
+        fig = px.line(
             df,
             x="date",
             y="len_kb",

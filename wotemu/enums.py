@@ -79,13 +79,17 @@ class BuiltinApps(enum.Enum):
     ERROR = "wotemu_error"
     READER = "wotemu_reader"
     SUBSCRIBER = "wotemu_subscriber"
+    WORKER = "wotemu_worker"
+    CALLER = "wotemu_caller"
 
 
 BUILTIN_APPS_MODULES = {
     BuiltinApps.CLOCK: "wotemu.apps.clock",
     BuiltinApps.ERROR: "wotemu.apps.error",
     BuiltinApps.READER: "wotemu.apps.reader",
-    BuiltinApps.SUBSCRIBER: "wotemu.apps.subscriber"
+    BuiltinApps.SUBSCRIBER: "wotemu.apps.subscriber",
+    BuiltinApps.WORKER: "wotemu.apps.worker",
+    BuiltinApps.CALLER: "wotemu.apps.caller"
 }
 
 assert set(BUILTIN_APPS_MODULES.keys()) == set(BuiltinApps)

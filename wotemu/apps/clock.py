@@ -12,7 +12,7 @@ from wotpy.wot.td import ThingDescription
 
 _DESCRIPTION = {
     "id": "urn:org:fundacionctic:thing:clock",
-    "name": "Benchmark Thing",
+    "name": "Clock Thing",
     "properties": {
         "time": {
             "type": DataType.INTEGER,
