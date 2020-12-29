@@ -505,7 +505,7 @@ class ReportBuilder:
 
         return fig
 
-    async def build_consumed_events_figure(self, task, freq="10s", facet_col_wrap=2, base_height=400):
+    async def build_consumed_events_figure(self, task, freq="5s", facet_col_wrap=2, base_height=400):
         fig = await self._build_events_figure(
             task=task,
             cls_name=wotpy.wot.consumed.thing.ConsumedThing.__name__,
@@ -516,11 +516,12 @@ class ReportBuilder:
         if not fig:
             return None
 
-        fig.update_layout(title_text="Timeline of consumed events")
+        fig.update_layout(
+            title_text=f"Timeline of consumed events ({freq} windows)")
 
         return fig
 
-    async def build_exposed_events_figure(self, task, freq="10s", facet_col_wrap=2, base_height=400):
+    async def build_exposed_events_figure(self, task, freq="5s", facet_col_wrap=2, base_height=400):
         fig = await self._build_events_figure(
             task=task,
             cls_name=wotpy.wot.exposed.thing.ExposedThing.__name__,
@@ -531,7 +532,8 @@ class ReportBuilder:
         if not fig:
             return None
 
-        fig.update_layout(title_text="Timeline of exposed events")
+        fig.update_layout(
+            title_text=f"Timeline of exposed events ({freq} windows)")
 
         return fig
 
