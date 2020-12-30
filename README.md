@@ -1,5 +1,7 @@
 # WoTemu
 
+[![Docker Cloud Build](https://img.shields.io/docker/cloud/build/agmangas/wotemu)](https://hub.docker.com/r/agmangas/wotemu)
+
 An emulator for [Web of Things](https://www.w3.org/WoT/) applications programmed on top of [WoTPy](https://pypi.org/project/wotpy/) that is based on [Docker Swarm Mode](https://docs.docker.com/engine/swarm/).
 
 ## Usage
