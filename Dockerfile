@@ -1,7 +1,7 @@
 FROM ubuntu:20.04
 
 ENV PATH_WOTEMU /root/wotemu
-ENV WAIT_GATEWAYS 5
+ENV WAIT_GATEWAYS 10
 
 RUN apt-get update -y && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     build-essential \
