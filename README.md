@@ -1,6 +1,6 @@
 # WoTemu
 
-An emulator for Web of Things applications programmed on top of [WoTPy](https://pypi.org/project/wotpy/) that is based on [Docker Swarm Mode](https://docs.docker.com/engine/swarm/).
+An emulator for [Web of Things](https://www.w3.org/WoT/) applications programmed on top of [WoTPy](https://pypi.org/project/wotpy/) that is based on [Docker Swarm Mode](https://docs.docker.com/engine/swarm/).
 
 ## Usage
 
