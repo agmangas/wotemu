@@ -1,11 +1,13 @@
 import copy
+import os
 
 from deepmerge import always_merger
 from wotemu.config import DEFAULT_DOCKER_SOCKET, ConfigVars
 from wotemu.enums import Labels
 
 COMPOSE_VERSION = "3.7"
-BASE_IMAGE = "wotemu"
+IMAGE_ENV_VAR = "WOTEMU_IMAGE_OVERRIDE"
+BASE_IMAGE = "agmangas/wotemu:latest"
 TEMPLATE_TASK_NAME = "{{.Task.Name}}"
 TEMPLATE_NODE_HOST = "{{.Node.Hostname}}"
 TEMPLATE_NODE_ID = "{{.Node.ID}}"
@@ -18,18 +20,18 @@ ENV_KEY_NODE_ID = "NODE_ID"
 ENV_KEY_SERVICE_ID = "SERVICE_ID"
 ENV_KEY_SERVICE_NAME = "SERVICE_NAME"
 ENV_KEY_CPU_SPEED = "TARGET_CPU_SPEED"
-ENV_VAL_FLAG = "1"
+ENV_VAL_TRUTHY = "1"
 VOL_DOCKER_SOCK = "{}:{}".format(DEFAULT_DOCKER_SOCKET, DEFAULT_DOCKER_SOCKET)
 
 SERVICE_BASE_DOCKER_PROXY = {
     "image": "tecnativa/docker-socket-proxy",
     "environment": {
-        "CONTAINERS": ENV_VAL_FLAG,
-        "NETWORKS": ENV_VAL_FLAG,
-        "TASKS": ENV_VAL_FLAG,
-        "SERVICES": ENV_VAL_FLAG,
-        "NODES": ENV_VAL_FLAG,
-        ENV_KEY_PRIVILEGED: ENV_VAL_FLAG
+        "CONTAINERS": ENV_VAL_TRUTHY,
+        "NETWORKS": ENV_VAL_TRUTHY,
+        "TASKS": ENV_VAL_TRUTHY,
+        "SERVICES": ENV_VAL_TRUTHY,
+        "NODES": ENV_VAL_TRUTHY,
+        ENV_KEY_PRIVILEGED: ENV_VAL_TRUTHY
     },
     "deploy": {
         "placement": {
@@ -46,7 +48,7 @@ SERVICE_BASE_REDIS = {
 }
 
 _ENVIRONMENT_BASE = {
-    ENV_KEY_PRIVILEGED: ENV_VAL_FLAG,
+    ENV_KEY_PRIVILEGED: ENV_VAL_TRUTHY,
     ENV_KEY_NODE_HOST: TEMPLATE_NODE_HOST,
     ENV_KEY_NODE_ID: TEMPLATE_NODE_ID,
     ENV_KEY_SERVICE_NAME: TEMPLATE_SERVICE_NAME,
@@ -54,7 +56,6 @@ _ENVIRONMENT_BASE = {
 }
 
 SERVICE_BASE_GATEWAY = {
-    "image": BASE_IMAGE,
     "privileged": True,
     "hostname": TEMPLATE_TASK_NAME,
     "volumes": [VOL_DOCKER_SOCK],
@@ -63,7 +64,6 @@ SERVICE_BASE_GATEWAY = {
 }
 
 SERVICE_BASE_BROKER = {
-    "image": BASE_IMAGE,
     "privileged": True,
     "hostname": TEMPLATE_TASK_NAME,
     "volumes": [VOL_DOCKER_SOCK],
@@ -131,6 +131,7 @@ def get_network_gateway_definition(topology, network):
         depends_on.append(topology.redis.host)
 
     service.update({
+        "image": os.getenv(IMAGE_ENV_VAR, BASE_IMAGE),
         "command": network.cmd_gateway,
         "networks": [network.name],
         "depends_on": depends_on
@@ -164,6 +165,7 @@ def get_broker_definition(topology, broker):
         depends_on.append(topology.redis.host)
 
     service.update({
+        "image": os.getenv(IMAGE_ENV_VAR, BASE_IMAGE),
         "command": broker.cmd,
         "networks": [net.name for net in broker.networks],
         "depends_on": depends_on

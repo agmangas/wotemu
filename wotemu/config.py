@@ -123,4 +123,4 @@ def get_env_config():
 def log_config():
     conf_env = {key.value: os.getenv(key.value, None) for key in ConfigVars}
     _logger.debug("Configuration environment:\n%s", pprint.pformat(conf_env))
-    _logger.info("Current configuration: %s", get_env_config())
+    _logger.debug("Current configuration: %s", get_env_config())

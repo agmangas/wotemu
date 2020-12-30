@@ -1,5 +1,6 @@
 import collections
 import logging
+import os
 import warnings
 
 import inflection
@@ -8,7 +9,8 @@ from wotemu.config import (DEFAULT_CONFIG_VARS, DEFAULT_HOST_DOCKER_PROXY,
                            DEFAULT_HOST_REDIS, ConfigVars)
 from wotemu.enums import (NETEM_CONDITIONS, BuiltinApps, NetworkConditions,
                           NodePlatforms)
-from wotemu.topology.compose import (BASE_IMAGE, get_broker_definition,
+from wotemu.topology.compose import (BASE_IMAGE, IMAGE_ENV_VAR,
+                                     get_broker_definition,
                                      get_docker_proxy_definition,
                                      get_network_definition,
                                      get_network_gateway_definition,
@@ -176,7 +178,7 @@ class Node(BaseNamedModel):
 
     def __init__(
             self, name, app, networks, broker=None, broker_network=None,
-            image=BASE_IMAGE, resources=None, scale=None, args_compose=None):
+            image=None, resources=None, scale=None, args_compose=None):
         self._assert_broker(app, broker)
         self._assert_broker_network(broker, broker_network)
         self._warn_broker_network_undefined(broker, broker_network)
@@ -186,11 +188,15 @@ class Node(BaseNamedModel):
         self.networks = networks
         self.broker = broker
         self._broker_network = broker_network
-        self.image = image
+        self._image = image
         self.resources = resources
         self.scale = scale
         self.args_compose = args_compose
         super().__init__(name)
+
+    @property
+    def image(self):
+        return self._image or os.getenv(IMAGE_ENV_VAR, BASE_IMAGE)
 
     @property
     def broker_network(self):
