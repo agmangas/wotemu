@@ -30,8 +30,7 @@ _REDIS_DATA_FILE = "./redis_data.json"
 
 RedisService = namedtuple(
     "RedisService",
-    ["url", "container"],
-    defaults=(None,))
+    ["url", "container"])
 
 _logger = logging.getLogger(__name__)
 
@@ -65,7 +64,7 @@ def get_redis_service():
 
     if redis_url:
         _logger.debug("Using Redis from environment: %s", redis_url)
-        return RedisService(url=redis_url)
+        return RedisService(url=redis_url, container=None)
 
     _logger.warning(
         "Undefined Redis URL ($%s): Creating volatile Docker container",

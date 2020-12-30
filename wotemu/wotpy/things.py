@@ -46,7 +46,10 @@ class VerbCallback:
 
     @property
     def loop(self):
-        return asyncio.get_running_loop()
+        try:
+            return asyncio.get_running_loop()
+        except:
+            return asyncio.get_event_loop()
 
     @property
     def interaction_name(self):
