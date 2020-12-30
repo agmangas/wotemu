@@ -1,6 +1,3 @@
-import logging
-import time
-
 from wotemu.enums import NetworkConditions
 from wotemu.topology.models import (Broker, BuiltinApps, Network, Node,
                                     NodeApp, NodeResources, Topology)
