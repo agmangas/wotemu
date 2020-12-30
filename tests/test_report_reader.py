@@ -71,7 +71,9 @@ async def test_get_info(redis_reader):
         "service_vips",
         "hostname",
         "container_id",
-        "task_id"
+        "task_id",
+        "constraints",
+        "networks_cidr"
     }
 
 
