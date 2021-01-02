@@ -12,3 +12,13 @@ install:
 - pip install -U .[dev]
 script:
 - pytest -v
+deploy:
+  provider: pypi
+  username: __token__
+  password:
+    secure: DXQgnsS5dVqyp+JiGbtsgVuoFb0L9tVv5hYFt74QZVcM2y/UR0TZjNqC7A3Je70X9fo13NhmoVH5ilaCf8lQKS0UvfCNq/A8ty/LtFePZDBFnH4r0zUGmvY+NOC9La/Pijne8VZZrVYoF1xfSKLJNBIPkhctpxycNHYupT8Mmwui6cZdrM/d/c53Uw6mgYBdjUCB8n4S/dk0KVPZuCja6ckXYN45oYIbMetJfpanfKuyYmsp7xglgTYzHzYhA2tAoEL/YPqCx89Jh3y1GzsoN8NMYnMdJ9k9a6mG2aK2hdXWG/kgMSDmZ5+OpJORsGC0v5yy4V3G7po0nlQVEFddyW16P0EdXt5NR3vcxgyBBWDoDGRqANyOgW397iJRuMNLBTFTp7KCj2xTjjv+2+n2+ExELz/BQLKga7Fv1WB9GA+RBeJJfUVxb6uT5APqgAOQUAISlbQhkkJA2Nv8PIc+hZwcEelfGLLJ8/vAVt6y8u8IqvEpNllU/9MeaxKW8uTbhiL6M0sC6XTGC8AilsP0IGfPLcjqAlrNS6pxvY/amNyKBENwxLx/IEpoMcwXIC+kVVkm0+6xL0ozjE0fR5nLRQPKdrvohMV0wu+a7ofqxVbxY92vV99QIvkiYL2aAuYGdrFHmaejCeUag1JS9JkK2u8On2PDdTqK+Z1d+DMs+lc=
+  on:
+    tags: true
+    branch: master
+  distributions: sdist bdist_wheel
+  skip_existing: true
