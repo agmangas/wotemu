@@ -10,38 +10,101 @@ The main output of an emulation experiment is an HTML report describing the obse
 
 ## Design
 
-WoTemu leverages [Docker Swarm Mode](https://docs.docker.com/engine/swarm/) to offer simple horizontal scaling across heterogeneous nodes; this enables the emulation of scenarios with hundreds of actors.
+This project leverages [Docker Swarm Mode](https://docs.docker.com/engine/swarm/) to offer simple horizontal scaling across heterogeneous nodes; this enables the emulation of scenarios with hundreds of actors.
 
 The following image shows a high-level view of a simple emulation stack. This serves to illustrate the main design choices behind WoTemu.
 
 ![Design diagram](diagram.png "Design diagram")
 
-* All communications for the supported protocols (HTTP, CoAP, Websockets and MQTT) go through the network **gateways**; these use NetEm to shape the traffic and emulate real network conditions. This redirection is based on iptables and is invisible to the application.
-* All **nodes** report their metrics (e.g. system resources, packets, interactions) to a central Redis store in a periodic fashion. This will be later used to build the final HTML report.
-* A **Docker API proxy** instance is always deployed in a _manager_ node to enable **nodes** to access stack metadata (e.g. container IDs of other nodes in the same network).
+- All communications for the supported protocols (HTTP, CoAP, Websockets and MQTT) go through the network **gateways**; these use NetEm to shape the traffic and emulate real network conditions. This redirection is based on iptables and is invisible to the application.
+- All **nodes** report their metrics (e.g. system resources, packets, interactions) to a central Redis store in a periodic fashion. This will be later used to build the final HTML report.
+- A **Docker API proxy** instance is always deployed in a _manager_ node to enable **nodes** to access stack metadata (e.g. container IDs of other nodes in the same network).
 
 ## Quickstart
 
-Write a Python file that exposes a `topology` function that takes no arguments and returns an instance of `wotemu.topology.models.Topology`. The Compose file that describes the emulation stack can be generated with the following command:
+### Describe the topology
+
+Emulation experiments are represented by instances of `wotemu.topology.models.Topology`; these may be converted to Compose files that describe Docker stacks using the `wotemu compose` CLI command. To that end, you need to write a Python file exposing a `topology` function that takes no arguments and returns an instance of `Topology`. The following is such an example:
+
+```python
+from wotemu.enums import NetworkConditions
+from wotemu.topology.models import (BuiltinApps, Network, Node, NodeApp,
+                                    NodeResources, Topology)
+
+_SERVER_GIST = "https://gist.github.com/agmangas/94cc5c3d9d5dcb473cff774b3522bbb6/raw"
+
+
+def topology():
+    network_3g = Network(
+        name="3g",
+        conditions=NetworkConditions.REGULAR_3G)
+
+    node_server = Node(
+        name="server",
+        app=NodeApp(path=_SERVER_GIST, http=True),
+        networks=[network_3g],
+        scale=1)
+
+    host_server = "{}.{}".format(
+        node_server.name,
+        network_3g.name)
+
+    app_reader = NodeApp(
+        path=BuiltinApps.READER,
+        params={
+            "servient_host": host_server,
+            "thing_id": "urn:wotemu:quickstart:thing"
+        })
+
+    node_reader = Node(
+        name="reader",
+        app=app_reader,
+        networks=[network_3g],
+        resources=NodeResources(mem_limit="150M"),
+        scale=4)
+
+    topology = Topology(nodes=[
+        node_server,
+        node_reader
+    ])
+
+    return topology
+```
+
+There are two distinct types of nodes in this example: _server_ and _reader_.
+
+The _reader_ uses the `READER` built-in application, which takes a servient host and Thing ID as arguments and periodically reads all properties exposed by the Thing. This particular `READER` is connected to the _server_ node.
+
+The _server_ uses a custom application defined in a remote HTTP URL that exposes a Thing with two properties. A `NodeApp` can be based on any Python module that exposes an _asynchronous_ `app` function that takes at least three positional arguments:
+
+| Variable | Type                        | Description                                                  |
+| -------- | --------------------------- | ------------------------------------------------------------ |
+| `wot`    | `wotpy.wot.wot.WoT`         | WoTPy WoT entrypoint decorated and pre-configured by WoTemu. |
+| `conf`   | `wotemu.config.EnvConfig`   | Environment configuration that is currently active.          |
+| `loop`   | `asyncio.AbstractEventLoop` | Loop that is running the application.                        |
+
+> Applications can be defined in one of three ways: using a WoTemu built-in application, with a remote HTTP URL, or with an absolute local file path. The most versatile option is to load the applications from the filesystem of a custom Docker image based on `agmangas/wotemu`.
+
+### Deploy the Docker stack
 
 ```
-wotemu compose --path /examples/simple.py
+wotemu compose --path ./examples/quickstart.py
 ```
 
-The emulation stack is deployed using the regular Docker interface:
-
 ```
-docker stack deploy -c /examples/simple.py simple
+docker stack deploy -c ./examples/quickstart.yml quickstart
 ```
 
-The emulation stack may be stopped when you consider that enough time has passed to gather a significant amount of data:
+### Build the final report
+
+The emulation stack can be stopped when the user considers that enough time has passed to gather a significant amount of data:
 
 ```
-wotemu stop --compose-file /examples/simple.yml --stack simple
+wotemu stop --compose-file ./examples/quickstart.yml --stack quickstart
 ```
 
 An HTML report containing useful insights into the behaviour of the emulation stack may be generated with the following command.
 
 ```
-wotemu report --out /report/ --stack simple
+wotemu report --out /report/ --stack quickstart
 ```

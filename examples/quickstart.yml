@@ -1,0 +1,141 @@
+networks:
+  3g:
+    attachable: true
+    driver: overlay
+    labels:
+      org.fundacionctic.wotemu.net: ''
+    name: 3g
+services:
+  docker_api_proxy:
+    deploy:
+      placement:
+        constraints:
+        - node.role == manager
+    environment:
+      CONTAINERS: '1'
+      NETWORKS: '1'
+      NODES: '1'
+      PATCH_PRIVILEGED: '1'
+      SERVICES: '1'
+      TASKS: '1'
+    image: tecnativa/docker-socket-proxy
+    networks:
+    - 3g
+    privileged: true
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+  gw_3g:
+    command:
+    - gateway
+    - delay --time 300 --jitter 150 --distribution normal
+    - rate --rate 1500kbit
+    depends_on:
+    - docker_api_proxy
+    - redis
+    environment:
+      DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
+      NODE_HOSTNAME: '{{.Node.Hostname}}'
+      NODE_ID: '{{.Node.ID}}'
+      PATCH_PRIVILEGED: '1'
+      PORT_CATALOGUE: '9090'
+      PORT_COAP: '5683'
+      PORT_HTTP: '80'
+      PORT_MQTT: '1883'
+      PORT_WS: '81'
+      REDIS_URL: redis://redis
+      SERVICE_ID: '{{.Service.ID}}'
+      SERVICE_NAME: '{{.Service.Name}}'
+    hostname: '{{.Task.Name}}'
+    image: agmangas/wotemu
+    labels:
+      org.fundacionctic.wotemu.gw: ''
+    networks:
+    - 3g
+    privileged: true
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+  reader:
+    command:
+    - app
+    - --path
+    - wotemu_reader
+    - --func-param
+    - servient_host
+    - server.3g
+    - --func-param
+    - thing_id
+    - urn:wotemu:quickstart:thing
+    depends_on:
+    - gw_3g
+    - docker_api_proxy
+    - redis
+    deploy:
+      replicas: 4
+      resources:
+        limits:
+          memory: 150M
+    environment:
+      DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
+      NODE_HOSTNAME: '{{.Node.Hostname}}'
+      NODE_ID: '{{.Node.ID}}'
+      PATCH_PRIVILEGED: '1'
+      PORT_CATALOGUE: '9090'
+      PORT_COAP: '5683'
+      PORT_HTTP: '80'
+      PORT_MQTT: '1883'
+      PORT_WS: '81'
+      REDIS_URL: redis://redis
+      SERVICE_ID: '{{.Service.ID}}'
+      SERVICE_NAME: '{{.Service.Name}}'
+    hostname: '{{.Task.Name}}'
+    image: agmangas/wotemu
+    labels:
+      org.fundacionctic.wotemu.node: ''
+    networks:
+    - 3g
+    privileged: true
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+  redis:
+    image: redis:5
+    labels:
+      org.fundacionctic.wotemu.redis: ''
+    networks:
+    - 3g
+    ports:
+    - '6379'
+  server:
+    command:
+    - app
+    - --path
+    - https://gist.github.com/agmangas/94cc5c3d9d5dcb473cff774b3522bbb6/raw
+    - --enable-http
+    depends_on:
+    - gw_3g
+    - docker_api_proxy
+    - redis
+    deploy:
+      replicas: 1
+    environment:
+      DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
+      NODE_HOSTNAME: '{{.Node.Hostname}}'
+      NODE_ID: '{{.Node.ID}}'
+      PATCH_PRIVILEGED: '1'
+      PORT_CATALOGUE: '9090'
+      PORT_COAP: '5683'
+      PORT_HTTP: '80'
+      PORT_MQTT: '1883'
+      PORT_WS: '81'
+      REDIS_URL: redis://redis
+      SERVICE_ID: '{{.Service.ID}}'
+      SERVICE_NAME: '{{.Service.Name}}'
+    hostname: '{{.Task.Name}}'
+    image: agmangas/wotemu
+    labels:
+      org.fundacionctic.wotemu.node: ''
+    networks:
+    - 3g
+    privileged: true
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+version: '3.7'
