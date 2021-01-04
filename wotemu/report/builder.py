@@ -27,6 +27,8 @@ from wotemu.report.components.task_section import TaskSectionComponent
 from wotemu.report.utils import get_base_template, shorten_task_name
 from wotpy.protocols.enums import InteractionVerbs
 
+_MIN_HEIGHT = 400
+
 _logger = logging.getLogger(__name__)
 
 
@@ -301,6 +303,7 @@ class ReportBuilder:
             "inbound" if inbound else "outbound")
 
         height = height_task * len(heatmap_y)
+        height = max(height, _MIN_HEIGHT)
 
         fig.update_xaxes(title_text="Service")
         fig.update_yaxes(title_text="Task")
@@ -590,6 +593,7 @@ class ReportBuilder:
         fig.update_traces(orientation="h")
 
         height = (len(task_keys) * height_task) + (height_facet * len(models))
+        height = max(height, _MIN_HEIGHT)
 
         fig.update_layout(
             height=height,
@@ -622,6 +626,7 @@ class ReportBuilder:
             return None
 
         height = height_task * len(task_keys)
+        height = max(height, _MIN_HEIGHT)
 
         fig = px.box(
             df_ranking,
@@ -646,6 +651,7 @@ class ReportBuilder:
         df_snap["task_short"] = df_snap["task"].apply(shorten_task_name)
 
         height = height_task * len(df_snap["task"].unique())
+        height = max(height, _MIN_HEIGHT)
 
         fig = px.timeline(
             df_snap,
