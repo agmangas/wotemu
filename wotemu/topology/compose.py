@@ -7,7 +7,7 @@ from wotemu.enums import Labels
 
 COMPOSE_VERSION = "3.7"
 IMAGE_ENV_VAR = "WOTEMU_IMAGE_OVERRIDE"
-BASE_IMAGE = "agmangas/wotemu:latest"
+BASE_IMAGE = "agmangas/wotemu"
 TEMPLATE_TASK_NAME = "{{.Task.Name}}"
 TEMPLATE_NODE_HOST = "{{.Node.Hostname}}"
 TEMPLATE_NODE_ID = "{{.Node.ID}}"

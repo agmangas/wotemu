@@ -33,7 +33,7 @@ services:
       SERVICE_ID: '{{.Service.ID}}'
       SERVICE_NAME: '{{.Service.Name}}'
     hostname: '{{.Task.Name}}'
-    image: wotemu
+    image: agmangas/wotemu
     labels:
       org.fundacionctic.wotemu.broker: ''
     networks:
@@ -48,9 +48,9 @@ services:
     - wotemu_clock
     - --enable-http
     depends_on:
-    - docker_api_proxy
-    - gw_wifi
     - redis
+    - gw_wifi
+    - docker_api_proxy
     deploy:
       replicas: 2
     environment:
@@ -67,7 +67,7 @@ services:
       SERVICE_ID: '{{.Service.ID}}'
       SERVICE_NAME: '{{.Service.Name}}'
     hostname: '{{.Task.Name}}'
-    image: wotemu
+    image: agmangas/wotemu
     labels:
       org.fundacionctic.wotemu.node: ''
     networks:
@@ -83,9 +83,9 @@ services:
     - --enable-mqtt
     depends_on:
     - gw_mobile_2g
-    - docker_api_proxy
-    - gw_wifi
     - redis
+    - gw_wifi
+    - docker_api_proxy
     deploy:
       replicas: 2
     environment:
@@ -103,12 +103,12 @@ services:
       SERVICE_ID: '{{.Service.ID}}'
       SERVICE_NAME: '{{.Service.Name}}'
     hostname: '{{.Task.Name}}'
-    image: wotemu
+    image: agmangas/wotemu
     labels:
       org.fundacionctic.wotemu.node: ''
     networks:
-    - mobile_2g
     - wifi
+    - mobile_2g
     privileged: true
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
@@ -124,9 +124,9 @@ services:
     - thing_id
     - urn:org:fundacionctic:thing:clock
     depends_on:
-    - docker_api_proxy
-    - gw_wifi
     - redis
+    - gw_wifi
+    - docker_api_proxy
     deploy:
       replicas: 2
     environment:
@@ -143,7 +143,7 @@ services:
       SERVICE_ID: '{{.Service.ID}}'
       SERVICE_NAME: '{{.Service.Name}}'
     hostname: '{{.Task.Name}}'
-    image: wotemu
+    image: agmangas/wotemu
     labels:
       org.fundacionctic.wotemu.node: ''
     networks:
@@ -163,9 +163,9 @@ services:
     - thing_id
     - urn:org:fundacionctic:thing:clock
     depends_on:
-    - docker_api_proxy
-    - gw_wifi
     - redis
+    - gw_wifi
+    - docker_api_proxy
     deploy:
       replicas: 4
       resources:
@@ -186,7 +186,7 @@ services:
       SERVICE_NAME: '{{.Service.Name}}'
       TARGET_CPU_SPEED: 200
     hostname: '{{.Task.Name}}'
-    image: wotemu
+    image: agmangas/wotemu
     labels:
       org.fundacionctic.wotemu.node: ''
     networks:
@@ -207,9 +207,9 @@ services:
     - urn:org:fundacionctic:thing:clock
     depends_on:
     - gw_mobile_2g
-    - docker_api_proxy
-    - gw_wifi
     - redis
+    - gw_wifi
+    - docker_api_proxy
     deploy:
       replicas: 2
       resources:
@@ -230,12 +230,12 @@ services:
       SERVICE_NAME: '{{.Service.Name}}'
       TARGET_CPU_SPEED: 200
     hostname: '{{.Task.Name}}'
-    image: wotemu
+    image: agmangas/wotemu
     labels:
       org.fundacionctic.wotemu.node: ''
     networks:
-    - mobile_2g
     - wifi
+    - mobile_2g
     privileged: true
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
@@ -253,8 +253,8 @@ services:
       TASKS: '1'
     image: tecnativa/docker-socket-proxy
     networks:
-    - mobile_2g
     - wifi
+    - mobile_2g
     privileged: true
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
@@ -264,9 +264,9 @@ services:
     - --path
     - wotemu_error
     depends_on:
-    - docker_api_proxy
-    - gw_wifi
     - redis
+    - gw_wifi
+    - docker_api_proxy
     deploy:
       replicas: 2
     environment:
@@ -283,7 +283,7 @@ services:
       SERVICE_ID: '{{.Service.ID}}'
       SERVICE_NAME: '{{.Service.Name}}'
     hostname: '{{.Task.Name}}'
-    image: wotemu
+    image: agmangas/wotemu
     labels:
       org.fundacionctic.wotemu.node: ''
     networks:
@@ -313,7 +313,7 @@ services:
       SERVICE_ID: '{{.Service.ID}}'
       SERVICE_NAME: '{{.Service.Name}}'
     hostname: '{{.Task.Name}}'
-    image: wotemu
+    image: agmangas/wotemu
     labels:
       org.fundacionctic.wotemu.gw: ''
     networks:
@@ -343,7 +343,7 @@ services:
       SERVICE_ID: '{{.Service.ID}}'
       SERVICE_NAME: '{{.Service.Name}}'
     hostname: '{{.Task.Name}}'
-    image: wotemu
+    image: agmangas/wotemu
     labels:
       org.fundacionctic.wotemu.gw: ''
     networks:
@@ -356,8 +356,8 @@ services:
     labels:
       org.fundacionctic.wotemu.redis: ''
     networks:
-    - mobile_2g
     - wifi
+    - mobile_2g
     ports:
     - '6379'
   worker:
@@ -368,8 +368,8 @@ services:
     - --enable-ws
     depends_on:
     - gw_mobile_2g
-    - docker_api_proxy
     - redis
+    - docker_api_proxy
     deploy:
       replicas: 1
     environment:
@@ -386,7 +386,7 @@ services:
       SERVICE_ID: '{{.Service.ID}}'
       SERVICE_NAME: '{{.Service.Name}}'
     hostname: '{{.Task.Name}}'
-    image: wotemu
+    image: agmangas/wotemu
     labels:
       org.fundacionctic.wotemu.node: ''
     networks:
@@ -407,8 +407,8 @@ services:
     - urn:org:fundacionctic:thing:worker
     depends_on:
     - gw_mobile_2g
-    - docker_api_proxy
     - redis
+    - docker_api_proxy
     deploy:
       replicas: 2
     environment:
@@ -425,7 +425,7 @@ services:
       SERVICE_ID: '{{.Service.ID}}'
       SERVICE_NAME: '{{.Service.Name}}'
     hostname: '{{.Task.Name}}'
-    image: wotemu
+    image: agmangas/wotemu
     labels:
       org.fundacionctic.wotemu.node: ''
     networks:
