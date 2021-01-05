@@ -45,6 +45,14 @@ The recommended workflow to run an experiment is as follows:
 
 > Please note that the commands in this section should be executed in a Swarm _manager_.
 
+### (Optional) Create a development Swarm cluster
+
+There is a [Vagrant configuration file](https://www.vagrantup.com/) in this repository that may be used to quickly create a Swarm cluster consisting of three virtual machines (one _manager_ and two _workers_) for development and test purposes. All dependencies for WoTemu are installed in the [provision stage](https://www.vagrantup.com/docs/provisioning).
+
+```
+vagrant up
+```
+
 ### Describe the topology
 
 Topologies can be defined in a Python file exposing a `topology` function that takes no arguments and returns an instance of `Topology`. The following is such an example:
@@ -119,7 +127,7 @@ The `path` parameter of a `NodeApp` instance should point to an _application_. T
 
 Loading applications from the filesystem of a custom Docker image based on [agmangas/wotemu](https://hub.docker.com/r/agmangas/wotemu) is arguably the **most versatile option**. To that end, you may use the optional `image` parameter in the `Node` class (set to `agmangas/wotemu:latest` by default).
 
-### Deploy the Docker stack
+### Deploy the stack
 
 A Compose file describing the emulation experiment can be created automatically from a topology file using the `wotemu compose` CLI command:
 
