@@ -13,6 +13,8 @@ networks:
     name: wifi
 services:
   broker:
+    cap_add:
+    - ALL
     command:
     - broker
     depends_on:
@@ -23,7 +25,6 @@ services:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       NODE_HOSTNAME: '{{.Node.Hostname}}'
       NODE_ID: '{{.Node.ID}}'
-      PATCH_PRIVILEGED: '1'
       PORT_CATALOGUE: '9090'
       PORT_COAP: '5683'
       PORT_HTTP: '80'
@@ -38,26 +39,26 @@ services:
       org.fundacionctic.wotemu.broker: ''
     networks:
     - mobile_2g
-    privileged: true
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
   clock_http:
+    cap_add:
+    - ALL
     command:
     - app
     - --path
     - wotemu_clock
     - --enable-http
     depends_on:
+    - docker_api_proxy
     - redis
     - gw_wifi
-    - docker_api_proxy
     deploy:
       replicas: 2
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       NODE_HOSTNAME: '{{.Node.Hostname}}'
       NODE_ID: '{{.Node.ID}}'
-      PATCH_PRIVILEGED: '1'
       PORT_CATALOGUE: '9090'
       PORT_COAP: '5683'
       PORT_HTTP: '80'
@@ -72,20 +73,21 @@ services:
       org.fundacionctic.wotemu.node: ''
     networks:
     - wifi
-    privileged: true
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
   clock_mqtt:
+    cap_add:
+    - ALL
     command:
     - app
     - --path
     - wotemu_clock
     - --enable-mqtt
     depends_on:
+    - docker_api_proxy
     - gw_mobile_2g
     - redis
     - gw_wifi
-    - docker_api_proxy
     deploy:
       replicas: 2
     environment:
@@ -93,7 +95,6 @@ services:
       MQTT_BROKER_HOST: broker.mobile_2g
       NODE_HOSTNAME: '{{.Node.Hostname}}'
       NODE_ID: '{{.Node.ID}}'
-      PATCH_PRIVILEGED: '1'
       PORT_CATALOGUE: '9090'
       PORT_COAP: '5683'
       PORT_HTTP: '80'
@@ -107,12 +108,13 @@ services:
     labels:
       org.fundacionctic.wotemu.node: ''
     networks:
-    - wifi
     - mobile_2g
-    privileged: true
+    - wifi
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
   clock_property_reader:
+    cap_add:
+    - ALL
     command:
     - app
     - --path
@@ -124,16 +126,15 @@ services:
     - thing_id
     - urn:org:fundacionctic:thing:clock
     depends_on:
+    - docker_api_proxy
     - redis
     - gw_wifi
-    - docker_api_proxy
     deploy:
       replicas: 2
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       NODE_HOSTNAME: '{{.Node.Hostname}}'
       NODE_ID: '{{.Node.ID}}'
-      PATCH_PRIVILEGED: '1'
       PORT_CATALOGUE: '9090'
       PORT_COAP: '5683'
       PORT_HTTP: '80'
@@ -148,10 +149,11 @@ services:
       org.fundacionctic.wotemu.node: ''
     networks:
     - wifi
-    privileged: true
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
   clock_sub_http:
+    cap_add:
+    - ALL
     command:
     - app
     - --path
@@ -163,9 +165,9 @@ services:
     - thing_id
     - urn:org:fundacionctic:thing:clock
     depends_on:
+    - docker_api_proxy
     - redis
     - gw_wifi
-    - docker_api_proxy
     deploy:
       replicas: 4
       resources:
@@ -175,7 +177,6 @@ services:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       NODE_HOSTNAME: '{{.Node.Hostname}}'
       NODE_ID: '{{.Node.ID}}'
-      PATCH_PRIVILEGED: '1'
       PORT_CATALOGUE: '9090'
       PORT_COAP: '5683'
       PORT_HTTP: '80'
@@ -191,10 +192,11 @@ services:
       org.fundacionctic.wotemu.node: ''
     networks:
     - wifi
-    privileged: true
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
   clock_sub_mqtt:
+    cap_add:
+    - ALL
     command:
     - app
     - --path
@@ -206,10 +208,10 @@ services:
     - thing_id
     - urn:org:fundacionctic:thing:clock
     depends_on:
+    - docker_api_proxy
     - gw_mobile_2g
     - redis
     - gw_wifi
-    - docker_api_proxy
     deploy:
       replicas: 2
       resources:
@@ -219,7 +221,6 @@ services:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       NODE_HOSTNAME: '{{.Node.Hostname}}'
       NODE_ID: '{{.Node.ID}}'
-      PATCH_PRIVILEGED: '1'
       PORT_CATALOGUE: '9090'
       PORT_COAP: '5683'
       PORT_HTTP: '80'
@@ -234,12 +235,13 @@ services:
     labels:
       org.fundacionctic.wotemu.node: ''
     networks:
-    - wifi
     - mobile_2g
-    privileged: true
+    - wifi
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
   docker_api_proxy:
+    cap_add:
+    - ALL
     deploy:
       placement:
         constraints:
@@ -248,32 +250,31 @@ services:
       CONTAINERS: '1'
       NETWORKS: '1'
       NODES: '1'
-      PATCH_PRIVILEGED: '1'
       SERVICES: '1'
       TASKS: '1'
     image: tecnativa/docker-socket-proxy
     networks:
-    - wifi
     - mobile_2g
-    privileged: true
+    - wifi
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
   error:
+    cap_add:
+    - ALL
     command:
     - app
     - --path
     - wotemu_error
     depends_on:
+    - docker_api_proxy
     - redis
     - gw_wifi
-    - docker_api_proxy
     deploy:
       replicas: 2
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       NODE_HOSTNAME: '{{.Node.Hostname}}'
       NODE_ID: '{{.Node.ID}}'
-      PATCH_PRIVILEGED: '1'
       PORT_CATALOGUE: '9090'
       PORT_COAP: '5683'
       PORT_HTTP: '80'
@@ -288,10 +289,11 @@ services:
       org.fundacionctic.wotemu.node: ''
     networks:
     - wifi
-    privileged: true
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
   gw_mobile_2g:
+    cap_add:
+    - ALL
     command:
     - gateway
     - delay --time 700 --jitter 100 --distribution normal
@@ -303,7 +305,6 @@ services:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       NODE_HOSTNAME: '{{.Node.Hostname}}'
       NODE_ID: '{{.Node.ID}}'
-      PATCH_PRIVILEGED: '1'
       PORT_CATALOGUE: '9090'
       PORT_COAP: '5683'
       PORT_HTTP: '80'
@@ -318,10 +319,11 @@ services:
       org.fundacionctic.wotemu.gw: ''
     networks:
     - mobile_2g
-    privileged: true
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
   gw_wifi:
+    cap_add:
+    - ALL
     command:
     - gateway
     - delay --time 25 --jitter 5 --distribution normal
@@ -333,7 +335,6 @@ services:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       NODE_HOSTNAME: '{{.Node.Hostname}}'
       NODE_ID: '{{.Node.ID}}'
-      PATCH_PRIVILEGED: '1'
       PORT_CATALOGUE: '9090'
       PORT_COAP: '5683'
       PORT_HTTP: '80'
@@ -348,7 +349,6 @@ services:
       org.fundacionctic.wotemu.gw: ''
     networks:
     - wifi
-    privileged: true
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
   redis:
@@ -356,27 +356,28 @@ services:
     labels:
       org.fundacionctic.wotemu.redis: ''
     networks:
-    - wifi
     - mobile_2g
+    - wifi
     ports:
     - '6379'
   worker:
+    cap_add:
+    - ALL
     command:
     - app
     - --path
     - wotemu_worker
     - --enable-ws
     depends_on:
+    - docker_api_proxy
     - gw_mobile_2g
     - redis
-    - docker_api_proxy
     deploy:
       replicas: 1
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       NODE_HOSTNAME: '{{.Node.Hostname}}'
       NODE_ID: '{{.Node.ID}}'
-      PATCH_PRIVILEGED: '1'
       PORT_CATALOGUE: '9090'
       PORT_COAP: '5683'
       PORT_HTTP: '80'
@@ -391,10 +392,11 @@ services:
       org.fundacionctic.wotemu.node: ''
     networks:
     - mobile_2g
-    privileged: true
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
   worker_caller:
+    cap_add:
+    - ALL
     command:
     - app
     - --path
@@ -406,16 +408,15 @@ services:
     - thing_id
     - urn:org:fundacionctic:thing:worker
     depends_on:
+    - docker_api_proxy
     - gw_mobile_2g
     - redis
-    - docker_api_proxy
     deploy:
       replicas: 2
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       NODE_HOSTNAME: '{{.Node.Hostname}}'
       NODE_ID: '{{.Node.ID}}'
-      PATCH_PRIVILEGED: '1'
       PORT_CATALOGUE: '9090'
       PORT_COAP: '5683'
       PORT_HTTP: '80'
@@ -430,7 +431,6 @@ services:
       org.fundacionctic.wotemu.node: ''
     networks:
     - mobile_2g
-    privileged: true
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
 version: '3.7'

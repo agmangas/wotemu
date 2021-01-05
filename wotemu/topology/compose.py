@@ -14,7 +14,6 @@ TEMPLATE_NODE_ID = "{{.Node.ID}}"
 TEMPLATE_SERVICE_ID = "{{.Service.ID}}"
 TEMPLATE_SERVICE_NAME = "{{.Service.Name}}"
 ENV_KEY_CPU_SPEED = "TARGET_CPU_SPEED"
-ENV_KEY_PRIVILEGED = "PATCH_PRIVILEGED"
 ENV_KEY_NODE_HOST = "NODE_HOSTNAME"
 ENV_KEY_NODE_ID = "NODE_ID"
 ENV_KEY_SERVICE_ID = "SERVICE_ID"
@@ -30,15 +29,14 @@ SERVICE_BASE_DOCKER_PROXY = {
         "NETWORKS": ENV_VAL_TRUTHY,
         "TASKS": ENV_VAL_TRUTHY,
         "SERVICES": ENV_VAL_TRUTHY,
-        "NODES": ENV_VAL_TRUTHY,
-        ENV_KEY_PRIVILEGED: ENV_VAL_TRUTHY
+        "NODES": ENV_VAL_TRUTHY
     },
     "deploy": {
         "placement": {
             "constraints": ["node.role == manager"]
         }
     },
-    "privileged": True,
+    "cap_add": ["ALL"],
     "volumes": [VOL_DOCKER_SOCK]
 }
 
@@ -48,7 +46,6 @@ SERVICE_BASE_REDIS = {
 }
 
 _ENVIRONMENT_BASE = {
-    ENV_KEY_PRIVILEGED: ENV_VAL_TRUTHY,
     ENV_KEY_NODE_HOST: TEMPLATE_NODE_HOST,
     ENV_KEY_NODE_ID: TEMPLATE_NODE_ID,
     ENV_KEY_SERVICE_NAME: TEMPLATE_SERVICE_NAME,
@@ -56,7 +53,7 @@ _ENVIRONMENT_BASE = {
 }
 
 SERVICE_BASE_GATEWAY = {
-    "privileged": True,
+    "cap_add": ["ALL"],
     "hostname": TEMPLATE_TASK_NAME,
     "volumes": [VOL_DOCKER_SOCK],
     "labels": {Labels.WOTEMU_GATEWAY.value: ""},
@@ -64,7 +61,7 @@ SERVICE_BASE_GATEWAY = {
 }
 
 SERVICE_BASE_BROKER = {
-    "privileged": True,
+    "cap_add": ["ALL"],
     "hostname": TEMPLATE_TASK_NAME,
     "volumes": [VOL_DOCKER_SOCK],
     "labels": {Labels.WOTEMU_BROKER.value: ""},
@@ -72,7 +69,7 @@ SERVICE_BASE_BROKER = {
 }
 
 SERVICE_BASE_NODE = {
-    "privileged": True,
+    "cap_add": ["ALL"],
     "hostname": TEMPLATE_TASK_NAME,
     "volumes": [VOL_DOCKER_SOCK],
     "labels": {Labels.WOTEMU_NODE.value: ""},

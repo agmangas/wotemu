@@ -9,7 +9,6 @@ $prov_base = <<-SCRIPT
 /vagrant/scripts/install-deps.sh
 pip3 install -U -e /vagrant[dev]
 /vagrant/scripts/install-docker.sh
-curl -s https://gist.githubusercontent.com/agmangas/3f8e58655829c229d5bb986a2911a9d8/raw | bash
 /vagrant/scripts/build-image.sh
 /vagrant/scripts/install-pumba.sh
 SCRIPT

@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 
 set -e
+set -x
 
-VERSION_DOCKER="20.10.1"
-VERSION_COMPOSE="1.27.4"
+VERSION_DOCKER=${VERSION_DOCKER:-20.10.1}
+VERSION_COMPOSE=${VERSION_COMPOSE:-1.27.4}
 
 apt-get update -y
 apt-get install -y curl
