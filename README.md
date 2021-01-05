@@ -21,6 +21,14 @@ The following image shows a high-level view of a simple emulation stack. This se
 - Thanks to the capabilities of Docker Swarm, multiple replicas of a single node can be created easily and will automatically recover from errors. This means that **nodes** may be interpreted as _templates_, while each replica is an actual real instance of the node.
 - A **Docker API proxy** instance is always deployed in a _manager_ node to enable **nodes** to access stack metadata (e.g. container IDs of other nodes in the same network).
 
+## System requirements
+
+* Python 3.6+
+* Docker Engine 20.10.0+ ([swap limit capabilities must be enabled](https://docs.docker.com/engine/install/linux-postinstall/#your-kernel-does-not-support-cgroup-swap-limit-capabilities))
+* Docker Compose 1.27.0+
+* [Pumba](https://github.com/alexei-led/pumba) 0.7.0+
+* [WoTemu](https://pypi.org/project/wotemu/) (Install with `pip install wotemu`)
+
 ## Quickstart
 
 Emulation experiments are represented by instances of `wotemu.topology.models.Topology`.
