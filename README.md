@@ -33,6 +33,8 @@ The recommended workflow to run an experiment is as follows:
 4. Stop the stack after an arbitrary amount of time.
 5. Build the final report from the collected data contained in the central Redis store.
 
+> Please note that the commands in this section should be executed in a Swarm _manager_.
+
 ### Describe the topology
 
 Topologies can be defined in a Python file exposing a `topology` function that takes no arguments and returns an instance of `Topology`. The following is such an example:
@@ -107,7 +109,7 @@ The `path` parameter of a `NodeApp` instance should point to such an application
 
 ### Deploy the Docker stack
 
-A Compose file that fully describes the emulation experiment can be automatically created from a topology file using the `wotemu compose` CLI command:
+A Compose file that fully describes the emulation experiment can be created automatically from a topology file using the `wotemu compose` CLI command:
 
 ```
 wotemu compose --path ./examples/quickstart.py
@@ -127,7 +129,9 @@ Metrics such as network packets, interactions or system usage data points will b
 wotemu stop --compose-file ./examples/quickstart.yml --stack quickstart
 ```
 
-An HTML report containing useful insights into the behaviour of the emulation stack can be then generated with the following command:
+> It is necessary to stop the stack using `wotemu stop` instead of `docker stack rm` to capture a final snapshot of the stack state and keep the Redis store online.
+
+An HTML report containing useful insights into the behaviour of the emulation stack can be then generated with the following command.
 
 ```
 wotemu report --out /report/ --stack quickstart
