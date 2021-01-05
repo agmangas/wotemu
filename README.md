@@ -4,7 +4,7 @@
 
 An emulator for Python applications to help in the design of **IoT deployments** based on the **edge computing** model. It is focused on the [Web of Things](https://www.w3.org/WoT/) paradigm by offering extended support for applications programmed with [WoTPy](https://pypi.org/project/wotpy/).
 
-As an emulator, WoTemu demands significantly higher computation resources than other design tools in the same domain, it is, however, able to run the real production code, which simplifies the design process and provides more meaningful insights into the architecture.
+As an emulator, WoTemu demands significantly higher computation resources than simulators in the same domain, it is, however, able to run real code, which simplifies the design process and provides more meaningful insights into the target architecture.
 
 The main output of an emulation experiment is an HTML report describing the observed behaviour of the stack. Please see a [demo report here](https://agmangas.github.io/demo-wotemu-report/).
 
@@ -17,17 +17,19 @@ The following image shows a high-level view of a simple emulation stack. This se
 ![Design diagram](diagram.png "Design diagram")
 
 - All communications for the supported protocols (HTTP, CoAP, Websockets and MQTT) go through the network **gateways**; these use NetEm to shape the traffic and emulate real network conditions. This redirection is based on _iptables_ and is invisible to the application.
-- All **nodes** report their metrics to a central Redis store in a periodic fashion. This will be later used to build the final HTML report.
-- Thanks to the capabilities of Docker Swarm, multiple replicas of a single node can be created easily and will automatically recover from errors. This means that **nodes** may be interpreted as _templates_, while each replica is an actual real instance of the node.
-- A **Docker API proxy** instance is always deployed in a _manager_ node to enable **nodes** to access stack metadata (e.g. container IDs of other nodes in the same network).
+- All **nodes** report their metrics to a central Redis store in a periodic fashion; this will be later used to build the final HTML report.
+- Thanks to the capabilities of Docker Swarm, multiple replicas of a single node can be created easily and will automatically recover from errors. **Nodes** could be interpreted as _templates_, while each replica is an actual real instance of the node.
+- A **Docker API proxy** service based on [Tecnativa/docker-socket-proxy](https://github.com/Tecnativa/docker-socket-proxy) is always deployed in a _manager_ node to enable **nodes** to access stack metadata (e.g. container IDs of other nodes in the same network).
 
 ## System requirements
 
 * Python 3.6+
-* Docker Engine 20.10.0+ ([swap limit capabilities must be enabled](https://docs.docker.com/engine/install/linux-postinstall/#your-kernel-does-not-support-cgroup-swap-limit-capabilities))
+* Docker Engine 20.10.0+ ([swap limit capabilities should be enabled](https://docs.docker.com/engine/install/linux-postinstall/#your-kernel-does-not-support-cgroup-swap-limit-capabilities))
 * Docker Compose 1.27.0+
 * [Pumba](https://github.com/alexei-led/pumba) 0.7.0+
-* [WoTemu](https://pypi.org/project/wotemu/) (Install with `pip install wotemu`)
+* [WoTemu](https://pypi.org/project/wotemu/) (install with _pip_: `pip install wotemu`)
+
+> Such a recent version of the Docker Engine is required to ensure that `cap_add` is supported in Swarm Mode.
 
 ## Quickstart
 
@@ -94,14 +96,14 @@ def topology():
 
 There are two types of nodes here:
 
-- The _reader_ uses the `READER` _built-in_ application, which takes a servient host (`servient_host`) and Thing ID (`thing_id`) as arguments and periodically reads all properties exposed by the Thing. This particular instance of `READER` is connected to the _server_ node.
+- The _reader_ uses the `READER` _built-in_ application, which takes a WoTPy Servient index URL (`servient_host`) and Thing ID (`thing_id`) as arguments and periodically reads all properties exposed by the Thing; this particular instance of `READER` is connected to the _server_ node. All replicas of _reader_ are constrained to 150MB of memory.
 - The _server_ uses a [custom application defined in a remote HTTP URL](https://gist.github.com/agmangas/94cc5c3d9d5dcb473cff774b3522bbb6) that exposes a Thing with two properties.
 
-Both nodes are connected in a network that uses the `REGULAR_3G` network conditions. The four replicas of _reader_ will periodically read both properties from the single replica of _server_ on a channel that more or less behaves like a 3G connection.
+Both nodes are connected in a network that uses the `REGULAR_3G` network conditions. The four replicas of _reader_ will periodically read both properties from the single replica of _server_ on a channel that displays the typical latency and bandwidth of a 3G connection.
 
 #### Applications
 
-An application (i.e. the code run by a `Node`) is a Python file that exposes an _asynchronous_ `app` function that takes at least three positional arguments:
+An _application_ (i.e. the code run by a `Node`) is a Python file that exposes an _asynchronous_ `app` function that takes at least three positional arguments:
 
 | Variable | Type                        | Description                                                  |
 | -------- | --------------------------- | ------------------------------------------------------------ |
@@ -109,21 +111,23 @@ An application (i.e. the code run by a `Node`) is a Python file that exposes an 
 | `conf`   | `wotemu.config.EnvConfig`   | Environment configuration that is currently active.          |
 | `loop`   | `asyncio.AbstractEventLoop` | Loop that is running the application.                        |
 
-The `path` parameter of a `NodeApp` instance should point to such an application. There are three distinct options when setting the value of `path`:
+The `path` parameter of a `NodeApp` instance should point to an _application_. There are three distinct options when setting the value of `path`:
 
 * Using a WoTemu built-in application (e.g. `BuiltinApps.READER`).
 * Using a remote HTTP URL.
-* Using a local file path. Loading applications from the filesystem of a custom Docker image based on `agmangas/wotemu` is arguably the **most versatile option**.
+* Using a local file path.
+
+Loading applications from the filesystem of a custom Docker image based on [agmangas/wotemu](https://hub.docker.com/r/agmangas/wotemu) is arguably the **most versatile option**. To that end, you may use the optional `image` parameter in the `Node` class (set to `agmangas/wotemu:latest` by default).
 
 ### Deploy the Docker stack
 
-A Compose file that fully describes the emulation experiment can be created automatically from a topology file using the `wotemu compose` CLI command:
+A Compose file describing the emulation experiment can be created automatically from a topology file using the `wotemu compose` CLI command:
 
 ```
 wotemu compose --path ./examples/quickstart.py
 ```
 
-This stack may then be deployed to a Docker Swarm cluster in the usual fashion:
+This stack may then be deployed to the Swarm cluster in the usual fashion:
 
 ```
 docker stack deploy -c ./examples/quickstart.yml quickstart
@@ -137,7 +141,7 @@ Metrics such as network packets, interactions or system usage data points will b
 wotemu stop --compose-file ./examples/quickstart.yml --stack quickstart
 ```
 
-> It is necessary to stop the stack using `wotemu stop` instead of `docker stack rm` to capture a final snapshot of the stack state and keep the Redis store online.
+> It is necessary to stop the stack with `wotemu stop` instead of `docker stack rm` to capture a final snapshot of the stack state and keep the Redis store online.
 
 An HTML report containing useful insights into the behaviour of the emulation stack can be then generated with the following command.
 
