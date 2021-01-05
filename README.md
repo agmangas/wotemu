@@ -16,15 +16,26 @@ The following image shows a high-level view of a simple emulation stack. This se
 
 ![Design diagram](diagram.png "Design diagram")
 
-- All communications for the supported protocols (HTTP, CoAP, Websockets and MQTT) go through the network **gateways**; these use NetEm to shape the traffic and emulate real network conditions. This redirection is based on iptables and is invisible to the application.
-- All **nodes** report their metrics (e.g. system resources, packets, interactions) to a central Redis store in a periodic fashion. This will be later used to build the final HTML report.
+- All communications for the supported protocols (HTTP, CoAP, Websockets and MQTT) go through the network **gateways**; these use NetEm to shape the traffic and emulate real network conditions. This redirection is based on _iptables_ and is invisible to the application.
+- All **nodes** report their metrics to a central Redis store in a periodic fashion. This will be later used to build the final HTML report.
+- Thanks to the capabilities of Docker Swarm, multiple replicas of a single node can be created easily and will automatically recover from errors. This means that **nodes** may be interpreted as _templates_, while each replica is an actual real instance of the node.
 - A **Docker API proxy** instance is always deployed in a _manager_ node to enable **nodes** to access stack metadata (e.g. container IDs of other nodes in the same network).
 
 ## Quickstart
 
+Emulation experiments are represented by instances of `wotemu.topology.models.Topology`.
+
+The recommended workflow to run an experiment is as follows:
+
+1. Create a `Topology`.
+2. Build the Compose file that describes the stack of that `Topology`.
+3. Run the stack on the Docker Swarm cluster.
+4. Stop the stack after an arbitrary amount of time.
+5. Build the final report from the collected data contained in the central Redis store.
+
 ### Describe the topology
 
-Emulation experiments are represented by instances of `wotemu.topology.models.Topology`; these may be converted to Compose files that describe Docker stacks using the `wotemu compose` CLI command. To that end, you need to write a Python file exposing a `topology` function that takes no arguments and returns an instance of `Topology`. The following is such an example:
+Topologies can be defined in a Python file exposing a `topology` function that takes no arguments and returns an instance of `Topology`. The following is such an example:
 
 ```python
 from wotemu.enums import NetworkConditions
@@ -71,11 +82,16 @@ def topology():
     return topology
 ```
 
-There are two distinct types of nodes in this example: _server_ and _reader_.
+There are two types of nodes here:
 
-The _reader_ uses the `READER` built-in application, which takes a servient host and Thing ID as arguments and periodically reads all properties exposed by the Thing. This particular `READER` is connected to the _server_ node.
+- The _reader_ uses the `READER` _built-in_ application, which takes a servient host (`servient_host`) and Thing ID (`thing_id`) as arguments and periodically reads all properties exposed by the Thing. This particular instance of `READER` is connected to the _server_ node.
+- The _server_ uses a [custom application defined in a remote HTTP URL](https://gist.github.com/agmangas/94cc5c3d9d5dcb473cff774b3522bbb6) that exposes a Thing with two properties.
 
-The _server_ uses a custom application defined in a remote HTTP URL that exposes a Thing with two properties. A `NodeApp` can be based on any Python module that exposes an _asynchronous_ `app` function that takes at least three positional arguments:
+Both nodes are connected in a network that uses the `REGULAR_3G` network conditions. The four replicas of _reader_ will periodically read both properties from the single replica of _server_ on a channel that more or less behaves like a 3G connection.
+
+#### Applications
+
+An application (i.e. the code run by a `Node`) is a Python file that exposes an _asynchronous_ `app` function that takes at least three positional arguments:
 
 | Variable | Type                        | Description                                                  |
 | -------- | --------------------------- | ------------------------------------------------------------ |
@@ -83,13 +99,21 @@ The _server_ uses a custom application defined in a remote HTTP URL that exposes
 | `conf`   | `wotemu.config.EnvConfig`   | Environment configuration that is currently active.          |
 | `loop`   | `asyncio.AbstractEventLoop` | Loop that is running the application.                        |
 
-> Applications can be defined in one of three ways: using a WoTemu built-in application, with a remote HTTP URL, or with an absolute local file path. The most versatile option is to load the applications from the filesystem of a custom Docker image based on `agmangas/wotemu`.
+The `path` parameter of a `NodeApp` instance should point to such an application. There are three distinct options when setting the value of `path`:
+
+* Using a WoTemu built-in application (e.g. `BuiltinApps.READER`).
+* Using a remote HTTP URL.
+* Using a local file path. Loading applications from the filesystem of a custom Docker image based on `agmangas/wotemu` is arguably the **most versatile option**.
 
 ### Deploy the Docker stack
+
+A Compose file that fully describes the emulation experiment can be automatically created from a topology file using the `wotemu compose` CLI command:
 
 ```
 wotemu compose --path ./examples/quickstart.py
 ```
+
+This stack may then be deployed to a Docker Swarm cluster in the usual fashion:
 
 ```
 docker stack deploy -c ./examples/quickstart.yml quickstart
@@ -97,13 +121,13 @@ docker stack deploy -c ./examples/quickstart.yml quickstart
 
 ### Build the final report
 
-The emulation stack can be stopped when the user considers that enough time has passed to gather a significant amount of data:
+Metrics such as network packets, interactions or system usage data points will be periodically collected while the stack is active. The emulation stack can be stopped when the user considers that enough time has passed to gather a significant amount of data for the experiment:
 
 ```
 wotemu stop --compose-file ./examples/quickstart.yml --stack quickstart
 ```
 
-An HTML report containing useful insights into the behaviour of the emulation stack may be generated with the following command.
+An HTML report containing useful insights into the behaviour of the emulation stack can be then generated with the following command:
 
 ```
 wotemu report --out /report/ --stack quickstart
