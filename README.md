@@ -49,9 +49,7 @@ The recommended workflow to run an experiment is as follows:
 
 There is a [Vagrant](https://www.vagrantup.com/) configuration file (`Vagrantfile`) in this repository that may be used to quickly create a Swarm cluster consisting of three virtual machines (one _manager_ and two _workers_) for development and test purposes. All dependencies for WoTemu are installed in the [provision stage](https://www.vagrantup.com/docs/provisioning).
 
-```
-vagrant up
-```
+Run `vagrant up` in your host to create and provision the three guest machines. Please note that you must manually run the `/vagrant/scripts/join-swarm.sh' script once in both `worker1` and `worker2` to join the swarm.
 
 ### Describe the topology
 
