@@ -34,3 +34,11 @@ async def test_write_report(redis_reader):
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         await builder.write_report(base_path=tmp_dir)
+
+
+@pytest.mark.asyncio
+async def test_write_report_dataset(redis_reader):
+    builder = ReportBuilder(reader=redis_reader)
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        await builder.write_report_dataset(base_path=tmp_dir)

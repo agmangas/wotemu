@@ -2,6 +2,7 @@ import copy
 import datetime
 import functools
 import io
+import json
 import logging
 import math
 import os
@@ -846,3 +847,52 @@ class ReportBuilder:
 
             with open(file_path, "wb") as fh:
                 fh.write(file_bytes)
+
+    def _json_df(self, df, orient="records", date_format="iso"):
+        if df is None or df.empty:
+            return None
+
+        return json.loads(df.to_json(
+            orient=orient,
+            date_format=date_format))
+
+    async def write_report_dataset(self, base_path, file_prefix="wotemu", orient="records", date_format="iso"):
+        task_ids = await self._get_tasks()
+        tasks_data = {}
+
+        json_df = functools.partial(
+            self._json_df,
+            orient=orient,
+            date_format=date_format)
+
+        for task_id in task_ids:
+            df_system = await self._get_system_df(task=task_id)
+            df_packet = await self._get_packet_df(task=task_id, extended=True)
+            df_interactions = await self._get_thing_df(task=task_id)
+            info = await self._get_info(task_id, latest=True)
+
+            tasks_data[task_id] = {
+                "system": json_df(df_system),
+                "packet": json_df(df_packet),
+                "interaction": json_df(df_interactions),
+                "info": info
+            }
+
+        df_inb = await self._get_service_traffic_df(inbound=True)
+        df_out = await self._get_service_traffic_df(inbound=False)
+        df_snap = await self._get_snapshot_df()
+
+        content = {
+            "service_traffic": {
+                "inbound": json_df(df_inb),
+                "outbound": json_df(df_out)
+            },
+            "tasks": tasks_data,
+            "snapshot": json_df(df_snap)
+        }
+
+        file_name = "{}_{}.json".format(file_prefix, int(time.time()))
+        file_path = os.path.join(base_path, file_name)
+
+        with open(file_path, "w") as fh:
+            fh.write(json.dumps(content))
