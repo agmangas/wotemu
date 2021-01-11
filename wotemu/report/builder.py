@@ -858,7 +858,7 @@ class ReportBuilder:
 
     async def write_report_dataset(
             self, base_path, file_name=None,
-            orient="records", date_format="iso", indent=4):
+            orient="split", date_format="iso", indent=4):
         task_ids = await self._get_tasks()
         tasks_data = {}
 
