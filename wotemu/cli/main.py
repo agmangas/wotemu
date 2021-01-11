@@ -162,7 +162,7 @@ def broker(conf, **kwargs):
 @click.pass_obj
 @_catch
 def stop(conf, **kwargs):
-    """Stops a simulation stack that is currently running. 
+    """Stops an emulation stack that is currently active. 
     Unlike 'docker stack rm' this keeps the in-memory traces 
     if necessary and logs other events of interest."""
 
@@ -173,9 +173,11 @@ def stop(conf, **kwargs):
 @click.option("--out", required=True)
 @click.option("--stack", default=None)
 @click.option("--redis-url", default=None)
+@click.option("--json", is_flag=True)
 @click.pass_obj
 @_catch
 def report(conf, **kwargs):
     """Builds an emulation stack report."""
 
+    kwargs["as_json"] = kwargs.pop("json", False)
     wotemu.cli.report.build_report(conf, **kwargs)

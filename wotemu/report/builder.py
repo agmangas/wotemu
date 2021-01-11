@@ -856,7 +856,9 @@ class ReportBuilder:
             orient=orient,
             date_format=date_format))
 
-    async def write_report_dataset(self, base_path, file_prefix="wotemu", orient="records", date_format="iso"):
+    async def write_report_dataset(
+            self, base_path, file_name=None,
+            orient="records", date_format="iso", indent=4):
         task_ids = await self._get_tasks()
         tasks_data = {}
 
@@ -891,8 +893,9 @@ class ReportBuilder:
             "snapshot": json_df(df_snap)
         }
 
-        file_name = "{}_{}.json".format(file_prefix, int(time.time()))
+        tstamp = int(time.time() * 1e3)
+        file_name = f"{file_name}.json" if file_name else f"wotemu_{tstamp}.json"
         file_path = os.path.join(base_path, file_name)
 
         with open(file_path, "w") as fh:
-            fh.write(json.dumps(content))
+            fh.write(json.dumps(content, indent=indent, sort_keys=True))
