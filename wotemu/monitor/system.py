@@ -33,6 +33,8 @@ _times = {
     "cgroup": None
 }
 
+_cache = {}
+
 
 class CggetError(RuntimeError):
     def __init__(self, key):
@@ -92,17 +94,37 @@ def _get_cpu_percent():
         return 0.0
 
 
-def _get_cpu_constraint():
+def _cgget_cpu_period(use_cache=True):
+    if use_cache and _cache.get(_CPU_PERIOD, None) is not None:
+        return _cache[_CPU_PERIOD]
+
     period = cgget(_CPU_PERIOD)
 
     if period is None:
         raise CggetError(_CPU_PERIOD)
+
+    _cache[_CPU_PERIOD] = period
+
+    return period
+
+
+def _cgget_cpu_quota(use_cache=True):
+    if use_cache and _cache.get(_CPU_QUOTA, None) is not None:
+        return _cache[_CPU_QUOTA]
 
     quota = cgget(_CPU_QUOTA)
 
     if quota is None:
         raise CggetError(_CPU_QUOTA)
 
+    _cache[_CPU_QUOTA] = quota
+
+    return quota
+
+
+def _get_cpu_constraint():
+    period = _cgget_cpu_period(use_cache=True)
+    quota = _cgget_cpu_quota(use_cache=True)
     return (float(quota) / float(period)) if quota > 0 else None
 
 
@@ -124,8 +146,18 @@ def _get_cpu():
     return ret
 
 
-def _get_memory_limit():
+def _cgget_mem_limit(use_cache=True):
+    if use_cache and _cache.get(_MEM_LIMIT, None) is not None:
+        return _cache[_MEM_LIMIT]
+
     limit_bytes = cgget(_MEM_LIMIT)
+    _cache[_MEM_LIMIT] = limit_bytes
+
+    return limit_bytes
+
+
+def _get_memory_limit():
+    limit_bytes = _cgget_mem_limit(use_cache=True)
     total_bytes_system = psutil.virtual_memory().total
 
     if limit_bytes and limit_bytes < total_bytes_system:
