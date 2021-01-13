@@ -5,17 +5,13 @@ ENV WAIT_GATEWAYS 10
 ENV VERSION_PUMBA 0.7.7
 
 RUN apt-get update -y && DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    build-essential \
     python3 \
     python3-pip \
     iproute2 \
-    inetutils-ping \
     iptables \
     tshark \
     wget \
     curl \
-    tcpdump \
-    git \
     mosquitto \
     dnsutils \
     cgroup-tools 
