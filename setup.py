@@ -1,14 +1,26 @@
+from os import path
+
 import setuptools
 
 from wotemu.__version__ import __version__
 
+
+def _get_readme():
+    curr_dir = path.abspath(path.dirname(__file__))
+
+    with open(path.join(curr_dir, "README.md")) as fh:
+        return fh.read()
+
+
 setuptools.setup(
     name="wotemu",
     version=__version__,
-    keywords='wot iot fog emulator',
+    keywords='wot iot edge emulator',
     author='Andres Garcia Mangas',
     author_email='andres.garcia@fundacionctic.org',
-    description="A Fog-layer emulator based on Swarm Mode for Web of Things applications",
+    description="An emulator for Python applications to help in the design of IoT deployments based on the edge computing model",
+    long_description=_get_readme(),
+    long_description_content_type="text/markdown",
     packages=setuptools.find_packages(),
     include_package_data=True,
     zip_safe=False,
