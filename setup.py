@@ -16,8 +16,10 @@ setuptools.setup(
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
         "License :: OSI Approved :: MIT License",
-        "Development Status :: 3 - Alpha"
+        "Development Status :: 4 - Beta",
+        "Operating System :: POSIX :: Linux"
     ],
     entry_points={
         "console_scripts": [
