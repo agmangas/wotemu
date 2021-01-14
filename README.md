@@ -109,7 +109,7 @@ Both nodes are connected in a network that uses the `REGULAR_3G` network conditi
 
 #### Applications
 
-An _application_ (i.e. the code run by a `Node`) is a Python file that exposes an _asynchronous_ `app` function that takes at least three positional arguments:
+An _application_ (i.e. the code run by a `Node`) is a Python file that exposes an [asynchronous](https://docs.python.org/3/library/asyncio-task.html#coroutines) `app` function that takes at least three positional arguments:
 
 | Variable | Type                        | Description                                                  |
 | -------- | --------------------------- | ------------------------------------------------------------ |
@@ -124,6 +124,8 @@ The `path` parameter of a `NodeApp` instance should point to an _application_. T
 * Using a local file path.
 
 Loading applications from the filesystem of a custom Docker image based on [agmangas/wotemu](https://hub.docker.com/r/agmangas/wotemu) is arguably the **most versatile option**. To that end, you may use the optional `image` parameter in the `Node` class (set to `agmangas/wotemu:latest` by default).
+
+Please note that although WoTemu does not impose any restrictions on what is actually executed in the application function, your code should follow the [asynchronous I/O programming model](https://docs.python.org/3/library/asyncio.html) to avoid blocking the main thread (there are some WoTemu background processes running in the loop that is passed as argument).
 
 ### Deploy the stack
 
