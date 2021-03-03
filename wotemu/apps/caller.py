@@ -1,3 +1,8 @@
+"""
+Invokes all the actions from the Thing 
+passed as argument in a periodic fashion.
+"""
+
 import asyncio
 import logging
 

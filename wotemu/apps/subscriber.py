@@ -1,11 +1,12 @@
+"""
+Subscribes to all properties and events 
+from the Thing passed as argument.
+"""
+
 import asyncio
 import functools
-import json
 import logging
-import pprint
-import sys
 
-import tornado.httpclient
 from wotemu.utils import consume_from_catalogue, wait_node
 
 _logger = logging.getLogger(__name__)
@@ -27,10 +28,20 @@ def _on_error(err, interaction, error_event):
 def _subscribe(interaction, error_event):
     _logger.debug("Subscribing to: {}".format(interaction))
 
-    return interaction.subscribe(
-        on_next=functools.partial(_on_next, interaction=interaction),
-        on_completed=functools.partial(_on_completed, interaction=interaction),
-        on_error=functools.partial(_on_error, interaction=interaction, error_event=error_event))
+    on_next = functools.partial(
+        _on_next,
+        interaction=interaction)
+
+    on_completed = functools.partial(
+        _on_completed,
+        interaction=interaction)
+
+    on_error = functools.partial(
+        _on_error,
+        interaction=interaction,
+        error_event=error_event)
+
+    return interaction.subscribe(on_next=on_next, on_completed=on_completed, on_error=on_error)
 
 
 async def _cancel_subs(subs, cancel_sleep=3):

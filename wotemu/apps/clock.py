@@ -1,10 +1,15 @@
+"""
+Exposes a Thing with a property that returns the current 
+UNIX timestamp and a couple of events that fire periodically 
+with the current date and UNIX timestamp.
+"""
+
 import asyncio
 import datetime
 import functools
 import json
 import logging
 import pprint
-import random
 import time
 
 from wotpy.wot.enums import DataType

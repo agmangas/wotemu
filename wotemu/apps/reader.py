@@ -1,3 +1,8 @@
+"""
+Reads all the properties from the Thing 
+passed as argument in a periodic fashion.
+"""
+
 import asyncio
 import logging
 

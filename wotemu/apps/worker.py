@@ -1,3 +1,8 @@
+"""
+Exposes a Thing with an action that 
+can be invoked to stress the CPU. 
+"""
+
 import asyncio
 import json
 import logging
@@ -10,7 +15,7 @@ _logger = logging.getLogger(__name__)
 
 _DESCRIPTION = {
     "id": "urn:org:fundacionctic:thing:worker",
-    "name": "Callable Thing",
+    "name": "Dummy worker Thing",
     "actions": {
         "doWork": {
             "safe": True,

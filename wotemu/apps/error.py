@@ -1,3 +1,7 @@
+"""
+Sleeps for a while before raising an exception.
+"""
+
 import asyncio
 import logging
 import random
