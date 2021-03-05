@@ -1,18 +1,18 @@
 language: python
 dist: focal
 services:
-- redis
+  - redis
 python:
-- '3.6'
-- '3.7'
-- '3.8'
-- '3.9'
+  - "3.6"
+  - "3.7"
+  - "3.8"
+  - "3.9"
 env:
-- TEST_REDIS_URL=redis://127.0.0.1
+  - TEST_REDIS_URL=redis://127.0.0.1
 install:
-- pip install -U .[dev]
+  - pip install -U .[dev]
 script:
-- pytest -v
+  - travis_retry pytest -v
 deploy:
   provider: pypi
   username: __token__
