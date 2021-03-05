@@ -10,7 +10,8 @@ from datetime import datetime
 _logger = logging.getLogger(__name__)
 
 
-async def app(wot, conf, loop, mean_time=120.0):
+async def app(wot, conf, loop, mean_time=300.0):
+    mean_time = float(mean_time)
     lambd = 1.0 / mean_time
     sleep_time = random.expovariate(lambd)
 

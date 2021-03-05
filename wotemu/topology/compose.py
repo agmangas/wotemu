@@ -52,6 +52,12 @@ _ENVIRONMENT_BASE = {
     ENV_KEY_SERVICE_ID: TEMPLATE_SERVICE_ID
 }
 
+SERVICE_BASE_GENERIC = {
+    "hostname": TEMPLATE_TASK_NAME,
+    "labels": {Labels.WOTEMU_SERVICE.value: ""},
+    "environment": {**_ENVIRONMENT_BASE}
+}
+
 SERVICE_BASE_GATEWAY = {
     "cap_add": ["ALL"],
     "hostname": TEMPLATE_TASK_NAME,
@@ -80,6 +86,12 @@ NETWORK_BASE = {
     "driver": "overlay",
     "attachable": True,
     "labels": {Labels.WOTEMU_NETWORK.value: ""}
+}
+
+NETWORK_SERVICE_BASE = {
+    "driver": "overlay",
+    "attachable": True,
+    "labels": {Labels.WOTEMU_SERVICE_NETWORK.value: ""}
 }
 
 
@@ -114,6 +126,44 @@ def get_redis_definition(topology, topology_redis):
     })
 
     return {topology.redis.host: service}
+
+
+def get_generic_service_definition(topology, srv):
+    service = copy.deepcopy(SERVICE_BASE_GENERIC)
+
+    if srv.params.get("env"):
+        service["environment"].update(srv.params["env"])
+
+    if srv.params.get("labels"):
+        service["labels"].update(srv.params["labels"])
+
+    deploy = {}
+
+    if srv.params.get("restart_policy"):
+        policy = srv.params["restart_policy"]
+
+        deploy.update({
+            "restart_policy": {
+                "condition": policy["Condition"]
+            }
+        })
+
+    if srv.params.get("mode"):
+        mode = srv.params["mode"]
+        deploy.update({"mode": mode["Mode"]})
+
+    if len(deploy) > 0:
+        service.update({"deploy": deploy})
+
+    service.update({
+        "image": srv.image,
+        "networks": [
+            srv.get_node_network_name(node)
+            for node in topology.get_service_nodes(srv)
+        ]
+    })
+
+    return {srv.name: service}
 
 
 def get_network_gateway_definition(topology, network):
@@ -209,6 +259,9 @@ def get_node_definition(topology, node):
 
     networks = [net.name for net in node.networks]
 
+    for srv in node.services:
+        networks.append(srv.get_node_network_name(node))
+
     depends_on = [
         *[net.name_gateway for net in node.networks]
     ]
@@ -261,6 +314,18 @@ def get_node_definition(topology, node):
     return {node.name: service}
 
 
+def _service_networks(topology, srv):
+    nets = {}
+
+    for node in topology.get_service_nodes(srv):
+        net_name = srv.get_node_network_name(node)
+        definition = copy.deepcopy(NETWORK_SERVICE_BASE)
+        definition.update({"name": net_name})
+        nets.update({net_name: definition})
+
+    return nets
+
+
 def get_topology_definition(topology):
     definition = {"version": COMPOSE_VERSION}
 
@@ -275,6 +340,9 @@ def get_topology_definition(topology):
     for net in topology.networks:
         services.update(net.to_gateway_compose_dict(topology))
 
+    for srv in topology.services:
+        services.update(srv.to_compose_dict(topology))
+
     for node in topology.nodes:
         services.update(node.to_compose_dict(topology))
 
@@ -285,6 +353,9 @@ def get_topology_definition(topology):
 
     for net in topology.networks:
         networks.update(net.to_compose_dict(topology))
+
+    for srv in topology.services:
+        networks.update(_service_networks(topology, srv))
 
     definition.update({
         "services": services,

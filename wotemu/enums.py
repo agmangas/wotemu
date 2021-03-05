@@ -7,6 +7,8 @@ class Labels(enum.Enum):
     WOTEMU_NODE = "org.fundacionctic.wotemu.node"
     WOTEMU_BROKER = "org.fundacionctic.wotemu.broker"
     WOTEMU_REDIS = "org.fundacionctic.wotemu.redis"
+    WOTEMU_SERVICE = "org.fundacionctic.wotemu.service"
+    WOTEMU_SERVICE_NETWORK = "org.fundacionctic.wotemu.servicenet"
 
 
 class RedisPrefixes(enum.Enum):

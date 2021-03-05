@@ -1,4 +1,3 @@
-import collections
 import logging
 import os
 import warnings
@@ -7,11 +6,11 @@ import inflection
 import yaml
 from wotemu.config import (DEFAULT_CONFIG_VARS, DEFAULT_HOST_DOCKER_PROXY,
                            DEFAULT_HOST_REDIS, ConfigVars)
-from wotemu.enums import (NETEM_CONDITIONS, BuiltinApps, NetworkConditions,
-                          NodePlatforms)
+from wotemu.enums import NETEM_CONDITIONS, BuiltinApps, NetworkConditions
 from wotemu.topology.compose import (BASE_IMAGE, IMAGE_ENV_VAR,
                                      get_broker_definition,
                                      get_docker_proxy_definition,
+                                     get_generic_service_definition,
                                      get_network_definition,
                                      get_network_gateway_definition,
                                      get_node_definition, get_redis_definition,
@@ -128,7 +127,7 @@ class BaseNamedModel:
         self._name = name_clean
 
     def __eq__(self, other):
-        self.name == other.name
+        return self.name == other.name
 
     def __hash__(self):
         return hash(self.name)
@@ -139,6 +138,29 @@ class BaseNamedModel:
     @property
     def name(self):
         return self._name
+
+
+class Service(BaseNamedModel):
+    """Represents any generic service (e.g. a database) that 
+    may be required by a node of the emulation experiment."""
+
+    def __init__(self, name, image, **kwargs):
+        """Optional parameters are the same as client.services.create:
+        https://docker-py.readthedocs.io/en/stable/services.html"""
+
+        self.image = image
+        self._params = kwargs
+        super().__init__(name)
+
+    @property
+    def params(self):
+        return self._params
+
+    def get_node_network_name(self, node):
+        return f"srvnet_{self.name}_{node.name}"
+
+    def to_compose_dict(self, topology):
+        return get_generic_service_definition(topology, self)
 
 
 class Node(BaseNamedModel):
@@ -178,7 +200,7 @@ class Node(BaseNamedModel):
 
     def __init__(
             self, name, app, networks, broker=None, broker_network=None,
-            image=None, resources=None, scale=None, args_compose=None):
+            image=None, resources=None, scale=None, args_compose=None, services=None):
         self._assert_broker(app, broker)
         self._assert_broker_network(broker, broker_network)
         self._warn_broker_network_undefined(broker, broker_network)
@@ -192,6 +214,7 @@ class Node(BaseNamedModel):
         self.resources = resources
         self.scale = scale
         self.args_compose = args_compose
+        self._services = set(services) if services else set()
         super().__init__(name)
 
     @property
@@ -219,6 +242,14 @@ class Node(BaseNamedModel):
     @property
     def cmd_app(self):
         return [self.ENTRY_APP] + list(self.app.app_args)
+
+    @property
+    def services(self):
+        return self._services
+
+    def link_service(self, srv):
+        assert srv not in self._services, "Duplicated service"
+        self._services.add(srv)
 
     def to_compose_dict(self, topology):
         return get_node_definition(topology, self)
@@ -363,6 +394,11 @@ class Topology:
         self.docker_proxy = docker_proxy if docker_proxy else TopologyDockerProxy()
         self._brokers = brokers
 
+        assert len(set(self.nodes)) == len(self.nodes)
+
+        assert len(set(self.services).union(self.nodes)) \
+            == len([*self.services, *self.nodes])
+
     @property
     def config(self):
         return {
@@ -387,9 +423,16 @@ class Topology:
 
     @property
     def networks(self):
-        nets_node = set([net for node in self.nodes for net in node.networks])
-        nets_brkr = set([net for brk in self.brokers for net in brk.networks])
+        nets_node = set(net for node in self.nodes for net in node.networks)
+        nets_brkr = set(net for brk in self.brokers for net in brk.networks)
         return list(nets_node.union(nets_brkr))
+
+    @property
+    def services(self):
+        return list(set(srv for node in self.nodes for srv in node.services))
+
+    def get_service_nodes(self, service):
+        return list(set(node for node in self.nodes for item in node.services if item is service))
 
     def to_compose_dict(self):
         return get_topology_definition(self)

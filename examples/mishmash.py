@@ -1,6 +1,7 @@
+from docker.types import RestartPolicy
 from wotemu.enums import NetworkConditions
 from wotemu.topology.models import (Broker, BuiltinApps, Network, Node,
-                                    NodeApp, NodeResources, Topology)
+                                    NodeApp, NodeResources, Service, Topology)
 
 PARAM_SERVIENT_HOST = "servient_host"
 PARAM_THING_ID = "thing_id"
@@ -91,7 +92,7 @@ def topology():
         name="error",
         app=NodeApp(path=BuiltinApps.ERROR),
         networks=[network_wifi],
-        scale=2)
+        scale=1)
 
     app_worker = NodeApp(
         path=BuiltinApps.WORKER,
@@ -120,7 +121,15 @@ def topology():
         networks=[network_2g],
         scale=2)
 
-    topology = Topology(nodes=[
+    mongo = Service(
+        name="mongo",
+        image="mongo:4",
+        restart_policy=RestartPolicy(condition="on-failure"))
+
+    node_clock_http.link_service(mongo)
+    node_sub_http.link_service(mongo)
+
+    nodes = [
         node_clock_mqtt,
         node_clock_http,
         node_sub_mqtt,
@@ -129,6 +138,8 @@ def topology():
         node_error,
         node_worker,
         node_caller
-    ])
+    ]
+
+    topology = Topology(nodes=nodes)
 
     return topology

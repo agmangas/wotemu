@@ -5,6 +5,18 @@ networks:
     labels:
       org.fundacionctic.wotemu.net: ''
     name: mobile_2g
+  srvnet_mongo_clock_http:
+    attachable: true
+    driver: overlay
+    labels:
+      org.fundacionctic.wotemu.servicenet: ''
+    name: srvnet_mongo_clock_http
+  srvnet_mongo_clock_sub_http:
+    attachable: true
+    driver: overlay
+    labels:
+      org.fundacionctic.wotemu.servicenet: ''
+    name: srvnet_mongo_clock_sub_http
   wifi:
     attachable: true
     driver: overlay
@@ -50,9 +62,9 @@ services:
     - wotemu_clock
     - --enable-http
     depends_on:
-    - docker_api_proxy
     - redis
     - gw_wifi
+    - docker_api_proxy
     deploy:
       replicas: 2
     environment:
@@ -73,6 +85,7 @@ services:
       org.fundacionctic.wotemu.node: ''
     networks:
     - wifi
+    - srvnet_mongo_clock_http
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
   clock_mqtt:
@@ -84,10 +97,10 @@ services:
     - wotemu_clock
     - --enable-mqtt
     depends_on:
-    - docker_api_proxy
-    - gw_mobile_2g
     - redis
     - gw_wifi
+    - gw_mobile_2g
+    - docker_api_proxy
     deploy:
       replicas: 2
     environment:
@@ -108,8 +121,8 @@ services:
     labels:
       org.fundacionctic.wotemu.node: ''
     networks:
-    - mobile_2g
     - wifi
+    - mobile_2g
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
   clock_property_reader:
@@ -126,9 +139,9 @@ services:
     - thing_id
     - urn:org:fundacionctic:thing:clock
     depends_on:
-    - docker_api_proxy
     - redis
     - gw_wifi
+    - docker_api_proxy
     deploy:
       replicas: 2
     environment:
@@ -165,9 +178,9 @@ services:
     - thing_id
     - urn:org:fundacionctic:thing:clock
     depends_on:
-    - docker_api_proxy
     - redis
     - gw_wifi
+    - docker_api_proxy
     deploy:
       replicas: 4
       resources:
@@ -192,6 +205,7 @@ services:
       org.fundacionctic.wotemu.node: ''
     networks:
     - wifi
+    - srvnet_mongo_clock_sub_http
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
   clock_sub_mqtt:
@@ -208,10 +222,10 @@ services:
     - thing_id
     - urn:org:fundacionctic:thing:clock
     depends_on:
-    - docker_api_proxy
-    - gw_mobile_2g
     - redis
     - gw_wifi
+    - gw_mobile_2g
+    - docker_api_proxy
     deploy:
       replicas: 2
       resources:
@@ -235,8 +249,8 @@ services:
     labels:
       org.fundacionctic.wotemu.node: ''
     networks:
-    - mobile_2g
     - wifi
+    - mobile_2g
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
   docker_api_proxy:
@@ -254,8 +268,8 @@ services:
       TASKS: '1'
     image: tecnativa/docker-socket-proxy
     networks:
-    - mobile_2g
     - wifi
+    - mobile_2g
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
   error:
@@ -266,11 +280,11 @@ services:
     - --path
     - wotemu_error
     depends_on:
-    - docker_api_proxy
     - redis
     - gw_wifi
+    - docker_api_proxy
     deploy:
-      replicas: 2
+      replicas: 1
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       NODE_HOSTNAME: '{{.Node.Hostname}}'
@@ -351,13 +365,29 @@ services:
     - wifi
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
+  mongo:
+    deploy:
+      restart_policy:
+        condition: on-failure
+    environment:
+      NODE_HOSTNAME: '{{.Node.Hostname}}'
+      NODE_ID: '{{.Node.ID}}'
+      SERVICE_ID: '{{.Service.ID}}'
+      SERVICE_NAME: '{{.Service.Name}}'
+    hostname: '{{.Task.Name}}'
+    image: mongo:4
+    labels:
+      org.fundacionctic.wotemu.service: ''
+    networks:
+    - srvnet_mongo_clock_http
+    - srvnet_mongo_clock_sub_http
   redis:
     image: redis:5
     labels:
       org.fundacionctic.wotemu.redis: ''
     networks:
-    - mobile_2g
     - wifi
+    - mobile_2g
     ports:
     - '6379'
   worker:
@@ -369,9 +399,9 @@ services:
     - wotemu_worker
     - --enable-ws
     depends_on:
-    - docker_api_proxy
-    - gw_mobile_2g
     - redis
+    - gw_mobile_2g
+    - docker_api_proxy
     deploy:
       replicas: 1
     environment:
@@ -408,9 +438,9 @@ services:
     - thing_id
     - urn:org:fundacionctic:thing:worker
     depends_on:
-    - docker_api_proxy
-    - gw_mobile_2g
     - redis
+    - gw_mobile_2g
+    - docker_api_proxy
     deploy:
       replicas: 2
     environment:

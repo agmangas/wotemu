@@ -85,6 +85,7 @@ class NodeMonitor:
         assert not self._tasks_packet
 
         if not self._packet_ifaces or not len(self._packet_ifaces):
+            _logger.warning("No packet interfaces were defined")
             return
 
         packet_awaitables = []
