@@ -1,0 +1,289 @@
+networks:
+  srvnet_mongo_historian:
+    attachable: true
+    driver: overlay
+    labels:
+      org.fundacionctic.wotemu.servicenet: ''
+    name: srvnet_mongo_historian
+  wifi:
+    attachable: true
+    driver: overlay
+    labels:
+      org.fundacionctic.wotemu.net: ''
+    name: wifi
+services:
+  clock_0:
+    cap_add:
+    - ALL
+    command:
+    - app
+    - --path
+    - wotemu_clock
+    - --enable-ws
+    depends_on:
+    - docker_api_proxy
+    - redis
+    - gw_wifi
+    environment:
+      DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
+      NODE_HOSTNAME: '{{.Node.Hostname}}'
+      NODE_ID: '{{.Node.ID}}'
+      PORT_CATALOGUE: '9090'
+      PORT_COAP: '5683'
+      PORT_HTTP: '80'
+      PORT_MQTT: '1883'
+      PORT_WS: '81'
+      REDIS_URL: redis://redis
+      SERVICE_ID: '{{.Service.ID}}'
+      SERVICE_NAME: '{{.Service.Name}}'
+    hostname: '{{.Task.Name}}'
+    image: agmangas/wotemu
+    labels:
+      org.fundacionctic.wotemu.node: ''
+    networks:
+    - wifi
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+  clock_1:
+    cap_add:
+    - ALL
+    command:
+    - app
+    - --path
+    - wotemu_clock
+    - --enable-ws
+    depends_on:
+    - docker_api_proxy
+    - redis
+    - gw_wifi
+    environment:
+      DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
+      NODE_HOSTNAME: '{{.Node.Hostname}}'
+      NODE_ID: '{{.Node.ID}}'
+      PORT_CATALOGUE: '9090'
+      PORT_COAP: '5683'
+      PORT_HTTP: '80'
+      PORT_MQTT: '1883'
+      PORT_WS: '81'
+      REDIS_URL: redis://redis
+      SERVICE_ID: '{{.Service.ID}}'
+      SERVICE_NAME: '{{.Service.Name}}'
+    hostname: '{{.Task.Name}}'
+    image: agmangas/wotemu
+    labels:
+      org.fundacionctic.wotemu.node: ''
+    networks:
+    - wifi
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+  clock_2:
+    cap_add:
+    - ALL
+    command:
+    - app
+    - --path
+    - wotemu_clock
+    - --enable-ws
+    depends_on:
+    - docker_api_proxy
+    - redis
+    - gw_wifi
+    environment:
+      DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
+      NODE_HOSTNAME: '{{.Node.Hostname}}'
+      NODE_ID: '{{.Node.ID}}'
+      PORT_CATALOGUE: '9090'
+      PORT_COAP: '5683'
+      PORT_HTTP: '80'
+      PORT_MQTT: '1883'
+      PORT_WS: '81'
+      REDIS_URL: redis://redis
+      SERVICE_ID: '{{.Service.ID}}'
+      SERVICE_NAME: '{{.Service.Name}}'
+    hostname: '{{.Task.Name}}'
+    image: agmangas/wotemu
+    labels:
+      org.fundacionctic.wotemu.node: ''
+    networks:
+    - wifi
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+  clock_3:
+    cap_add:
+    - ALL
+    command:
+    - app
+    - --path
+    - wotemu_clock
+    - --enable-ws
+    depends_on:
+    - docker_api_proxy
+    - redis
+    - gw_wifi
+    environment:
+      DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
+      NODE_HOSTNAME: '{{.Node.Hostname}}'
+      NODE_ID: '{{.Node.ID}}'
+      PORT_CATALOGUE: '9090'
+      PORT_COAP: '5683'
+      PORT_HTTP: '80'
+      PORT_MQTT: '1883'
+      PORT_WS: '81'
+      REDIS_URL: redis://redis
+      SERVICE_ID: '{{.Service.ID}}'
+      SERVICE_NAME: '{{.Service.Name}}'
+    hostname: '{{.Task.Name}}'
+    image: agmangas/wotemu
+    labels:
+      org.fundacionctic.wotemu.node: ''
+    networks:
+    - wifi
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+  clock_4:
+    cap_add:
+    - ALL
+    command:
+    - app
+    - --path
+    - wotemu_clock
+    - --enable-ws
+    depends_on:
+    - docker_api_proxy
+    - redis
+    - gw_wifi
+    environment:
+      DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
+      NODE_HOSTNAME: '{{.Node.Hostname}}'
+      NODE_ID: '{{.Node.ID}}'
+      PORT_CATALOGUE: '9090'
+      PORT_COAP: '5683'
+      PORT_HTTP: '80'
+      PORT_MQTT: '1883'
+      PORT_WS: '81'
+      REDIS_URL: redis://redis
+      SERVICE_ID: '{{.Service.ID}}'
+      SERVICE_NAME: '{{.Service.Name}}'
+    hostname: '{{.Task.Name}}'
+    image: agmangas/wotemu
+    labels:
+      org.fundacionctic.wotemu.node: ''
+    networks:
+    - wifi
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+  docker_api_proxy:
+    cap_add:
+    - ALL
+    deploy:
+      placement:
+        constraints:
+        - node.role == manager
+    environment:
+      CONTAINERS: '1'
+      NETWORKS: '1'
+      NODES: '1'
+      SERVICES: '1'
+      TASKS: '1'
+    image: tecnativa/docker-socket-proxy
+    networks:
+    - wifi
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+  gw_wifi:
+    cap_add:
+    - ALL
+    command:
+    - gateway
+    - delay --time 25 --jitter 5 --distribution normal
+    - rate --rate 50mbit
+    depends_on:
+    - docker_api_proxy
+    - redis
+    environment:
+      DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
+      NODE_HOSTNAME: '{{.Node.Hostname}}'
+      NODE_ID: '{{.Node.ID}}'
+      PORT_CATALOGUE: '9090'
+      PORT_COAP: '5683'
+      PORT_HTTP: '80'
+      PORT_MQTT: '1883'
+      PORT_WS: '81'
+      REDIS_URL: redis://redis
+      SERVICE_ID: '{{.Service.ID}}'
+      SERVICE_NAME: '{{.Service.Name}}'
+    hostname: '{{.Task.Name}}'
+    image: agmangas/wotemu
+    labels:
+      org.fundacionctic.wotemu.gw: ''
+    networks:
+    - wifi
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+  historian:
+    cap_add:
+    - ALL
+    command:
+    - app
+    - --path
+    - wotemu_mongo_historian
+    - --func-param
+    - mongo_uri
+    - mongodb://mongo
+    - --func-param
+    - observed_things
+    - '[{"servient_host": "clock_0.wifi", "thing_id": "urn:org:fundacionctic:thing:clock"},
+      {"servient_host": "clock_1.wifi", "thing_id": "urn:org:fundacionctic:thing:clock"},
+      {"servient_host": "clock_2.wifi", "thing_id": "urn:org:fundacionctic:thing:clock"},
+      {"servient_host": "clock_3.wifi", "thing_id": "urn:org:fundacionctic:thing:clock"},
+      {"servient_host": "clock_4.wifi", "thing_id": "urn:org:fundacionctic:thing:clock"}]'
+    - --enable-http
+    depends_on:
+    - docker_api_proxy
+    - redis
+    - gw_wifi
+    environment:
+      DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
+      NODE_HOSTNAME: '{{.Node.Hostname}}'
+      NODE_ID: '{{.Node.ID}}'
+      PORT_CATALOGUE: '9090'
+      PORT_COAP: '5683'
+      PORT_HTTP: '80'
+      PORT_MQTT: '1883'
+      PORT_WS: '81'
+      REDIS_URL: redis://redis
+      SERVICE_ID: '{{.Service.ID}}'
+      SERVICE_NAME: '{{.Service.Name}}'
+    hostname: '{{.Task.Name}}'
+    image: agmangas/wotemu
+    labels:
+      org.fundacionctic.wotemu.node: ''
+    networks:
+    - wifi
+    - srvnet_mongo_historian
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+  mongo:
+    deploy:
+      restart_policy:
+        condition: on-failure
+    environment:
+      NODE_HOSTNAME: '{{.Node.Hostname}}'
+      NODE_ID: '{{.Node.ID}}'
+      SERVICE_ID: '{{.Service.ID}}'
+      SERVICE_NAME: '{{.Service.Name}}'
+    hostname: '{{.Task.Name}}'
+    image: mongo:4
+    labels:
+      org.fundacionctic.wotemu.service: ''
+    networks:
+    - srvnet_mongo_historian
+  redis:
+    image: redis:5
+    labels:
+      org.fundacionctic.wotemu.redis: ''
+    networks:
+    - wifi
+    ports:
+    - '6379'
+version: '3.7'

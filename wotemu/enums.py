@@ -83,6 +83,7 @@ class BuiltinApps(enum.Enum):
     SUBSCRIBER = "wotemu_subscriber"
     WORKER = "wotemu_worker"
     CALLER = "wotemu_caller"
+    MONGO_HISTORIAN = "wotemu_mongo_historian"
 
 
 BUILTIN_APPS_MODULES = {
@@ -91,7 +92,8 @@ BUILTIN_APPS_MODULES = {
     BuiltinApps.READER: "wotemu.apps.reader",
     BuiltinApps.SUBSCRIBER: "wotemu.apps.subscriber",
     BuiltinApps.WORKER: "wotemu.apps.worker",
-    BuiltinApps.CALLER: "wotemu.apps.caller"
+    BuiltinApps.CALLER: "wotemu.apps.caller",
+    BuiltinApps.MONGO_HISTORIAN: "wotemu.apps.historian"
 }
 
 assert set(BUILTIN_APPS_MODULES.keys()) == set(BuiltinApps)
