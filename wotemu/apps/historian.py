@@ -312,9 +312,7 @@ async def _insert_properties(wot, port_catalogue, servient_host, thing_id, motor
         await _write(params=params, motor_client=motor_client, db_name=db_name)
 
 
-async def _start_insert_task(
-        wot, port_catalogue, observed_things, motor_client, db_name,
-        interval=_DEFAULT_INSERT_INTERVAL):
+async def _start_insert_task(wot, port_catalogue, observed_things, motor_client, db_name, interval):
     _logger.debug(
         "Starting periodic insert task for Things:\n%s",
         pprint.pformat(observed_things))
@@ -342,7 +340,7 @@ async def _start_insert_task(
 
 
 async def produce_thing(
-        wot, conf, mongo_uri, observed_things,
+        wot, conf, mongo_uri, observed_things, interval,
         db_name=None, timeout_ping=_DEFAULT_TIMEOUT_PING):
     await _wait_mongo(mongo_uri=mongo_uri, timeout_ping=timeout_ping)
 
@@ -395,19 +393,21 @@ async def produce_thing(
         port_catalogue=conf.port_catalogue,
         observed_things=observed_things,
         motor_client=motor_client,
-        db_name=db_name))
+        db_name=db_name,
+        interval=interval))
 
     return MongoHistorianThing(task_insert=task_insert, exposed_thing=exposed_thing)
 
 
 async def app(
-        wot, conf, loop, mongo_uri,
-        observed_things=None, db_name=None, timeout_ping=_DEFAULT_TIMEOUT_PING):
+        wot, conf, loop, mongo_uri, observed_things=None, db_name=None,
+        interval=_DEFAULT_INSERT_INTERVAL, timeout_ping=_DEFAULT_TIMEOUT_PING):
     historian_thing = await produce_thing(
         wot=wot,
         conf=conf,
         mongo_uri=mongo_uri,
         observed_things=observed_things,
+        interval=interval,
         db_name=db_name,
         timeout_ping=timeout_ping)
 
