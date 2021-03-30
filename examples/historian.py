@@ -47,9 +47,28 @@ def topology():
 
     node_historian.link_service(mongo)
 
+    uplink_historian_app = NodeApp(
+        path=BuiltinApps.MONGO_HISTORIAN,
+        http=True,
+        params={
+            "mongo_uri": "mongodb://mongo",
+            "downlink_servient_host": f"{node_historian.name}.{network_wifi.name}",
+            "downlink_thing_id": "urn:org:fundacionctic:thing:historian",
+            "downlink_buckets": 1,
+            "downlink_interval": 60
+        })
+
+    node_uplink_historian = Node(
+        name="historian_uplink",
+        app=uplink_historian_app,
+        networks=[network_wifi])
+
+    node_uplink_historian.link_service(mongo)
+
     topology = Topology(nodes=[
         *nodes_clock,
-        node_historian
+        node_historian,
+        node_uplink_historian
     ])
 
     return topology

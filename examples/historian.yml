@@ -5,6 +5,12 @@ networks:
     labels:
       org.fundacionctic.wotemu.servicenet: ''
     name: srvnet_mongo_historian
+  srvnet_mongo_historian_uplink:
+    attachable: true
+    driver: overlay
+    labels:
+      org.fundacionctic.wotemu.servicenet: ''
+    name: srvnet_mongo_historian_uplink
   wifi:
     attachable: true
     driver: overlay
@@ -21,9 +27,9 @@ services:
     - wotemu_clock
     - --enable-ws
     depends_on:
-    - docker_api_proxy
     - redis
     - gw_wifi
+    - docker_api_proxy
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       NODE_HOSTNAME: '{{.Node.Hostname}}'
@@ -53,9 +59,9 @@ services:
     - wotemu_clock
     - --enable-ws
     depends_on:
-    - docker_api_proxy
     - redis
     - gw_wifi
+    - docker_api_proxy
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       NODE_HOSTNAME: '{{.Node.Hostname}}'
@@ -85,9 +91,9 @@ services:
     - wotemu_clock
     - --enable-ws
     depends_on:
-    - docker_api_proxy
     - redis
     - gw_wifi
+    - docker_api_proxy
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       NODE_HOSTNAME: '{{.Node.Hostname}}'
@@ -117,9 +123,9 @@ services:
     - wotemu_clock
     - --enable-ws
     depends_on:
-    - docker_api_proxy
     - redis
     - gw_wifi
+    - docker_api_proxy
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       NODE_HOSTNAME: '{{.Node.Hostname}}'
@@ -149,9 +155,9 @@ services:
     - wotemu_clock
     - --enable-ws
     depends_on:
-    - docker_api_proxy
     - redis
     - gw_wifi
+    - docker_api_proxy
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       NODE_HOSTNAME: '{{.Node.Hostname}}'
@@ -239,9 +245,9 @@ services:
       {"servient_host": "clock_4.wifi", "thing_id": "urn:org:fundacionctic:thing:clock"}]'
     - --enable-http
     depends_on:
-    - docker_api_proxy
     - redis
     - gw_wifi
+    - docker_api_proxy
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       NODE_HOSTNAME: '{{.Node.Hostname}}'
@@ -263,6 +269,54 @@ services:
     - srvnet_mongo_historian
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
+  historian_uplink:
+    cap_add:
+    - ALL
+    command:
+    - app
+    - --path
+    - wotemu_mongo_historian
+    - --func-param
+    - mongo_uri
+    - mongodb://mongo
+    - --func-param
+    - downlink_servient_host
+    - historian.wifi
+    - --func-param
+    - downlink_thing_id
+    - urn:org:fundacionctic:thing:historian
+    - --func-param
+    - downlink_buckets
+    - '1'
+    - --func-param
+    - downlink_interval
+    - '60'
+    - --enable-http
+    depends_on:
+    - redis
+    - gw_wifi
+    - docker_api_proxy
+    environment:
+      DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
+      NODE_HOSTNAME: '{{.Node.Hostname}}'
+      NODE_ID: '{{.Node.ID}}'
+      PORT_CATALOGUE: '9090'
+      PORT_COAP: '5683'
+      PORT_HTTP: '80'
+      PORT_MQTT: '1883'
+      PORT_WS: '81'
+      REDIS_URL: redis://redis
+      SERVICE_ID: '{{.Service.ID}}'
+      SERVICE_NAME: '{{.Service.Name}}'
+    hostname: '{{.Task.Name}}'
+    image: agmangas/wotemu
+    labels:
+      org.fundacionctic.wotemu.node: ''
+    networks:
+    - wifi
+    - srvnet_mongo_historian_uplink
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
   mongo:
     deploy:
       restart_policy:
@@ -278,6 +332,7 @@ services:
       org.fundacionctic.wotemu.service: ''
     networks:
     - srvnet_mongo_historian
+    - srvnet_mongo_historian_uplink
   redis:
     image: redis:5
     labels:

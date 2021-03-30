@@ -19,8 +19,6 @@ from wotemu.utils import consume_from_catalogue
 from wotpy.wot.td import ThingDescription
 
 _DEFAULT_FALLBACK_DB = "wotemu_mongo_historian"
-_DEFAULT_TIMEOUT_PING = 60
-_DEFAULT_INSERT_INTERVAL = 5
 
 _DESCRIPTION = {
     "id": "urn:org:fundacionctic:thing:historian",
@@ -39,18 +37,43 @@ _DESCRIPTION = {
                         "type": "string"
                     }
                 },
-                "required": ["servient", "thing"]
+                "required": ["servient", "thingId"]
             }
         }
     },
     "actions": {
+        "list": {
+            "safe": True,
+            "idempotent": False,
+            "output": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "thingId": {
+                            "type": "string"
+                        },
+                        "propertyName": {
+                            "type": "string"
+                        },
+                        "servient": {
+                            "type": "string"
+                        }
+                    },
+                    "required": ["propertyName", "thingId", "servient"]
+                }
+            }
+        },
         "get": {
             "safe": True,
             "idempotent": False,
             "input": {
                 "type": "object",
                 "properties": {
-                    "lastSeconds": {
+                    "fromUnix": {
+                        "type": "number"
+                    },
+                    "toUnix": {
                         "type": "number"
                     },
                     "thingId": {
@@ -62,9 +85,8 @@ _DESCRIPTION = {
                     "servient": {
                         "type": "string"
                     },
-                    "aggregate": {
-                        "type": "string",
-                        "enum": ["second", "minute", "hour"]
+                    "buckets": {
+                        "type": "number"
                     }
                 },
                 "required": ["propertyName"]
@@ -74,8 +96,8 @@ _DESCRIPTION = {
                 "items": {
                     "type": "object",
                     "properties": {
-                        "isoDate": {
-                            "type": "string"
+                        "unixTime": {
+                            "type": "number"
                         },
                         "thingId": {
                             "type": "string"
@@ -90,7 +112,7 @@ _DESCRIPTION = {
                             "type": "string"
                         }
                     },
-                    "required": ["propertyName", "value"]
+                    "required": ["unixTime", "propertyName", "thingId", "servient", "value"]
                 }
             }
         },
@@ -100,7 +122,7 @@ _DESCRIPTION = {
             "input": {
                 "type": "object",
                 "properties": {
-                    "timestamp": {
+                    "unixTime": {
                         "type": "number"
                     },
                     "propertyName": {
@@ -109,11 +131,14 @@ _DESCRIPTION = {
                     "thingId": {
                         "type": "string"
                     },
+                    "servient": {
+                        "type": "string"
+                    },
                     "value": {
                         "type": "string"
                     }
                 },
-                "required": ["propertyName", "value"]
+                "required": ["propertyName", "thingId", "servient", "value"]
             }
         }
     }
@@ -124,18 +149,11 @@ _logger = logging.getLogger(__name__)
 
 MongoHistorianThing = collections.namedtuple(
     "MongoHistorianThing",
-    ["task_insert", "exposed_thing"])
+    ["task_observe", "exposed_thing", "observe_stop_event"])
 
 
 async def _get_aggregated(params_input, motor_client, db_name, query):
-    aggr_formats = {
-        "second": "%Y_%m_%d_%H_%M_%S",
-        "minute": "%Y_%m_%d_%H_%M",
-        "hour": "%Y_%m_%d_%H"
-    }
-
-    date_format = aggr_formats.get(params_input.get("aggregate"))
-    date_format = date_format or aggr_formats["minute"]
+    num_buckets = int(params_input.get("buckets", 10))
 
     pipeline = [
         {
@@ -145,20 +163,23 @@ async def _get_aggregated(params_input, motor_client, db_name, query):
             "$addFields": {
                 "date_str": {
                     "$dateToString": {
-                        "format": date_format,
+                        "format": "%Y%m%d_%H%M%S",
                         "date": "$utc_date"
                     }
                 }
             }
         },
         {
-            "$group": {
-                "_id": "$date_str",
-                "utc_date": {"$last": "$utc_date"},
-                "property_name": {"$last": "$property_name"},
-                "thing_id": {"$last": "$thing_id"},
-                "servient": {"$last": "$servient"},
-                "value": {"$last": "$value"}
+            "$bucketAuto": {
+                "groupBy": "$date_str",
+                "buckets": num_buckets,
+                "output": {
+                    "utc_date": {"$first": "$utc_date"},
+                    "property_name": {"$first": "$property_name"},
+                    "thing_id": {"$first": "$thing_id"},
+                    "servient": {"$first": "$servient"},
+                    "value": {"$first": "$value"}
+                }
             }
         },
         {
@@ -172,11 +193,11 @@ async def _get_aggregated(params_input, motor_client, db_name, query):
 
     return [
         {
-            "thingId": doc.get("thing_id"),
+            "thingId": doc["thing_id"],
             "propertyName": doc["property_name"],
-            "servient": doc.get("servient"),
+            "servient": doc["servient"],
             "value": doc["value"],
-            "isoDate": doc["utc_date"].isoformat()
+            "unixTime": doc["utc_date"].timestamp()
         }
         async for doc in cur
     ]
@@ -184,18 +205,20 @@ async def _get_aggregated(params_input, motor_client, db_name, query):
 
 async def _get(params, motor_client, db_name):
     params_input = params["input"]
-
-    last_secs = int(params_input.get("lastSeconds", 30))
-    gte_date = datetime.utcnow() - datetime.timedelta(seconds=last_secs)
+    from_unix = int(params_input.get("fromUnix", time.time() - 60))
 
     query = {
         "property_name": {
             "$eq": params_input["propertyName"]
         },
         "utc_date": {
-            "$gte": gte_date
+            "$gte": datetime.utcfromtimestamp(from_unix)
         }
     }
+
+    if params_input.get("toUnix"):
+        to_unix = int(params_input["toUnix"])
+        query["utc_date"].update({"$lt": datetime.utcfromtimestamp(to_unix)})
 
     if params_input.get("thingId"):
         query.update({
@@ -211,7 +234,7 @@ async def _get(params, motor_client, db_name):
             }
         })
 
-    if params_input.get("aggregate"):
+    if params_input.get("buckets"):
         return await _get_aggregated(
             params_input=params_input,
             motor_client=motor_client,
@@ -222,11 +245,11 @@ async def _get(params, motor_client, db_name):
 
     return [
         {
-            "thingId": doc.get("thing_id"),
+            "thingId": doc["thing_id"],
             "propertyName": doc["property_name"],
-            "servient": doc.get("servient"),
+            "servient": doc["servient"],
             "value": doc["value"],
-            "isoDate": doc["utc_date"].isoformat()
+            "unixTime": doc["utc_date"].timestamp()
         }
         async for doc in cur
     ]
@@ -234,18 +257,47 @@ async def _get(params, motor_client, db_name):
 
 async def _write(params, motor_client, db_name):
     params_input = params["input"]
-    tstamp = params_input.get("time")
+    tstamp = params_input.get("unixTime")
     dtime = datetime.utcfromtimestamp(tstamp) if tstamp else datetime.utcnow()
 
-    result = await motor_client[db_name].properties.insert_one({
+    doc = {
         "utc_date": dtime,
         "property_name": params_input["propertyName"],
-        "thing_id": params_input.get("thingId"),
-        "servient": params_input.get("servient"),
+        "thing_id": params_input["thingId"],
+        "servient": params_input["servient"],
         "value": params_input["value"]
-    })
+    }
 
-    _logger.debug("Inserted doc %s", result.inserted_id)
+    _logger.debug("Inserting doc: %s", doc)
+    result = await motor_client[db_name].properties.insert_one(doc)
+    _logger.debug("Inserted: %s", result.inserted_id)
+
+
+async def _list(params, motor_client, db_name):
+    pipeline = [
+        {
+            "$group": {
+                "_id": {
+                    "property_name": "$property_name",
+                    "thing_id": "$thing_id",
+                    "servient": "$servient"
+                }
+            }
+        }
+    ]
+
+    _logger.debug("Running pipeline:\n%s", pprint.pformat(pipeline))
+
+    cur = motor_client[db_name].properties.aggregate(pipeline)
+
+    return [
+        {
+            "propertyName": doc["_id"]["property_name"],
+            "thingId": doc["_id"]["thing_id"],
+            "servient": doc["_id"]["servient"]
+        }
+        async for doc in cur
+    ]
 
 
 async def _wait_mongo(mongo_uri, timeout_ping, sleep_iter=1.0):
@@ -270,78 +322,255 @@ async def _wait_mongo(mongo_uri, timeout_ping, sleep_iter=1.0):
 async def _create_indexes(motor_client, db_name):
     keys = [
         ("utc_date", pymongo.DESCENDING),
-        ("property_name", pymongo.DESCENDING)
+        ("property_name", pymongo.DESCENDING),
+        ("thing_id", pymongo.DESCENDING),
+        ("servient", pymongo.DESCENDING)
     ]
 
     _logger.info("Creating index: %s", keys)
 
     await motor_client[db_name].properties.create_index(
         keys,
-        name="utc_date_property_name",
+        name="utc_date_property_name_thing_id_servient",
+        background=True)
+
+    keys = [
+        ("property_name", pymongo.DESCENDING),
+        ("thing_id", pymongo.DESCENDING),
+        ("servient", pymongo.DESCENDING)
+    ]
+
+    _logger.info("Creating index: %s", keys)
+
+    await motor_client[db_name].properties.create_index(
+        keys,
+        name="property_name_thing_id_servient",
         background=True)
 
 
-async def _insert_properties(wot, port_catalogue, servient_host, thing_id, motor_client, db_name):
-    _logger.debug(
-        "Inserting properties (servient=%s) (thing=%s)",
-        servient_host, thing_id)
+async def _run_observe_historian_iter(
+        wot, port_catalogue, servient_host, thing_id,
+        buckets, interval, motor_client, db_name, invoke_timeout):
+    to_unix = datetime.utcnow().timestamp()
+    from_unix = to_unix - interval
 
-    consumed_thing = await consume_from_catalogue(
+    _logger.debug(
+        "Running historian observation iteration (from=%s) (to=%s)",
+        datetime.utcfromtimestamp(from_unix),
+        datetime.utcfromtimestamp(to_unix))
+
+    cons_thing = await consume_from_catalogue(
         wot=wot,
         port_catalogue=port_catalogue,
         servient_host=servient_host,
         thing_id=thing_id)
 
-    for name in consumed_thing.properties:
-        try:
-            _logger.debug("Reading property (%s)", name)
-            val = await consumed_thing.properties[name].read()
-            _logger.debug("Read property (%s=%s)", name, val)
-        except Exception as ex:
-            _logger.warning("Error reading (%s): %s", name, repr(ex))
+    props_list = await cons_thing.actions["list"].invoke(None, timeout=invoke_timeout)
 
-        params = {
+    _logger.debug("Reading properties:\n%s", pprint.pformat(props_list))
+
+    invocation_params = [
+        {
+            "toUnix": to_unix,
+            "fromUnix": from_unix,
+            "buckets": buckets,
+            "propertyName": prop_item["propertyName"],
+            "thingId": prop_item["thingId"],
+            "servient": prop_item["servient"]
+        }
+        for prop_item in props_list
+    ]
+
+    invocation_awaitables = [
+        cons_thing.actions["get"].invoke(params, timeout=invoke_timeout)
+        for params in invocation_params
+    ]
+
+    results = await asyncio.gather(*invocation_awaitables, return_exceptions=True)
+
+    write_params = [
+        {
             "input": {
-                "propertyName": name,
-                "thingId": thing_id,
-                "servient": servient_host,
-                "value": val
+                "unixTime": item["unixTime"],
+                "propertyName": item["propertyName"],
+                "thingId": item["thingId"],
+                "servient": item["servient"],
+                "value": item["value"]
             }
         }
+        for results_list in results
+        for item in results_list
+        if not isinstance(results_list, Exception)
+    ]
 
-        await _write(params=params, motor_client=motor_client, db_name=db_name)
+    write_awaitables = [
+        _write(params=params, motor_client=motor_client, db_name=db_name)
+        for params in write_params
+    ]
+
+    await asyncio.gather(*write_awaitables, return_exceptions=True)
 
 
-async def _start_insert_task(wot, port_catalogue, observed_things, motor_client, db_name, interval):
-    _logger.debug(
-        "Starting periodic insert task for Things:\n%s",
-        pprint.pformat(observed_things))
+async def _start_observe_historian_task(
+        wot, port_catalogue, servient_host, thing_id,
+        buckets, interval, motor_client, db_name, stop_event, invoke_timeout=40):
+    run_iter = functools.partial(
+        _run_observe_historian_iter,
+        wot=wot,
+        port_catalogue=port_catalogue,
+        servient_host=servient_host,
+        thing_id=thing_id,
+        buckets=buckets,
+        interval=interval,
+        motor_client=motor_client,
+        db_name=db_name,
+        invoke_timeout=invoke_timeout)
 
-    insert_props = functools.partial(
-        _insert_properties,
+    prev_time = None
+    next_time = time.time() + interval
+
+    while not stop_event.is_set():
+        now = time.time()
+
+        if now >= next_time:
+            if prev_time:
+                delta = now - prev_time
+                _logger.debug("Historian observation task delta: %s s.", delta)
+
+            prev_time = now
+            next_time = now + interval
+
+            try:
+                await run_iter()
+            except Exception as ex:
+                _logger.warning("Error in historian iteration: %s", repr(ex))
+
+        await asyncio.sleep(1)
+
+
+async def _read_insert_property(consumed_thing, name, thing_id, servient_host, motor_client, db_name):
+    try:
+        _logger.debug("Reading property (%s)", name)
+        val = await consumed_thing.properties[name].read()
+        _logger.debug("Read property (%s=%s)", name, val)
+    except Exception as ex:
+        _logger.warning("Error reading (%s): %s", name, repr(ex))
+        return
+
+    params = {
+        "input": {
+            "propertyName": name,
+            "thingId": thing_id,
+            "servient": servient_host,
+            "value": val
+        }
+    }
+
+    await _write(params=params, motor_client=motor_client, db_name=db_name)
+
+
+async def _run_observe_thing_iter(wot, port_catalogue, motor_client, db_name, servient_host, thing_id):
+    cons_thing = await consume_from_catalogue(
+        wot=wot,
+        port_catalogue=port_catalogue,
+        servient_host=servient_host,
+        thing_id=thing_id)
+
+    read_insert_kwargs = [
+        {
+            "consumed_thing": cons_thing,
+            "name": name,
+            "thing_id": thing_id,
+            "servient_host": servient_host,
+            "motor_client": motor_client,
+            "db_name": db_name
+        }
+        for name in cons_thing.properties
+    ]
+
+    read_insert_awaitables = [
+        _read_insert_property(**item)
+        for item in read_insert_kwargs
+    ]
+
+    await asyncio.gather(*read_insert_awaitables, return_exceptions=True)
+
+
+async def _start_observe_thing_task(wot, port_catalogue, motor_client, db_name, observed_things, interval, stop_event):
+    run_iter = functools.partial(
+        _run_observe_thing_iter,
         wot=wot,
         port_catalogue=port_catalogue,
         motor_client=motor_client,
         db_name=db_name)
 
-    while True:
-        for item in observed_things:
-            servient_host = item["servient_host"]
-            thing_id = item["thing_id"]
+    while not stop_event.is_set():
+        iter_awaitables = [
+            run_iter(
+                servient_host=item["servient_host"],
+                thing_id=item["thing_id"])
+            for item in observed_things
+        ]
 
-            try:
-                await insert_props(servient_host=servient_host, thing_id=thing_id)
-            except Exception as ex:
-                _logger.warning(
-                    "Error inserting properties (servient=%s) (thing=%s): %s",
-                    servient_host, thing_id, repr(ex))
-
+        await asyncio.gather(*iter_awaitables, return_exceptions=True)
         await asyncio.sleep(interval)
 
 
+async def _start_observe_task(
+        wot, port_catalogue, observed_things, motor_client, db_name, interval, stop_event,
+        downlink_servient_host, downlink_thing_id, downlink_buckets, downlink_interval):
+    awaitables = []
+
+    if observed_things and len(observed_things) > 0:
+        thing_awaitable = _start_observe_thing_task(
+            wot=wot,
+            port_catalogue=port_catalogue,
+            motor_client=motor_client,
+            db_name=db_name,
+            observed_things=observed_things,
+            interval=interval,
+            stop_event=stop_event)
+
+        awaitables.append(thing_awaitable)
+
+    if downlink_servient_host and downlink_thing_id:
+        historian_awaitable = _start_observe_historian_task(
+            wot=wot,
+            port_catalogue=port_catalogue,
+            servient_host=downlink_servient_host,
+            thing_id=downlink_thing_id,
+            buckets=downlink_buckets,
+            interval=downlink_interval,
+            motor_client=motor_client,
+            db_name=db_name,
+            stop_event=stop_event)
+
+        awaitables.append(historian_awaitable)
+
+    await asyncio.gather(*awaitables, return_exceptions=False)
+
+
+async def _things_handler(observed_things):
+    return [
+        {
+            "servient": item["servient_host"],
+            "thingId": item["thing_id"]
+        }
+        for item in observed_things
+    ]
+
+
 async def produce_thing(
-        wot, conf, mongo_uri, observed_things, interval,
-        db_name=None, timeout_ping=_DEFAULT_TIMEOUT_PING):
+        wot, conf, mongo_uri, db_name=None, observed_things=None, interval=5, timeout_ping=60,
+        downlink_servient_host=None, downlink_thing_id=None, downlink_buckets=1, downlink_interval=60):
+    downlink_args = [downlink_servient_host, downlink_thing_id]
+
+    if any(downlink_args) and not all(downlink_args):
+        raise ValueError("Partially defined downlink parameters")
+
+    downlink_buckets = int(downlink_buckets)
+    downlink_interval = int(downlink_interval)
+
     await _wait_mongo(mongo_uri=mongo_uri, timeout_ping=timeout_ping)
 
     _logger.info(
@@ -368,50 +597,57 @@ async def produce_thing(
         motor_client=motor_client,
         db_name=db_name)
 
+    handler_list = functools.partial(
+        _list,
+        motor_client=motor_client,
+        db_name=db_name)
+
     try:
         observed_things = observed_things or []
         observed_things = json.loads(observed_things)
     except:
         pass
 
-    async def things_handler():
-        return [
-            {
-                "servient": item["servient_host"],
-                "thingId": item["thing_id"]
-            }
-            for item in observed_things
-        ]
+    things_handler = functools.partial(
+        _things_handler,
+        observed_things=observed_things)
 
     exposed_thing = wot.produce(json.dumps(_DESCRIPTION))
     exposed_thing.set_action_handler("get", handler_get)
     exposed_thing.set_action_handler("write", handler_write)
+    exposed_thing.set_action_handler("list", handler_list)
     exposed_thing.set_property_read_handler("observedThings", things_handler)
 
-    task_insert = asyncio.ensure_future(_start_insert_task(
+    stop_event = asyncio.Event()
+
+    task_observe = asyncio.ensure_future(_start_observe_task(
         wot=wot,
         port_catalogue=conf.port_catalogue,
         observed_things=observed_things,
         motor_client=motor_client,
         db_name=db_name,
-        interval=interval))
-
-    return MongoHistorianThing(task_insert=task_insert, exposed_thing=exposed_thing)
-
-
-async def app(
-        wot, conf, loop, mongo_uri, observed_things=None, db_name=None,
-        interval=_DEFAULT_INSERT_INTERVAL, timeout_ping=_DEFAULT_TIMEOUT_PING):
-    historian_thing = await produce_thing(
-        wot=wot,
-        conf=conf,
-        mongo_uri=mongo_uri,
-        observed_things=observed_things,
         interval=interval,
-        db_name=db_name,
-        timeout_ping=timeout_ping)
+        stop_event=stop_event,
+        downlink_servient_host=downlink_servient_host,
+        downlink_thing_id=downlink_thing_id,
+        downlink_buckets=downlink_buckets,
+        downlink_interval=downlink_interval))
 
+    return MongoHistorianThing(
+        task_observe=task_observe,
+        exposed_thing=exposed_thing,
+        observe_stop_event=stop_event)
+
+
+async def app(wot, conf, loop, *args, **kwargs):
+    historian_thing = await produce_thing(wot=wot, conf=conf, *args, **kwargs)
     historian_thing.exposed_thing.expose()
 
     td = ThingDescription.from_thing(historian_thing.exposed_thing.thing)
     _logger.debug("Exposed Thing:\n%s", pprint.pformat(td.to_dict()))
+
+    try:
+        await historian_thing.task_observe
+    except asyncio.CancelledError:
+        historian_thing.observe_stop_event.set()
+        await asyncio.wait_for(historian_thing.task_observe, timeout=10)
