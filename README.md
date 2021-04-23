@@ -1,6 +1,6 @@
 # WoTemu
 
-[![Docker Cloud Build](https://img.shields.io/docker/cloud/build/agmangas/wotemu)](https://hub.docker.com/r/agmangas/wotemu) &nbsp; [![Build Status](https://travis-ci.com/agmangas/wotemu.svg?branch=master)](https://travis-ci.com/agmangas/wotemu)
+[![Docker Cloud Build](https://img.shields.io/docker/cloud/build/agmangas/wotemu)](https://hub.docker.com/r/agmangas/wotemu) &nbsp; [![Docker Image Size (latest semver)](https://img.shields.io/docker/image-size/agmangas/wotemu)](https://hub.docker.com/r/agmangas/wotemu) &nbsp; [![Build Status](https://travis-ci.com/agmangas/wotemu.svg?branch=master)](https://travis-ci.com/agmangas/wotemu) &nbsp; [![PyPI](https://img.shields.io/pypi/v/wotemu)](https://pypi.org/project/wotemu/) &nbsp; [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/wotemu)](https://pypi.org/project/wotemu/)
 
 An emulator for Python applications to help in the design of **IoT deployments** based on the **edge computing** model. It is focused on the [Web of Things](https://www.w3.org/WoT/) paradigm by offering extended support for applications programmed with [WoTPy](https://pypi.org/project/wotpy/).
 
