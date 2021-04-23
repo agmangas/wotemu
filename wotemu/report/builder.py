@@ -589,7 +589,7 @@ class ReportBuilder:
                 y=df_model["task_short"],
                 name=model)
 
-            fig.append_trace(trace, row=(idx + 1), col=1)
+            fig.add_trace(trace, row=(idx + 1), col=1)
 
         fig.update_traces(orientation="h")
 
