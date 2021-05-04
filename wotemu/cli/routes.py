@@ -1,16 +1,8 @@
 import logging
 import pprint
-import re
-import socket
 import subprocess
 
-import click
-import docker
 import netaddr
-import netifaces
-
-import wotemu.config
-import wotemu.enums
 from wotemu.utils import (get_current_task, get_network_gateway_task,
                           get_output_iface_for_task, get_task_networks,
                           ping_docker)
@@ -118,8 +110,14 @@ def update_routing(conf, rtable_name, rtable_mark, apply):
 
     ports_udp = [conf.port_coap]
 
-    _logger.debug("TCP ports: %s", ports_tcp)
-    _logger.debug("UDP ports: %s", ports_udp)
+    if conf.other_ports_tcp:
+        ports_tcp.extend(conf.other_ports_tcp)
+
+    if conf.other_ports_udp:
+        ports_udp.extend(conf.other_ports_udp)
+
+    _logger.info("Updating routes for TCP ports: %s", ports_tcp)
+    _logger.info("Updating routes for UDP ports: %s", ports_udp)
 
     docker_url = conf.docker_proxy_url
     ping_docker(docker_url=docker_url)

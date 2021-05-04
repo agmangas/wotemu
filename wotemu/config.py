@@ -30,7 +30,9 @@ EnvConfig = collections.namedtuple(
         "mqtt_broker_host",
         "mqtt_url",
         "redis_url",
-        "docker_proxy_url"
+        "docker_proxy_url",
+        "other_ports_tcp",
+        "other_ports_udp"
     ])
 
 
@@ -43,6 +45,8 @@ class ConfigVars(enum.Enum):
     MQTT_BROKER_HOST = "MQTT_BROKER_HOST"
     REDIS_URL = "REDIS_URL"
     DOCKER_PROXY_URL = "DOCKER_PROXY_URL"
+    OTHER_PORTS_TCP = "OTHER_PORTS_TCP"
+    OTHER_PORTS_UDP = "OTHER_PORTS_UDP"
 
 
 DEFAULT_CONFIG_VARS = {
@@ -53,7 +57,9 @@ DEFAULT_CONFIG_VARS = {
     ConfigVars.PORT_MQTT: _DEFAULT_PORT_MQTT,
     ConfigVars.MQTT_BROKER_HOST: None,
     ConfigVars.REDIS_URL: _DEFAULT_REDIS_URL,
-    ConfigVars.DOCKER_PROXY_URL: _DEFAULT_DOCKER_PROXY_URL
+    ConfigVars.DOCKER_PROXY_URL: _DEFAULT_DOCKER_PROXY_URL,
+    ConfigVars.OTHER_PORTS_TCP: None,
+    ConfigVars.OTHER_PORTS_UDP: None
 }
 
 
@@ -66,6 +72,14 @@ def _getenv_int(name, default):
             os.getenv(name), name, default)
 
         return default
+
+
+def _parse_ports(val):
+    try:
+        return [int(item) for item in val.split(",")]
+    except:
+        _logger.warning(f"Error parsing ports: {val}", exc_info=True)
+        return None
 
 
 def get_env_config():
@@ -101,6 +115,17 @@ def get_env_config():
         ConfigVars.DOCKER_PROXY_URL.value,
         DEFAULT_CONFIG_VARS.get(ConfigVars.DOCKER_PROXY_URL))
 
+    other_ports_tcp = os.getenv(
+        ConfigVars.OTHER_PORTS_TCP.value,
+        DEFAULT_CONFIG_VARS.get(ConfigVars.OTHER_PORTS_TCP))
+
+    other_ports_udp = os.getenv(
+        ConfigVars.OTHER_PORTS_UDP.value,
+        DEFAULT_CONFIG_VARS.get(ConfigVars.OTHER_PORTS_UDP))
+
+    other_ports_tcp = other_ports_tcp and _parse_ports(other_ports_tcp)
+    other_ports_udp = other_ports_udp and _parse_ports(other_ports_udp)
+
     mqtt_url = None
 
     if port_mqtt and mqtt_broker_host:
@@ -115,7 +140,9 @@ def get_env_config():
         mqtt_broker_host=mqtt_broker_host,
         mqtt_url=mqtt_url,
         redis_url=redis_url,
-        docker_proxy_url=docker_proxy_url)
+        docker_proxy_url=docker_proxy_url,
+        other_ports_tcp=other_ports_tcp,
+        other_ports_udp=other_ports_udp)
 
     return config
 
