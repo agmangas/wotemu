@@ -12,7 +12,7 @@ env:
 install:
   - pip install -U .[dev]
 script:
-  - travis_retry pytest -v
+  - travis_retry pytest -v --disable-warnings
 deploy:
   provider: pypi
   username: __token__
