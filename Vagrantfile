@@ -25,6 +25,10 @@ $prov_swarm_init = <<-SCRIPT
 docker swarm init --advertise-addr #{$addrs["manager1"]}
 SCRIPT
 
+unless Vagrant.has_plugin?("vagrant-reload")
+  system("vagrant plugin install vagrant-reload")
+end
+
 Vagrant.configure("2") do |config|
   config.vm.box = "bento/ubuntu-18.04"
 
@@ -40,27 +44,18 @@ Vagrant.configure("2") do |config|
     c.vm.hostname = "manager1"
     c.vm.network "private_network", ip: $addrs["manager1"]
     c.vm.provision "shell", inline: $prov_swarm_init
-
-    c.trigger.after :up, :provision do |t|
-      t.run = { :inline => "vagrant reload manager1" }
-    end  
+    c.vm.provision :reload
   end
 
   config.vm.define "worker1" do |c|
     c.vm.hostname = "worker1"
     c.vm.network "private_network", ip: $addrs["worker1"]
-
-    c.trigger.after :up, :provision do |t|
-      t.run = { :inline => "vagrant reload worker1" }
-    end
+    c.vm.provision :reload
   end
 
   config.vm.define "worker2" do |c|
     c.vm.hostname = "worker2"
     c.vm.network "private_network", ip: $addrs["worker2"]
-
-    c.trigger.after :up, :provision do |t|
-      t.run = { :inline => "vagrant reload worker2" }
-    end
+    c.vm.provision :reload
   end
 end
