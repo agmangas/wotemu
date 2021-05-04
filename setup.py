@@ -58,7 +58,8 @@ setuptools.setup(
         "plotly>=4.11,<5.0",
         "pandas>=1.1,<2.0",
         "lxml>=4.5,<5.0",
-        "motor>=2.3,<3.0"
+        "motor>=2.3,<3.0",
+        "websockets>=8.0,<9.0"
     ],
     extras_require={
         "dev": [
