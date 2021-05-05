@@ -8,6 +8,8 @@ COPY ./scripts ./scripts
 RUN ./scripts/install-image-deps.sh
 RUN ./scripts/install-cv-deps.sh
 RUN ./scripts/install-pumba.sh
+COPY setup.py setup.py
+RUN ./scripts/pip-install-from-setup.sh
 COPY . .
 RUN pip3 install -U .[apps]
 
