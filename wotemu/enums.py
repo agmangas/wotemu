@@ -85,6 +85,7 @@ class BuiltinApps(enum.Enum):
     CALLER = "wotemu_caller"
     MONGO_HISTORIAN = "wotemu_mongo_historian"
     CAMERA = "wotemu_camera"
+    DETECTOR = "wotemu_detector"
 
 
 BUILTIN_APPS_MODULES = {
@@ -95,7 +96,8 @@ BUILTIN_APPS_MODULES = {
     BuiltinApps.WORKER: "wotemu.apps.worker",
     BuiltinApps.CALLER: "wotemu.apps.caller",
     BuiltinApps.MONGO_HISTORIAN: "wotemu.apps.historian",
-    BuiltinApps.CAMERA: "wotemu.apps.camera"
+    BuiltinApps.CAMERA: "wotemu.apps.camera",
+    BuiltinApps.DETECTOR: "wotemu.apps.detector"
 }
 
 assert set(BUILTIN_APPS_MODULES.keys()) == set(BuiltinApps)

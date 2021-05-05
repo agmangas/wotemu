@@ -5,12 +5,11 @@ Mock video camera with naive motion detection capabilities.
 import asyncio
 import base64
 import collections
-import functools
 import importlib.resources
-import io
 import json
 import logging
 import pprint
+import sys
 
 import cv2
 import numpy as np
@@ -19,7 +18,7 @@ from wotpy.wot.td import ThingDescription
 _VIDEO_PKG = "wotemu.apps.data"
 _VIDEO_RESOURCE = "camera.mp4"
 _MOTION_THRESHOLD = 25.0
-_TIMEOUT = 10
+_JPEG_QUALITY = 60
 
 _DESCRIPTION = {
     "id": "urn:org:fundacionctic:thing:wotemu:camera",
@@ -62,8 +61,6 @@ def _frames_generator():
                 cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
 
             yield frame
-    except asyncio.CancelledError:
-        _logger.info("Cancelled video generator")
     finally:
         try:
             cap.release()
@@ -92,8 +89,9 @@ async def _video_motion_generator(target_fps=12, buf_size=None, motion_threshold
         await asyncio.sleep(frame_sleep)
 
 
-def _to_jpg_str(frame):
-    retval, img_bytes = cv2.imencode(".jpg", frame)
+def _to_b64_jpg(frame):
+    params = [cv2.IMWRITE_JPEG_QUALITY, _JPEG_QUALITY]
+    retval, img_bytes = cv2.imencode(".jpg", frame, params)
     assert retval
     return base64.b64encode(img_bytes).decode()
 
@@ -101,11 +99,11 @@ def _to_jpg_str(frame):
 async def _video_frame_emitter(exposed_thing):
     async for frame, motion in _video_motion_generator():
         if motion:
-            str_frame = _to_jpg_str(frame)
-            _logger.debug("Emitting video frame")
-            exposed_thing.emit_event("jpgVideoFrame", str_frame)
-        else:
-            _logger.debug("Dropping frame")
+            frame_jpg = _to_b64_jpg(frame)
+            frame_kb = round(sys.getsizeof(frame_jpg) / 1024.0, 1)
+            _logger.debug("Emitting jpgVideoFrame (%s KB)", frame_kb)
+            assert isinstance(frame_jpg, str)
+            exposed_thing.emit_event("jpgVideoFrame", frame_jpg)
 
 
 async def app(wot, conf, loop):
@@ -122,13 +120,4 @@ async def app(wot, conf, loop):
         "Exposed Thing:\n%s",
         pprint.pformat(ThingDescription.from_thing(exposed_thing.thing).to_dict()))
 
-    video_frame_emitter = functools.partial(
-        _video_frame_emitter,
-        exposed_thing=exposed_thing)
-
-    video_frame_task = asyncio.ensure_future(video_frame_emitter())
-
-    try:
-        await video_frame_task
-    except asyncio.CancelledError:
-        await asyncio.wait_for(video_frame_task, _TIMEOUT)
+    await _video_frame_emitter(exposed_thing=exposed_thing)

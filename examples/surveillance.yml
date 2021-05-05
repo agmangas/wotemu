@@ -18,7 +18,7 @@ networks:
       org.fundacionctic.wotemu.net: ''
     name: field
 services:
-  camera:
+  camera_num_0:
     cap_add:
     - ALL
     command:
@@ -28,8 +28,8 @@ services:
     - --enable-http
     depends_on:
     - gw_field
-    - redis
     - docker_api_proxy
+    - redis
     deploy:
       resources:
         limits:
@@ -38,8 +38,154 @@ services:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       NODE_HOSTNAME: '{{.Node.Hostname}}'
       NODE_ID: '{{.Node.ID}}'
-      OTHER_PORTS_TCP: '9898'
-      OTHER_PORTS_UDP: '9898'
+      PORT_CATALOGUE: '9090'
+      PORT_COAP: '5683'
+      PORT_HTTP: '80'
+      PORT_MQTT: '1883'
+      PORT_WS: '81'
+      REDIS_URL: redis://redis
+      SERVICE_ID: '{{.Service.ID}}'
+      SERVICE_NAME: '{{.Service.Name}}'
+      TARGET_CPU_SPEED: 200
+    hostname: '{{.Task.Name}}'
+    image: agmangas/wotemu
+    labels:
+      org.fundacionctic.wotemu.node: ''
+    networks:
+    - field
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+  camera_num_1:
+    cap_add:
+    - ALL
+    command:
+    - app
+    - --path
+    - wotemu_camera
+    - --enable-http
+    depends_on:
+    - gw_field
+    - docker_api_proxy
+    - redis
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    environment:
+      DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
+      NODE_HOSTNAME: '{{.Node.Hostname}}'
+      NODE_ID: '{{.Node.ID}}'
+      PORT_CATALOGUE: '9090'
+      PORT_COAP: '5683'
+      PORT_HTTP: '80'
+      PORT_MQTT: '1883'
+      PORT_WS: '81'
+      REDIS_URL: redis://redis
+      SERVICE_ID: '{{.Service.ID}}'
+      SERVICE_NAME: '{{.Service.Name}}'
+      TARGET_CPU_SPEED: 200
+    hostname: '{{.Task.Name}}'
+    image: agmangas/wotemu
+    labels:
+      org.fundacionctic.wotemu.node: ''
+    networks:
+    - field
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+  camera_num_2:
+    cap_add:
+    - ALL
+    command:
+    - app
+    - --path
+    - wotemu_camera
+    - --enable-http
+    depends_on:
+    - gw_field
+    - docker_api_proxy
+    - redis
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    environment:
+      DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
+      NODE_HOSTNAME: '{{.Node.Hostname}}'
+      NODE_ID: '{{.Node.ID}}'
+      PORT_CATALOGUE: '9090'
+      PORT_COAP: '5683'
+      PORT_HTTP: '80'
+      PORT_MQTT: '1883'
+      PORT_WS: '81'
+      REDIS_URL: redis://redis
+      SERVICE_ID: '{{.Service.ID}}'
+      SERVICE_NAME: '{{.Service.Name}}'
+      TARGET_CPU_SPEED: 200
+    hostname: '{{.Task.Name}}'
+    image: agmangas/wotemu
+    labels:
+      org.fundacionctic.wotemu.node: ''
+    networks:
+    - field
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+  camera_num_3:
+    cap_add:
+    - ALL
+    command:
+    - app
+    - --path
+    - wotemu_camera
+    - --enable-http
+    depends_on:
+    - gw_field
+    - docker_api_proxy
+    - redis
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    environment:
+      DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
+      NODE_HOSTNAME: '{{.Node.Hostname}}'
+      NODE_ID: '{{.Node.ID}}'
+      PORT_CATALOGUE: '9090'
+      PORT_COAP: '5683'
+      PORT_HTTP: '80'
+      PORT_MQTT: '1883'
+      PORT_WS: '81'
+      REDIS_URL: redis://redis
+      SERVICE_ID: '{{.Service.ID}}'
+      SERVICE_NAME: '{{.Service.Name}}'
+      TARGET_CPU_SPEED: 200
+    hostname: '{{.Task.Name}}'
+    image: agmangas/wotemu
+    labels:
+      org.fundacionctic.wotemu.node: ''
+    networks:
+    - field
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+  camera_num_4:
+    cap_add:
+    - ALL
+    command:
+    - app
+    - --path
+    - wotemu_camera
+    - --enable-http
+    depends_on:
+    - gw_field
+    - docker_api_proxy
+    - redis
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    environment:
+      DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
+      NODE_HOSTNAME: '{{.Node.Hostname}}'
+      NODE_ID: '{{.Node.ID}}'
       PORT_CATALOGUE: '9090'
       PORT_COAP: '5683'
       PORT_HTTP: '80'
@@ -67,8 +213,8 @@ services:
     - --enable-http
     depends_on:
     - docker_api_proxy
-    - redis
     - gw_cloud_user
+    - redis
     - gw_edge_link
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
@@ -97,12 +243,16 @@ services:
     command:
     - app
     - --path
-    - wotemu_clock
-    - --enable-http
+    - wotemu_detector
+    - --func-param
+    - cameras
+    - '[{"servient_host": "camera_num_0.field"}, {"servient_host": "camera_num_1.field"},
+      {"servient_host": "camera_num_2.field"}, {"servient_host": "camera_num_3.field"},
+      {"servient_host": "camera_num_4.field"}]'
     depends_on:
     - gw_field
-    - redis
     - docker_api_proxy
+    - redis
     - gw_edge_link
     deploy:
       resources:
@@ -112,8 +262,6 @@ services:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       NODE_HOSTNAME: '{{.Node.Hostname}}'
       NODE_ID: '{{.Node.ID}}'
-      OTHER_PORTS_TCP: '9898'
-      OTHER_PORTS_UDP: '9898'
       PORT_CATALOGUE: '9090'
       PORT_COAP: '5683'
       PORT_HTTP: '80'
@@ -147,8 +295,8 @@ services:
       TASKS: '1'
     image: tecnativa/docker-socket-proxy
     networks:
-    - field
     - cloud_user
+    - field
     - edge_link
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
@@ -247,8 +395,8 @@ services:
     labels:
       org.fundacionctic.wotemu.redis: ''
     networks:
-    - field
     - cloud_user
+    - field
     - edge_link
     ports:
     - '6379'
@@ -262,8 +410,8 @@ services:
     - --enable-http
     depends_on:
     - docker_api_proxy
-    - redis
     - gw_cloud_user
+    - redis
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       NODE_HOSTNAME: '{{.Node.Hostname}}'

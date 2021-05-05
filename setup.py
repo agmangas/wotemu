@@ -46,7 +46,7 @@ setuptools.setup(
         "netifaces>=0.10.9,<0.11.0",
         "Click>=7.0,<8.0",
         "sh>=1.12.14,<2.0",
-        "wotpy>=0.14.5,<0.16.0",
+        "wotpy==0.14.5",
         "aioredis>=1.3,<2.0",
         "tornado>=5.1,<6.0",
         "PyYAML>=5.3,<6.0",
@@ -73,7 +73,8 @@ setuptools.setup(
         ],
         "apps": [
             "motor>=2.3,<3.0",
-            "opencv-python>=4.5,<4.6"
+            "opencv-python>=4.5,<4.6",
+            "face-recognition>=1.3,<1.4"
         ]
     }
 )

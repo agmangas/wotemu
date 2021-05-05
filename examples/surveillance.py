@@ -1,16 +1,8 @@
-from wotemu.config import ConfigVars
+import json
+
 from wotemu.enums import NetworkConditions
 from wotemu.topology.models import (BuiltinApps, Network, Node, NodeApp,
                                     NodeResources, Topology)
-
-_PORT_STREAM = 9898
-
-_ARGS_COMPOSE_PORT_STREAM = {
-    "environment": {
-        ConfigVars.OTHER_PORTS_TCP.value: f"{_PORT_STREAM}",
-        ConfigVars.OTHER_PORTS_UDP.value: f"{_PORT_STREAM}"
-    }
-}
 
 
 def topology():
@@ -30,23 +22,38 @@ def topology():
         target_cpu_speed=200,
         mem_limit="256M")
 
-    node_camera = Node(
-        name="camera",
-        app=NodeApp(path=BuiltinApps.CAMERA, http=True),
-        networks=[network_field],
-        resources=camera_resources,
-        args_compose=_ARGS_COMPOSE_PORT_STREAM)
+    nodes_camera = [
+        Node(
+            name=f"camera_num_{idx}",
+            app=NodeApp(path=BuiltinApps.CAMERA, http=True),
+            networks=[network_field],
+            resources=camera_resources)
+        for idx in range(5)
+    ]
+
+    camera_hostnames = [
+        f"{item.name}.{network_field.name}"
+        for item in nodes_camera
+    ]
 
     detector_resources = NodeResources(
         target_cpu_speed=600,
         mem_limit="1G")
 
+    param_cameras = json.dumps([
+        {"servient_host": cam_name}
+        for cam_name in camera_hostnames
+    ])
+
+    app_detector = NodeApp(
+        path=BuiltinApps.DETECTOR,
+        params={"cameras": param_cameras})
+
     node_detector = Node(
         name="detector",
-        app=NodeApp(path=BuiltinApps.CLOCK, http=True),
+        app=app_detector,
         networks=[network_field, network_edge_link],
-        resources=detector_resources,
-        args_compose=_ARGS_COMPOSE_PORT_STREAM)
+        resources=detector_resources)
 
     node_cloud_server = Node(
         name="cloud_server",
@@ -59,7 +66,7 @@ def topology():
         networks=[network_cloud_user])
 
     topology = Topology(nodes=[
-        node_camera,
+        *nodes_camera,
         node_detector,
         node_cloud_server,
         node_user
