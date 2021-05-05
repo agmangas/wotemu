@@ -8,4 +8,5 @@ libxext6 \
 ffmpeg \
 libfontconfig1 \
 libxrender1 \
-libgl1-mesa-glx
+libgl1-mesa-glx \
+cmake
