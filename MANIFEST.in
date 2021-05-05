@@ -1,2 +1,3 @@
 graft wotemu/report/templates
+graft wotemu/apps/data
 global-exclude *.pyc

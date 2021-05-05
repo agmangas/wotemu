@@ -1,20 +1,15 @@
 import copy
 import datetime
 import functools
-import io
 import json
 import logging
 import math
 import os
-import pprint
-import re
-import tempfile
 import time
 
 import lxml.etree
 import numpy as np
 import pandas as pd
-import pkg_resources
 import plotly.express as px
 import plotly.graph_objects as go
 import wotpy.wot.consumed.thing
@@ -25,7 +20,7 @@ from wotemu.report.components.container import ContainerComponent
 from wotemu.report.components.figure_block import FigureBlockComponent
 from wotemu.report.components.task_list import TaskListComponent
 from wotemu.report.components.task_section import TaskSectionComponent
-from wotemu.report.utils import get_base_template, shorten_task_name
+from wotemu.report.utils import shorten_task_name
 from wotpy.protocols.enums import InteractionVerbs
 
 _MIN_HEIGHT = 400

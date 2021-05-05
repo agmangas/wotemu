@@ -58,7 +58,6 @@ setuptools.setup(
         "plotly>=4.11,<5.0",
         "pandas>=1.1,<2.0",
         "lxml>=4.5,<5.0",
-        "motor>=2.3,<3.0",
         "websockets>=8.0,<9.0"
     ],
     extras_require={
@@ -71,6 +70,10 @@ setuptools.setup(
             "docker>=4.0,<5.0",
             "html5lib>=1.1,<2.0",
             "bumpversion>=0.5.3,<0.6.0"
+        ],
+        "apps": [
+            "motor>=2.3,<3.0",
+            "opencv-python>=4.5,<4.6"
         ]
     }
 )
