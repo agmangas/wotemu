@@ -1,4 +1,5 @@
 import asyncio
+import copy
 import logging
 import pprint
 import time
@@ -141,6 +142,9 @@ class RequestVerbCallback(VerbCallback):
         self.loop.create_task(self.callback(data))
 
 
+_MAX_LOG_LEN = 256
+
+
 class SubscriptionVerbCallback(VerbCallback):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -156,19 +160,30 @@ class SubscriptionVerbCallback(VerbCallback):
 
         return data
 
+    def _log_item(self, data):
+        data_log = copy.copy(data)
+
+        if data_log.get("item"):
+            item_str = str(data_log["item"])
+
+            if len(item_str) > _MAX_LOG_LEN:
+                item_str = f"{item_str[:_MAX_LOG_LEN]} [...]"
+
+            data_log.update({"item": item_str})
+
+        _logger.log(
+            logging.WARNING if data_log.get("error") else logging.DEBUG,
+            "<%s>\n%s",
+            self.__class__.__name__,
+            pprint.pformat(data_log))
+
     def decorate_observable(self, obsv):
         if not self.callback:
             return obsv
 
         def callback_task(data):
             data.update(self.data)
-
-            _logger.log(
-                logging.WARNING if data.get("error") else logging.DEBUG,
-                "<%s>\n%s",
-                self.__class__.__name__,
-                pprint.pformat(data))
-
+            self._log_item(data)
             self.loop.create_task(self.callback(data))
 
         event_key = "event"
