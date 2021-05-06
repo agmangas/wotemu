@@ -76,14 +76,14 @@ def topology():
     nodes_camera_1, node_detector_1 = _build_detector_cluster(
         cluster_id=_ID_1,
         network_edge=network_edge_1,
-        num_cameras=4,
+        num_cameras=3,
         camera_resources=camera_resources,
         detector_resources=detector_resources)
 
     nodes_camera_2, node_detector_2 = _build_detector_cluster(
         cluster_id=_ID_2,
         network_edge=network_edge_2,
-        num_cameras=2,
+        num_cameras=1,
         camera_resources=camera_resources,
         detector_resources=detector_resources)
 
@@ -124,7 +124,7 @@ def topology():
             "servient_host": f"{node_historian.name}.{network_cloud_user.name}",
             "thing_id": _THING_ID_HISTORIAN,
             "params": json.dumps({"write": None}),
-            "lambda": 3
+            "lambd": 3
         })
 
     node_user = Node(
