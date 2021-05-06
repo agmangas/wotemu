@@ -88,8 +88,7 @@ _DESCRIPTION = {
                     "buckets": {
                         "type": "number"
                     }
-                },
-                "required": ["propertyName"]
+                }
             },
             "output": {
                 "type": "array",
@@ -153,6 +152,7 @@ MongoHistorianThing = collections.namedtuple(
 
 
 async def _get_aggregated(params_input, motor_client, db_name, query):
+    params_input = params_input or {}
     num_buckets = int(params_input.get("buckets", 10))
 
     pipeline = [
@@ -205,12 +205,11 @@ async def _get_aggregated(params_input, motor_client, db_name, query):
 
 async def _get(params, motor_client, db_name):
     params_input = params["input"]
+    params_input = params_input or {}
+
     from_unix = int(params_input.get("fromUnix", time.time() - 60))
 
     query = {
-        "property_name": {
-            "$eq": params_input["propertyName"]
-        },
         "utc_date": {
             "$gte": datetime.utcfromtimestamp(from_unix)
         }
@@ -219,6 +218,13 @@ async def _get(params, motor_client, db_name):
     if params_input.get("toUnix"):
         to_unix = int(params_input["toUnix"])
         query["utc_date"].update({"$lt": datetime.utcfromtimestamp(to_unix)})
+
+    if params_input.get("propertyName"):
+        query.update({
+            "property_name": {
+                "$eq": params_input["propertyName"]
+            }
+        })
 
     if params_input.get("thingId"):
         query.update({
@@ -257,6 +263,8 @@ async def _get(params, motor_client, db_name):
 
 async def _write(params, motor_client, db_name):
     params_input = params["input"]
+    params_input = params_input or {}
+
     tstamp = params_input.get("unixTime")
     dtime = datetime.utcfromtimestamp(tstamp) if tstamp else datetime.utcnow()
 
