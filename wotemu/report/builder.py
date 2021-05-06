@@ -258,7 +258,7 @@ class ReportBuilder:
 
         return 0 if df_where.empty else (df_where.iloc[0]["len"] / 1024.0)
 
-    async def build_service_traffic_figure(self, inbound, colorscale="Portland", height_task=50):
+    async def build_service_traffic_figure(self, inbound, colorscale="Portland", height_task=70):
         df = await self._get_service_traffic_df(inbound=inbound)
 
         if df.empty:
@@ -536,7 +536,7 @@ class ReportBuilder:
 
         return fig
 
-    async def build_cpu_ranking_figure(self, height_task=32, height_facet=50):
+    async def build_cpu_ranking_figure(self, height_task=45, height_facet=50):
         task_keys = await self._get_tasks()
 
         if not task_keys or len(task_keys) == 0:
@@ -601,7 +601,7 @@ class ReportBuilder:
 
         return fig
 
-    async def build_mem_ranking_figure(self, height_task=32):
+    async def build_mem_ranking_figure(self, height_task=45):
         task_keys = await self._get_tasks()
 
         if not task_keys or len(task_keys) == 0:
@@ -636,7 +636,7 @@ class ReportBuilder:
 
         return fig
 
-    async def build_task_timeline_figure(self, height_task=30):
+    async def build_task_timeline_figure(self, height_task=45):
         df_snap = await self._get_snapshot_df()
 
         df_snap["finish"] = np.where(
