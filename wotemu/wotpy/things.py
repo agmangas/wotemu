@@ -13,6 +13,18 @@ from wotpy.protocols.enums import InteractionVerbs
 _logger = logging.getLogger(__name__)
 
 
+def _truncate_key(data_dict, key, max_len=512):
+    if not data_dict.get(key):
+        return
+
+    str_val = str(data_dict[key])
+
+    if len(str_val) > max_len:
+        str_val = f"{str_val[:max_len]} [...]"
+
+    data_dict.update({key: str_val})
+
+
 class VerbCallback:
     def __init__(self, verb, func, call_args, call_kwargs):
         self.verb = verb
@@ -127,22 +139,23 @@ class RequestVerbCallback(VerbCallback):
     def update_latency(self):
         self.latency = time.time() - self._init_time
 
-    def create_callback_task(self):
-        if not self.callback:
-            return
-
-        data = self.data
+    def _log_item(self, data):
+        data_log = copy.copy(data)
+        _truncate_key(data_log, "result")
 
         _logger.log(
             logging.WARNING if self.error else logging.DEBUG,
             "<%s>\n%s",
             self.__class__.__name__,
-            pprint.pformat(data))
+            pprint.pformat(data_log))
 
+    def create_callback_task(self):
+        if not self.callback:
+            return
+
+        data = self.data
+        self._log_item(data)
         self.loop.create_task(self.callback(data))
-
-
-_MAX_LOG_LEN = 256
 
 
 class SubscriptionVerbCallback(VerbCallback):
@@ -162,14 +175,7 @@ class SubscriptionVerbCallback(VerbCallback):
 
     def _log_item(self, data):
         data_log = copy.copy(data)
-
-        if data_log.get("item"):
-            item_str = str(data_log["item"])
-
-            if len(item_str) > _MAX_LOG_LEN:
-                item_str = f"{item_str[:_MAX_LOG_LEN]} [...]"
-
-            data_log.update({"item": item_str})
+        _truncate_key(data_log, "item")
 
         _logger.log(
             logging.WARNING if data_log.get("error") else logging.DEBUG,
