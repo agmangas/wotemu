@@ -129,12 +129,23 @@ def update_routing(conf, rtable_name, rtable_mark, apply):
     task = get_current_task(docker_url=docker_url)
     network_ids = get_task_networks(docker_url=docker_url, task=task)
 
-    gw_tasks = {
-        net_id: get_network_gateway_task(
-            docker_url=docker_url,
-            network_id=net_id)
-        for net_id in network_ids
-    }
+    gw_tasks = {}
+
+    for net_id in network_ids:
+        try:
+            the_gw_task = get_network_gateway_task(
+                docker_url=docker_url,
+                network_id=net_id)
+        except:
+            _logger.error("Error finding gateway task", exc_info=True)
+
+            raise RuntimeError((
+                "Could not find gateway task for network {}. "
+                "This was probably due to the fact that "
+                "the task was not fully initialized yet."
+            ).format(net_id))
+
+        gw_tasks.update({net_id: the_gw_task})
 
     _logger.debug(
         "Gateway tasks:\n%s",
