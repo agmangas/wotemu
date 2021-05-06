@@ -217,6 +217,9 @@ class Node(BaseNamedModel):
         self._services = set(services) if services else set()
         super().__init__(name)
 
+    def __repr__(self):
+        return "{} (name={})".format(super().__repr__(), self.name)
+
     @property
     def image(self):
         return self._image or os.getenv(IMAGE_ENV_VAR, BASE_IMAGE)
