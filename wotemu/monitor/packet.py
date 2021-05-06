@@ -130,7 +130,14 @@ async def _process_queue(output_queue, queue_size, async_cb):
 
 
 def _check_proc_health(proc):
-    if not proc.is_alive() or proc.exitcode is not None:
+    is_alive = proc.is_alive()
+    exitcode = proc.exitcode
+
+    _logger.debug(
+        "Checking packet monitor health (is_alive=%s) (exitcode=%s)",
+        is_alive, exitcode)
+
+    if not is_alive or exitcode is not None:
         err_msg = (
             "Tshark packet capture process "
             "stopped prematurely "
