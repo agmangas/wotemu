@@ -45,9 +45,9 @@ services:
     - wotemu_camera
     - --enable-http
     depends_on:
+    - docker_api_proxy
     - gw_field_location_1
     - redis
-    - docker_api_proxy
     deploy:
       resources:
         limits:
@@ -82,9 +82,9 @@ services:
     - wotemu_camera
     - --enable-http
     depends_on:
+    - docker_api_proxy
     - gw_field_location_1
     - redis
-    - docker_api_proxy
     deploy:
       resources:
         limits:
@@ -119,9 +119,9 @@ services:
     - wotemu_camera
     - --enable-http
     depends_on:
+    - docker_api_proxy
     - gw_field_location_1
     - redis
-    - docker_api_proxy
     deploy:
       resources:
         limits:
@@ -156,9 +156,9 @@ services:
     - wotemu_camera
     - --enable-http
     depends_on:
+    - docker_api_proxy
     - gw_field_location_1
     - redis
-    - docker_api_proxy
     deploy:
       resources:
         limits:
@@ -193,9 +193,9 @@ services:
     - wotemu_camera
     - --enable-http
     depends_on:
-    - gw_field_location_2
-    - redis
     - docker_api_proxy
+    - redis
+    - gw_field_location_2
     deploy:
       resources:
         limits:
@@ -230,9 +230,9 @@ services:
     - wotemu_camera
     - --enable-http
     depends_on:
-    - gw_field_location_2
-    - redis
     - docker_api_proxy
+    - redis
+    - gw_field_location_2
     deploy:
       resources:
         limits:
@@ -272,10 +272,10 @@ services:
       {"servient_host": "camera_location_1_3.field_location_1"}]'
     - --enable-http
     depends_on:
-    - redis
-    - gw_field_location_1
-    - gw_edge_link_location_1
     - docker_api_proxy
+    - gw_field_location_1
+    - redis
+    - gw_edge_link_location_1
     deploy:
       resources:
         limits:
@@ -315,10 +315,10 @@ services:
       "camera_location_2_1.field_location_2"}]'
     - --enable-http
     depends_on:
-    - gw_field_location_2
-    - redis
     - docker_api_proxy
     - gw_edge_link_location_2
+    - redis
+    - gw_field_location_2
     deploy:
       resources:
         limits:
@@ -341,8 +341,8 @@ services:
     labels:
       org.fundacionctic.wotemu.node: ''
     networks:
-    - edge_link_location_2
     - field_location_2
+    - edge_link_location_2
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
   docker_api_proxy:
@@ -360,10 +360,10 @@ services:
       TASKS: '1'
     image: tecnativa/docker-socket-proxy
     networks:
+    - cloud_user
     - edge_link_location_2
     - edge_link_location_1
     - field_location_2
-    - cloud_user
     - field_location_1
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
@@ -534,11 +534,11 @@ services:
       "thing_id": "urn:org:fundacionctic:thing:wotemu:detector"}]'
     - --enable-http
     depends_on:
-    - docker_api_proxy
-    - gw_cloud_user
-    - gw_edge_link_location_1
     - gw_edge_link_location_2
+    - gw_edge_link_location_1
+    - docker_api_proxy
     - redis
+    - gw_cloud_user
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       NODE_HOSTNAME: '{{.Node.Hostname}}'
@@ -557,9 +557,9 @@ services:
       org.fundacionctic.wotemu.node: ''
     networks:
     - srvnet_mongo_historian
+    - cloud_user
     - edge_link_location_2
     - edge_link_location_1
-    - cloud_user
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
   mongo:
@@ -582,10 +582,10 @@ services:
     labels:
       org.fundacionctic.wotemu.redis: ''
     networks:
+    - cloud_user
     - edge_link_location_2
     - edge_link_location_1
     - field_location_2
-    - cloud_user
     - field_location_1
     ports:
     - '6379'
@@ -595,17 +595,23 @@ services:
     command:
     - app
     - --path
-    - wotemu_reader
+    - wotemu_caller
     - --func-param
     - servient_host
     - historian.cloud_user
     - --func-param
     - thing_id
     - urn:org:fundacionctic:thing:historian
+    - --func-param
+    - params
+    - '{"write": null}'
+    - --func-param
+    - lambda
+    - '3'
     depends_on:
-    - gw_cloud_user
     - docker_api_proxy
     - redis
+    - gw_cloud_user
     deploy:
       replicas: 3
     environment:

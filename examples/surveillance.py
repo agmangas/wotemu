@@ -119,10 +119,12 @@ def topology():
     node_historian.link_service(mongo)
 
     user_app = NodeApp(
-        path=BuiltinApps.READER,
+        path=BuiltinApps.CALLER,
         params={
             "servient_host": f"{node_historian.name}.{network_cloud_user.name}",
-            "thing_id": _THING_ID_HISTORIAN
+            "thing_id": _THING_ID_HISTORIAN,
+            "params": json.dumps({"write": None}),
+            "lambda": 3
         })
 
     node_user = Node(
