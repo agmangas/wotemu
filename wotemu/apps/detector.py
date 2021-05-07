@@ -17,6 +17,7 @@ import numpy as np
 from wotemu.utils import consume_from_catalogue, wait_node
 from wotpy.wot.td import ThingDescription
 
+_QUEUE_MAXSIZE = 5
 _DEFAULT_CAMERA_ID = "urn:org:fundacionctic:thing:wotemu:camera"
 _DEFAULT_FRAME_EVENT = "jpgVideoFrame"
 
@@ -71,45 +72,76 @@ _DESCRIPTION = {
 _logger = logging.getLogger(__name__)
 
 
-def _on_next(item, cam_id, store):
-    unix_now = int(time.time())
-    b64_jpg = item.data
-
-    _logger.debug(
-        "[%s] Received B64-encoded JPG (%s) (%s KB)",
-        cam_id,
-        b64_jpg.__class__.__name__,
-        round(sys.getsizeof(b64_jpg) / 1024.0, 1))
-
+def _detect(queue_item):
+    b64_jpg = queue_item["b64_jpg"]
     jpg_bytes = base64.b64decode(b64_jpg)
     frame_arr = cv2.imdecode(np.frombuffer(jpg_bytes, np.uint8), -1)
+    return face_recognition.face_locations(frame_arr)
 
-    _logger.debug(
-        "[%s] Decoded JPG frame (%s) (%s KB)",
-        cam_id,
-        frame_arr.__class__.__name__,
-        round(sys.getsizeof(frame_arr) / 1024.0, 1))
 
-    face_locations = face_recognition.face_locations(frame_arr)
+async def _process_queue(detection_queue, store, error_event, timeout_get=3.0):
+    while True:
+        if error_event.is_set():
+            raise RuntimeError((
+                "Stopping processing loop due to an error event "
+                "being activated by an active camera subscription."
+            ))
 
-    if not face_locations or len(face_locations) == 0:
-        return
+        try:
+            queue_item = await asyncio.wait_for(detection_queue.get(), timeout_get)
+        except asyncio.TimeoutError:
+            _logger.debug("Timeout waiting for queue item")
+            continue
 
-    _logger.info("[%s] Face locations: %s", cam_id, face_locations)
+        b64_jpg = queue_item["b64_jpg"]
+        cam_id = queue_item["cam_id"]
+        unix_now = queue_item["unix_now"]
 
-    store_idx = next(
-        (idx for idx, item in enumerate(store) if item["cameraId"] == cam_id),
-        None)
+        _logger.debug(
+            "[%s] Received B64-encoded JPG (%s) (%s KB)",
+            cam_id,
+            b64_jpg.__class__.__name__,
+            round(sys.getsizeof(b64_jpg) / 1024.0, 1))
 
-    if store_idx is not None:
-        store.pop(store_idx)
+        loop = asyncio.get_running_loop()
+        detect = functools.partial(_detect, queue_item=queue_item)
+        face_locations = await loop.run_in_executor(None, detect)
+        no_faces = not face_locations or len(face_locations) == 0
 
-    store.append({
-        "cameraId": cam_id,
-        "jpgB64": b64_jpg,
-        "faceLocations": face_locations,
-        "unixTime": unix_now
-    })
+        _logger.log(
+            logging.DEBUG if no_faces else logging.INFO,
+            "[%s] Face locations: %s",
+            cam_id, face_locations)
+
+        if no_faces:
+            continue
+
+        store_idx = next((
+            idx for idx, item in enumerate(store)
+            if item["cameraId"] == cam_id), None)
+
+        if store_idx is not None:
+            store.pop(store_idx)
+
+        store.append({
+            "cameraId": cam_id,
+            "jpgB64": b64_jpg,
+            "faceLocations": face_locations,
+            "unixTime": unix_now
+        })
+
+
+def _on_next(item, cam_id, detection_queue):
+    try:
+        _logger.debug("Putting new item in detection queue")
+
+        detection_queue.put_nowait({
+            "b64_jpg": item.data,
+            "unix_now": int(time.time()),
+            "cam_id": cam_id
+        })
+    except asyncio.QueueFull:
+        _logger.info("Detection queue is full")
 
 
 def _on_error(err, cam_id, error_event):
@@ -117,7 +149,7 @@ def _on_error(err, cam_id, error_event):
     error_event.set()
 
 
-async def _subscribe_camera(wot, conf, camera, error_event, store):
+async def _subscribe_camera(wot, conf, camera, error_event, detection_queue):
     servient_host = camera["servient_host"]
     thing_id = camera.get("thing_id", _DEFAULT_CAMERA_ID)
     frame_event = camera.get("frame_event", _DEFAULT_FRAME_EVENT)
@@ -134,7 +166,7 @@ async def _subscribe_camera(wot, conf, camera, error_event, store):
     on_next = functools.partial(
         _on_next,
         cam_id=cam_id,
-        store=store)
+        detection_queue=detection_queue)
 
     on_error = functools.partial(
         _on_error,
@@ -165,6 +197,7 @@ async def _identity(val):
 async def app(wot, conf, loop, cameras):
     cameras = json.loads(cameras)
     error_event = asyncio.Event()
+    detection_queue = asyncio.Queue(maxsize=_QUEUE_MAXSIZE)
     store = list()
 
     _logger.info("Subscribing to cameras:\n%s", pprint.pformat(cameras))
@@ -175,7 +208,7 @@ async def app(wot, conf, loop, cameras):
             conf=conf,
             camera=camera,
             error_event=error_event,
-            store=store)
+            detection_queue=detection_queue)
         for camera in cameras
     ], return_exceptions=False)
 
@@ -200,8 +233,12 @@ async def app(wot, conf, loop, cameras):
         pprint.pformat(ThingDescription.from_thing(exposed_thing.thing).to_dict()))
 
     try:
-        await error_event.wait()
-    except asyncio.CancelledError:
-        _logger.info("Cancelling camera detection app")
+        await _process_queue(
+            detection_queue=detection_queue,
+            store=store,
+            error_event=error_event)
+    except Exception as ex:
+        _logger.warning("Error in processing queue", exc_info=True)
+        raise ex
     finally:
         await _cancel_subs(subs)

@@ -83,7 +83,7 @@ def topology():
     nodes_camera_2, node_detector_2 = _build_detector_cluster(
         cluster_id=_ID_2,
         network_edge=network_edge_2,
-        num_cameras=1,
+        num_cameras=6,
         camera_resources=camera_resources,
         detector_resources=detector_resources)
 
