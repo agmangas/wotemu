@@ -19,6 +19,7 @@ from wotemu.utils import consume_from_catalogue
 from wotpy.wot.td import ThingDescription
 
 _DEFAULT_FALLBACK_DB = "wotemu_mongo_historian"
+_DEFAULT_QUERY_SECONDS = 60
 
 _DESCRIPTION = {
     "id": "urn:org:fundacionctic:thing:historian",
@@ -207,7 +208,8 @@ async def _get(params, motor_client, db_name):
     params_input = params["input"]
     params_input = params_input or {}
 
-    from_unix = int(params_input.get("fromUnix", time.time() - 60))
+    from_unix_default = time.time() - _DEFAULT_QUERY_SECONDS
+    from_unix = int(params_input.get("fromUnix", from_unix_default))
 
     query = {
         "utc_date": {

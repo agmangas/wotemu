@@ -156,9 +156,9 @@ services:
     - wotemu_camera
     - --enable-http
     depends_on:
-    - redis
     - docker_api_proxy
     - gw_field_location_2
+    - redis
     deploy:
       resources:
         limits:
@@ -197,9 +197,9 @@ services:
       "camera_location_1_1.field_location_1"}, {"servient_host": "camera_location_1_2.field_location_1"}]'
     - --enable-http
     depends_on:
+    - redis
     - docker_api_proxy
     - gw_edge_link_location_1
-    - redis
     - gw_field_location_1
     deploy:
       resources:
@@ -239,10 +239,10 @@ services:
     - '[{"servient_host": "camera_location_2_0.field_location_2"}]'
     - --enable-http
     depends_on:
-    - redis
-    - docker_api_proxy
     - gw_edge_link_location_2
     - gw_field_location_2
+    - docker_api_proxy
+    - redis
     deploy:
       resources:
         limits:
@@ -265,8 +265,8 @@ services:
     labels:
       org.fundacionctic.wotemu.node: ''
     networks:
-    - field_location_2
     - edge_link_location_2
+    - field_location_2
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
   docker_api_proxy:
@@ -284,11 +284,11 @@ services:
       TASKS: '1'
     image: tecnativa/docker-socket-proxy
     networks:
-    - field_location_2
-    - edge_link_location_1
-    - field_location_1
-    - cloud_user
     - edge_link_location_2
+    - edge_link_location_1
+    - field_location_2
+    - cloud_user
+    - field_location_1
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
   gw_cloud_user:
@@ -458,11 +458,11 @@ services:
       "thing_id": "urn:org:fundacionctic:thing:wotemu:detector"}]'
     - --enable-http
     depends_on:
+    - redis
+    - gw_edge_link_location_2
+    - gw_edge_link_location_1
     - gw_cloud_user
     - docker_api_proxy
-    - gw_edge_link_location_1
-    - gw_edge_link_location_2
-    - redis
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       NODE_HOSTNAME: '{{.Node.Hostname}}'
@@ -480,10 +480,10 @@ services:
     labels:
       org.fundacionctic.wotemu.node: ''
     networks:
-    - srvnet_mongo_historian
-    - cloud_user
     - edge_link_location_2
+    - srvnet_mongo_historian
     - edge_link_location_1
+    - cloud_user
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
   mongo:
@@ -506,11 +506,11 @@ services:
     labels:
       org.fundacionctic.wotemu.redis: ''
     networks:
-    - field_location_2
-    - edge_link_location_1
-    - field_location_1
-    - cloud_user
     - edge_link_location_2
+    - edge_link_location_1
+    - field_location_2
+    - cloud_user
+    - field_location_1
     ports:
     - '6379'
   user:
@@ -528,16 +528,16 @@ services:
     - urn:org:fundacionctic:thing:historian
     - --func-param
     - params
-    - '{"write": null}'
+    - '{"write": null, "list": null}'
     - --func-param
     - lambd
-    - '3'
+    - '5'
     depends_on:
-    - redis
-    - docker_api_proxy
     - gw_cloud_user
+    - docker_api_proxy
+    - redis
     deploy:
-      replicas: 3
+      replicas: 5
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       NODE_HOSTNAME: '{{.Node.Hostname}}'

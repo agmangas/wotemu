@@ -123,15 +123,15 @@ def topology():
         params={
             "servient_host": f"{node_historian.name}.{network_cloud_user.name}",
             "thing_id": _THING_ID_HISTORIAN,
-            "params": json.dumps({"write": None}),
-            "lambd": 3
+            "params": json.dumps({"write": None, "list": None}),
+            "lambd": 5
         })
 
     node_user = Node(
         name="user",
         app=user_app,
         networks=[network_cloud_user],
-        scale=3)
+        scale=5)
 
     topology = Topology(nodes=[
         *nodes_camera_1,
