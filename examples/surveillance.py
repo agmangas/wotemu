@@ -5,8 +5,8 @@ from wotemu.enums import NetworkConditions
 from wotemu.topology.models import (BuiltinApps, Network, Node, NodeApp,
                                     NodeResources, Service, Topology)
 
-_ID_1 = "location_1"
-_ID_2 = "location_2"
+_ID_1 = "loc1"
+_ID_2 = "loc2"
 
 _THING_ID_DETECTOR = "urn:org:fundacionctic:thing:wotemu:detector"
 _THING_ID_HISTORIAN = "urn:org:fundacionctic:thing:historian"
@@ -76,14 +76,14 @@ def topology():
     nodes_camera_1, node_detector_1 = _build_detector_cluster(
         cluster_id=_ID_1,
         network_edge=network_edge_1,
-        num_cameras=3,
+        num_cameras=2,
         camera_resources=camera_resources,
         detector_resources=detector_resources)
 
     nodes_camera_2, node_detector_2 = _build_detector_cluster(
         cluster_id=_ID_2,
         network_edge=network_edge_2,
-        num_cameras=6,
+        num_cameras=8,
         camera_resources=camera_resources,
         detector_resources=detector_resources)
 
@@ -112,7 +112,7 @@ def topology():
         })
 
     node_historian = Node(
-        name="historian",
+        name="cloud",
         app=historian_app,
         networks=[network_edge_1, network_edge_2, network_cloud_user])
 
