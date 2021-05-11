@@ -79,14 +79,8 @@ def _detect(queue_item):
     return face_recognition.face_locations(frame_arr)
 
 
-async def _process_queue(detection_queue, store, error_event, timeout_get=3.0):
+async def _process_queue(detection_queue, store, timeout_get=3.0):
     while True:
-        if error_event.is_set():
-            raise RuntimeError((
-                "Stopping processing loop due to an error event "
-                "being activated by an active camera subscription."
-            ))
-
         try:
             queue_item = await asyncio.wait_for(detection_queue.get(), timeout_get)
         except asyncio.TimeoutError:
@@ -179,6 +173,8 @@ async def _subscribe_camera(wot, conf, camera, error_event, detection_queue):
 
 
 async def _cancel_subs(subs, cancel_sleep=3):
+    _logger.info("Cancelling subscriptions: %s", subs)
+
     for sub in subs:
         try:
             _logger.debug("Disposing: {}".format(sub))
@@ -190,27 +186,45 @@ async def _cancel_subs(subs, cancel_sleep=3):
     await asyncio.sleep(cancel_sleep)
 
 
+async def _subscribe_task(wot, conf, cameras, detection_queue):
+    error_event = asyncio.Event()
+
+    while True:
+        _logger.info("Clearing error event")
+        error_event.clear()
+
+        try:
+            _logger.info(
+                "Subscribing to cameras:\n%s",
+                pprint.pformat(cameras))
+
+            subs = await asyncio.gather(*[
+                _subscribe_camera(
+                    wot=wot,
+                    conf=conf,
+                    camera=camera,
+                    error_event=error_event,
+                    detection_queue=detection_queue)
+                for camera in cameras
+            ], return_exceptions=False)
+
+            await error_event.wait()
+            _logger.warning("Detected error event")
+        finally:
+            try:
+                _cancel_subs(subs)
+            except:
+                _logger.warning("Error cancelling subs", exc_info=True)
+
+
 async def _identity(val):
     return val
 
 
 async def app(wot, conf, loop, cameras):
     cameras = json.loads(cameras)
-    error_event = asyncio.Event()
     detection_queue = asyncio.Queue(maxsize=_QUEUE_MAXSIZE)
     store = list()
-
-    _logger.info("Subscribing to cameras:\n%s", pprint.pformat(cameras))
-
-    subs = await asyncio.gather(*[
-        _subscribe_camera(
-            wot=wot,
-            conf=conf,
-            camera=camera,
-            error_event=error_event,
-            detection_queue=detection_queue)
-        for camera in cameras
-    ], return_exceptions=False)
 
     _logger.info(
         "Producing Thing:\n%s",
@@ -232,13 +246,13 @@ async def app(wot, conf, loop, cameras):
         "Exposed Thing:\n%s",
         pprint.pformat(ThingDescription.from_thing(exposed_thing.thing).to_dict()))
 
-    try:
-        await _process_queue(
+    await asyncio.gather(
+        _process_queue(
             detection_queue=detection_queue,
-            store=store,
-            error_event=error_event)
-    except Exception as ex:
-        _logger.warning("Error in processing queue", exc_info=True)
-        raise ex
-    finally:
-        await _cancel_subs(subs)
+            store=store),
+        _subscribe_task(
+            wot=wot,
+            conf=conf,
+            cameras=cameras,
+            detection_queue=detection_queue),
+        return_exceptions=False)
