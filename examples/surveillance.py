@@ -48,7 +48,8 @@ def _build_detector_cluster(
         app=app_detector,
         networks=[network, network_edge],
         resources=detector_resources,
-        broker=broker)
+        broker=broker,
+        broker_network=network_edge)
 
     return nodes_camera, node_detector
 
@@ -66,13 +67,9 @@ def topology():
         name="cloud_user",
         conditions=NetworkConditions.CABLE)
 
-    broker_1 = Broker(
-        name=f"broker_{_ID_1}",
-        networks=[network_edge_1])
-
-    broker_2 = Broker(
-        name=f"broker_{_ID_2}",
-        networks=[network_edge_2])
+    broker = Broker(
+        name=f"broker",
+        networks=[network_edge_1, network_edge_2])
 
     camera_resources = NodeResources(
         target_cpu_speed=200,
@@ -88,7 +85,7 @@ def topology():
         num_cameras=2,
         camera_resources=camera_resources,
         detector_resources=detector_resources,
-        broker=broker_1)
+        broker=broker)
 
     nodes_camera_2, node_detector_2 = _build_detector_cluster(
         cluster_id=_ID_2,
@@ -96,7 +93,7 @@ def topology():
         num_cameras=8,
         camera_resources=camera_resources,
         detector_resources=detector_resources,
-        broker=broker_2)
+        broker=broker)
 
     mongo = Service(
         name="mongo",
