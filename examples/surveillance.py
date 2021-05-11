@@ -2,8 +2,8 @@ import json
 
 from docker.types import RestartPolicy
 from wotemu.enums import NetworkConditions
-from wotemu.topology.models import (BuiltinApps, Network, Node, NodeApp,
-                                    NodeResources, Service, Topology)
+from wotemu.topology.models import (Broker, BuiltinApps, Network, Node,
+                                    NodeApp, NodeResources, Service, Topology)
 
 _ID_1 = "loc1"
 _ID_2 = "loc2"
@@ -13,7 +13,7 @@ _THING_ID_HISTORIAN = "urn:org:fundacionctic:thing:historian"
 
 
 def _build_detector_cluster(
-        cluster_id, network_edge, num_cameras,
+        cluster_id, network_edge, num_cameras, broker,
         camera_resources=None, detector_resources=None):
     network = Network(
         name=f"field_{cluster_id}",
@@ -41,29 +41,38 @@ def _build_detector_cluster(
     app_detector = NodeApp(
         path=BuiltinApps.DETECTOR,
         params={"cameras": param_cameras},
-        http=True)
+        mqtt=True)
 
     node_detector = Node(
         name=f"detector_{cluster_id}",
         app=app_detector,
         networks=[network, network_edge],
-        resources=detector_resources)
+        resources=detector_resources,
+        broker=broker)
 
     return nodes_camera, node_detector
 
 
 def topology():
     network_edge_1 = Network(
-        name=f"edge_link_{_ID_1}",
-        conditions=NetworkConditions.REGULAR_3G)
+        name=f"edge_2g_{_ID_1}",
+        conditions=NetworkConditions.GPRS)
 
     network_edge_2 = Network(
-        name=f"edge_link_{_ID_2}",
+        name=f"edge_3g_{_ID_2}",
         conditions=NetworkConditions.REGULAR_3G)
 
     network_cloud_user = Network(
         name="cloud_user",
         conditions=NetworkConditions.CABLE)
+
+    broker_1 = Broker(
+        name=f"broker_{_ID_1}",
+        networks=[network_edge_1])
+
+    broker_2 = Broker(
+        name=f"broker_{_ID_2}",
+        networks=[network_edge_2])
 
     camera_resources = NodeResources(
         target_cpu_speed=200,
@@ -78,14 +87,16 @@ def topology():
         network_edge=network_edge_1,
         num_cameras=2,
         camera_resources=camera_resources,
-        detector_resources=detector_resources)
+        detector_resources=detector_resources,
+        broker=broker_1)
 
     nodes_camera_2, node_detector_2 = _build_detector_cluster(
         cluster_id=_ID_2,
         network_edge=network_edge_2,
         num_cameras=8,
         camera_resources=camera_resources,
-        detector_resources=detector_resources)
+        detector_resources=detector_resources,
+        broker=broker_2)
 
     mongo = Service(
         name="mongo",
