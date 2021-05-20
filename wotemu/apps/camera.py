@@ -10,6 +10,7 @@ import json
 import logging
 import pprint
 import sys
+import time
 
 import cv2
 import numpy as np
@@ -26,7 +27,7 @@ _DESCRIPTION = {
     "events": {
         "jpgVideoFrame": {
             "data": {
-                "type": "string"
+                "type": "object"
             }
         }
     }
@@ -103,7 +104,11 @@ async def _video_frame_emitter(exposed_thing):
             frame_kb = round(sys.getsizeof(frame_jpg) / 1024.0, 1)
             _logger.debug("Emitting jpgVideoFrame (%s KB)", frame_kb)
             assert isinstance(frame_jpg, str)
-            exposed_thing.emit_event("jpgVideoFrame", frame_jpg)
+
+            exposed_thing.emit_event("jpgVideoFrame", {
+                "time_capture": time.time(),
+                "b64_jpg": frame_jpg
+            })
 
 
 async def app(wot, conf, loop):

@@ -14,12 +14,14 @@ import time
 import cv2
 import face_recognition
 import numpy as np
+from wotemu.monitor.utils import write_metric
 from wotemu.utils import consume_from_catalogue, wait_node
 from wotpy.wot.td import ThingDescription
 
 _QUEUE_MAXSIZE = 5
 _DEFAULT_CAMERA_ID = "urn:org:fundacionctic:thing:wotemu:camera"
 _DEFAULT_FRAME_EVENT = "jpgVideoFrame"
+_METRIC_LATENCY = "detection_latency"
 
 _DESCRIPTION = {
     "id": "urn:org:fundacionctic:thing:wotemu:detector",
@@ -45,7 +47,6 @@ _DESCRIPTION = {
             }
         },
         "latestDetections": {
-            "readOnly": True,
             "type": "array",
             "items": {
                 "type": "object",
@@ -79,7 +80,9 @@ def _detect(queue_item):
     return face_recognition.face_locations(frame_arr)
 
 
-async def _process_queue(detection_queue, store, timeout_get=3.0):
+async def _process_queue(detection_queue, prop, timeout_get=3.0):
+    store = list()
+
     while True:
         try:
             queue_item = await asyncio.wait_for(detection_queue.get(), timeout_get)
@@ -89,7 +92,8 @@ async def _process_queue(detection_queue, store, timeout_get=3.0):
 
         b64_jpg = queue_item["b64_jpg"]
         cam_id = queue_item["cam_id"]
-        unix_now = queue_item["unix_now"]
+        time_arrival = queue_item["time_arrival"]
+        time_capture = queue_item["time_capture"]
 
         _logger.debug(
             "[%s] Received B64-encoded JPG (%s) (%s KB)",
@@ -107,6 +111,12 @@ async def _process_queue(detection_queue, store, timeout_get=3.0):
             "[%s] Face locations: %s",
             cam_id, face_locations)
 
+        await write_metric(key=_METRIC_LATENCY, data={
+            "latency_pre_detect": time_arrival - time_capture,
+            "latency_post_detect": time.time() - time_capture,
+            "camera_id": cam_id
+        })
+
         if no_faces:
             continue
 
@@ -121,8 +131,10 @@ async def _process_queue(detection_queue, store, timeout_get=3.0):
             "cameraId": cam_id,
             "jpgB64": b64_jpg,
             "faceLocations": face_locations,
-            "unixTime": unix_now
+            "unixTime": time_capture
         })
+
+        prop.write(store)
 
 
 def _on_next(item, cam_id, detection_queue):
@@ -130,8 +142,9 @@ def _on_next(item, cam_id, detection_queue):
         _logger.debug("Putting new item in detection queue")
 
         detection_queue.put_nowait({
-            "b64_jpg": item.data,
-            "unix_now": int(time.time()),
+            "b64_jpg": item.data["b64_jpg"],
+            "time_capture": item.data["time_capture"],
+            "time_arrival": time.time(),
             "cam_id": cam_id
         })
     except asyncio.QueueFull:
@@ -224,7 +237,6 @@ async def _identity(val):
 async def app(wot, conf, loop, cameras):
     cameras = json.loads(cameras)
     detection_queue = asyncio.Queue(maxsize=_QUEUE_MAXSIZE)
-    store = list()
 
     _logger.info(
         "Producing Thing:\n%s",
@@ -236,10 +248,6 @@ async def app(wot, conf, loop, cameras):
         "cameras",
         functools.partial(_identity, val=cameras))
 
-    exposed_thing.set_property_read_handler(
-        "latestDetections",
-        functools.partial(_identity, val=store))
-
     exposed_thing.expose()
 
     _logger.debug(
@@ -249,7 +257,7 @@ async def app(wot, conf, loop, cameras):
     await asyncio.gather(
         _process_queue(
             detection_queue=detection_queue,
-            store=store),
+            prop=exposed_thing.properties["latestDetections"]),
         _subscribe_task(
             wot=wot,
             conf=conf,
