@@ -433,3 +433,25 @@ class ReportDataRedisReader:
         df = pd.DataFrame(rows)
 
         return df
+
+    async def get_app_metrics(self):
+        pattern = "{}:{}:*".format(
+            RedisPrefixes.NAMESPACE.value,
+            RedisPrefixes.APP.value)
+
+        keys = await self._client.keys(pattern=pattern)
+        keys = [item.decode() for item in keys]
+
+        metrics = []
+
+        for key in keys:
+            members = await self._client.zrange(key=key, start=0, stop=-1)
+            splitted = key.split(":")
+
+            metrics.append({
+                "key": splitted[-1],
+                "task": splitted[-2],
+                "data": [json.loads(item) for item in members]
+            })
+
+        return metrics

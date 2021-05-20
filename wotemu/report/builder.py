@@ -879,13 +879,16 @@ class ReportBuilder:
         df_out = await self._get_service_traffic_df(inbound=False)
         df_snap = await self._get_snapshot_df()
 
+        app_metrics = await self._reader.get_app_metrics()
+
         content = {
             "service_traffic": {
                 "inbound": json_df(df_inb),
                 "outbound": json_df(df_out)
             },
             "tasks": tasks_data,
-            "snapshot": json_df(df_snap)
+            "snapshot": json_df(df_snap),
+            "app_metrics": app_metrics
         }
 
         tstamp = int(time.time() * 1e3)
