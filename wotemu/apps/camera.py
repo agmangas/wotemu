@@ -9,21 +9,37 @@ import importlib.resources
 import json
 import logging
 import pprint
+import random
 import sys
 import time
 
 import cv2
 import numpy as np
+from wotemu.monitor.utils import write_metric
 from wotpy.wot.td import ThingDescription
 
 _VIDEO_PKG = "wotemu.apps.data"
 _VIDEO_RESOURCE = "camera.mp4"
 _MOTION_THRESHOLD = 25.0
 _JPEG_QUALITY = 60
+_PTZ_MU = 0.0
+_PTZ_SIGMA = 1.0
+_PTZ_LOOP_SLEEP = 0.1
+_METRIC_PTZ_LATENCY = "ptz_latency"
+
 
 _DESCRIPTION = {
     "id": "urn:org:fundacionctic:thing:wotemu:camera",
     "name": "Mock video camera",
+    "actions": {
+        "controlPTZ": {
+            "safe": True,
+            "idempotent": False,
+            "input": {
+                "type": "object"
+            }
+        }
+    },
     "events": {
         "jpgVideoFrame": {
             "data": {
@@ -111,6 +127,23 @@ async def _video_frame_emitter(exposed_thing):
             })
 
 
+async def _control_ptz(params):
+    params_input = params["input"]
+    params_input = params_input or {}
+
+    if params_input.get("time_capture"):
+        latency_ptz = time.time() - float(params_input["time_capture"])
+        data = {"latency_ptz": latency_ptz}
+        data.update(params_input)
+        await write_metric(key=_METRIC_PTZ_LATENCY, data=data)
+
+    sleep_secs = abs(random.gauss(_PTZ_MU, _PTZ_SIGMA))
+    sleep_end = time.time() + sleep_secs
+
+    while time.time() < sleep_end:
+        await asyncio.sleep(_PTZ_LOOP_SLEEP)
+
+
 async def app(wot, conf, loop):
     _logger.info("Starting mock video camera app")
 
@@ -119,6 +152,7 @@ async def app(wot, conf, loop):
         pprint.pformat(_DESCRIPTION))
 
     exposed_thing = wot.produce(json.dumps(_DESCRIPTION))
+    exposed_thing.set_action_handler("controlPTZ", _control_ptz)
     exposed_thing.expose()
 
     _logger.debug(

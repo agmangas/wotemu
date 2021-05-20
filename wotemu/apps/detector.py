@@ -19,8 +19,10 @@ from wotemu.utils import consume_from_catalogue, wait_node
 from wotpy.wot.td import ThingDescription
 
 _QUEUE_MAXSIZE = 5
+_QUEUE_MAX_SECONDS = 10
 _DEFAULT_CAMERA_ID = "urn:org:fundacionctic:thing:wotemu:camera"
 _DEFAULT_FRAME_EVENT = "jpgVideoFrame"
+_PTZ_ACTION = "controlPTZ"
 _METRIC_LATENCY = "detection_latency"
 
 _DESCRIPTION = {
@@ -80,7 +82,24 @@ def _detect(queue_item):
     return face_recognition.face_locations(frame_arr)
 
 
-async def _process_queue(detection_queue, prop, timeout_get=3.0):
+async def _control_camera_ptz(wot, conf, camera_id, **kwargs):
+    try:
+        splitted = camera_id.split("::")
+        servient_host = splitted[0].strip()
+        thing_id = splitted[1].strip()
+
+        camera_thing = await consume_from_catalogue(
+            wot=wot,
+            port_catalogue=conf.port_catalogue,
+            servient_host=servient_host,
+            thing_id=thing_id)
+
+        await camera_thing.actions[_PTZ_ACTION].invoke(kwargs)
+    except Exception as ex:
+        _logger.warning("Failed updating PTZ controls: %s", repr(ex))
+
+
+async def _process_queue(wot, conf, detection_queue, prop, timeout_get=3.0):
     store = list()
 
     while True:
@@ -95,16 +114,24 @@ async def _process_queue(detection_queue, prop, timeout_get=3.0):
         time_arrival = queue_item["time_arrival"]
         time_capture = queue_item["time_capture"]
 
+        if (time.time() - time_arrival) >= _QUEUE_MAX_SECONDS:
+            _logger.info("Dropping old item (>%s s.)", _QUEUE_MAX_SECONDS)
+            continue
+
         _logger.debug(
             "[%s] Received B64-encoded JPG (%s) (%s KB)",
             cam_id,
             b64_jpg.__class__.__name__,
             round(sys.getsizeof(b64_jpg) / 1024.0, 1))
 
+        time_pre_detect = time.time()
+
         loop = asyncio.get_running_loop()
         detect = functools.partial(_detect, queue_item=queue_item)
         face_locations = await loop.run_in_executor(None, detect)
         no_faces = not face_locations or len(face_locations) == 0
+
+        time_detect = time.time()
 
         _logger.log(
             logging.DEBUG if no_faces else logging.INFO,
@@ -112,8 +139,12 @@ async def _process_queue(detection_queue, prop, timeout_get=3.0):
             cam_id, face_locations)
 
         await write_metric(key=_METRIC_LATENCY, data={
-            "latency_pre_detect": time_arrival - time_capture,
-            "latency_post_detect": time.time() - time_capture,
+            "time_capture": time_capture,
+            "time_arrival": time_arrival,
+            "time_detect": time_detect,
+            "latency_frame": time_arrival - time_capture,
+            "latency_detect": time_detect - time_arrival,
+            "detect_cost": time_detect - time_pre_detect,
             "camera_id": cam_id
         })
 
@@ -135,6 +166,14 @@ async def _process_queue(detection_queue, prop, timeout_get=3.0):
         })
 
         prop.write(store)
+
+        asyncio.ensure_future(_control_camera_ptz(
+            wot=wot,
+            conf=conf,
+            camera_id=cam_id,
+            time_capture=time_capture,
+            time_arrival=time_arrival,
+            time_detect=time_detect))
 
 
 def _on_next(item, cam_id, detection_queue):
@@ -236,7 +275,7 @@ async def _identity(val):
 
 async def app(wot, conf, loop, cameras):
     cameras = json.loads(cameras)
-    detection_queue = asyncio.Queue(maxsize=_QUEUE_MAXSIZE)
+    detection_queue = asyncio.LifoQueue(maxsize=_QUEUE_MAXSIZE)
 
     _logger.info(
         "Producing Thing:\n%s",
@@ -256,6 +295,8 @@ async def app(wot, conf, loop, cameras):
 
     await asyncio.gather(
         _process_queue(
+            wot=wot,
+            conf=conf,
             detection_queue=detection_queue,
             prop=exposed_thing.properties["latestDetections"]),
         _subscribe_task(
