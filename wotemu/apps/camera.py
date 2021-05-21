@@ -131,17 +131,20 @@ async def _control_ptz(params):
     params_input = params["input"]
     params_input = params_input or {}
 
+    _logger.debug("Serving PTZ invocation:\n%s", pprint.pformat(params_input))
+
     if params_input.get("time_capture"):
         latency_ptz = time.time() - float(params_input["time_capture"])
-        data = {"latency_ptz": latency_ptz}
-        data.update(params_input)
-        await write_metric(key=_METRIC_PTZ_LATENCY, data=data)
+        params_input.update({"latency_ptz": latency_ptz})
+        await write_metric(key=_METRIC_PTZ_LATENCY, data=params_input)
 
     sleep_secs = abs(random.gauss(_PTZ_MU, _PTZ_SIGMA))
     sleep_end = time.time() + sleep_secs
 
     while time.time() < sleep_end:
         await asyncio.sleep(_PTZ_LOOP_SLEEP)
+
+    return params_input
 
 
 async def app(wot, conf, loop):

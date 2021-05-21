@@ -82,8 +82,12 @@ def _detect(queue_item):
     return face_recognition.face_locations(frame_arr)
 
 
-async def _control_camera_ptz(wot, conf, camera_id, **kwargs):
+async def _control_camera_ptz(wot, conf, camera_id, lock, **kwargs):
     try:
+        await lock.acquire()
+
+        _logger.debug("Invoking PTZ control: %s", camera_id)
+
         splitted = camera_id.split("::")
         servient_host = splitted[0].strip()
         thing_id = splitted[1].strip()
@@ -95,12 +99,16 @@ async def _control_camera_ptz(wot, conf, camera_id, **kwargs):
             thing_id=thing_id)
 
         await camera_thing.actions[_PTZ_ACTION].invoke(kwargs)
+
+        _logger.debug("Finished PTZ control invocation: %s", camera_id)
     except Exception as ex:
         _logger.warning("Failed updating PTZ controls: %s", repr(ex))
+    finally:
+        lock.release()
 
 
-async def _process_queue(wot, conf, detection_queue, prop, timeout_get=3.0):
-    store = list()
+async def _process_queue(wot, conf, detection_queue, store, timeout_get=3.0):
+    locks = {}
 
     while True:
         try:
@@ -165,12 +173,21 @@ async def _process_queue(wot, conf, detection_queue, prop, timeout_get=3.0):
             "unixTime": time_capture
         })
 
-        prop.write(store)
+        if not locks.get(cam_id):
+            _logger.debug("Initializing lock for %s", cam_id)
+            locks[cam_id] = asyncio.Lock()
+
+        lock = locks[cam_id]
+
+        if lock.locked():
+            _logger.debug("Skipping PTZ control for %s", cam_id)
+            continue
 
         asyncio.ensure_future(_control_camera_ptz(
             wot=wot,
             conf=conf,
             camera_id=cam_id,
+            lock=lock,
             time_capture=time_capture,
             time_arrival=time_arrival,
             time_detect=time_detect))
@@ -274,6 +291,7 @@ async def _identity(val):
 
 
 async def app(wot, conf, loop, cameras):
+    store = list()
     cameras = json.loads(cameras)
     detection_queue = asyncio.LifoQueue(maxsize=_QUEUE_MAXSIZE)
 
@@ -282,6 +300,10 @@ async def app(wot, conf, loop, cameras):
         pprint.pformat(_DESCRIPTION))
 
     exposed_thing = wot.produce(json.dumps(_DESCRIPTION))
+
+    exposed_thing.set_property_read_handler(
+        "latestDetections",
+        functools.partial(_identity, val=store))
 
     exposed_thing.set_property_read_handler(
         "cameras",
@@ -298,7 +320,7 @@ async def app(wot, conf, loop, cameras):
             wot=wot,
             conf=conf,
             detection_queue=detection_queue,
-            prop=exposed_thing.properties["latestDetections"]),
+            store=store),
         _subscribe_task(
             wot=wot,
             conf=conf,
