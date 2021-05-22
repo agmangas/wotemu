@@ -56,7 +56,7 @@ def topology():
             resources=camera_resources,
             broker=broker,
             broker_network=network_edge_2)
-        for idx in range(8)
+        for idx in range(6)
     ]
 
     camera_hostnames_1 = [

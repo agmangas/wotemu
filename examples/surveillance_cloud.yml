@@ -147,8 +147,8 @@ services:
     - --enable-mqtt
     depends_on:
     - redis
-    - docker_api_proxy
     - gw_edge_3g_loc2
+    - docker_api_proxy
     deploy:
       resources:
         limits:
@@ -185,8 +185,8 @@ services:
     - --enable-mqtt
     depends_on:
     - redis
-    - docker_api_proxy
     - gw_edge_3g_loc2
+    - docker_api_proxy
     deploy:
       resources:
         limits:
@@ -223,8 +223,8 @@ services:
     - --enable-mqtt
     depends_on:
     - redis
-    - docker_api_proxy
     - gw_edge_3g_loc2
+    - docker_api_proxy
     deploy:
       resources:
         limits:
@@ -261,8 +261,8 @@ services:
     - --enable-mqtt
     depends_on:
     - redis
-    - docker_api_proxy
     - gw_edge_3g_loc2
+    - docker_api_proxy
     deploy:
       resources:
         limits:
@@ -299,8 +299,8 @@ services:
     - --enable-mqtt
     depends_on:
     - redis
-    - docker_api_proxy
     - gw_edge_3g_loc2
+    - docker_api_proxy
     deploy:
       resources:
         limits:
@@ -337,84 +337,8 @@ services:
     - --enable-mqtt
     depends_on:
     - redis
-    - docker_api_proxy
     - gw_edge_3g_loc2
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-    environment:
-      DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
-      MQTT_BROKER_HOST: broker.edge_3g_loc2
-      NODE_HOSTNAME: '{{.Node.Hostname}}'
-      NODE_ID: '{{.Node.ID}}'
-      PORT_CATALOGUE: '9090'
-      PORT_COAP: '5683'
-      PORT_HTTP: '80'
-      PORT_MQTT: '1883'
-      PORT_WS: '81'
-      REDIS_URL: redis://redis
-      SERVICE_ID: '{{.Service.ID}}'
-      SERVICE_NAME: '{{.Service.Name}}'
-      TARGET_CPU_SPEED: 200
-    hostname: '{{.Task.Name}}'
-    image: agmangas/wotemu
-    labels:
-      org.fundacionctic.wotemu.node: ''
-    networks:
-    - edge_3g_loc2
-    volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
-  camera_loc2_6:
-    cap_add:
-    - ALL
-    command:
-    - app
-    - --path
-    - wotemu_camera
-    - --enable-mqtt
-    depends_on:
-    - redis
     - docker_api_proxy
-    - gw_edge_3g_loc2
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-    environment:
-      DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
-      MQTT_BROKER_HOST: broker.edge_3g_loc2
-      NODE_HOSTNAME: '{{.Node.Hostname}}'
-      NODE_ID: '{{.Node.ID}}'
-      PORT_CATALOGUE: '9090'
-      PORT_COAP: '5683'
-      PORT_HTTP: '80'
-      PORT_MQTT: '1883'
-      PORT_WS: '81'
-      REDIS_URL: redis://redis
-      SERVICE_ID: '{{.Service.ID}}'
-      SERVICE_NAME: '{{.Service.Name}}'
-      TARGET_CPU_SPEED: 200
-    hostname: '{{.Task.Name}}'
-    image: agmangas/wotemu
-    labels:
-      org.fundacionctic.wotemu.node: ''
-    networks:
-    - edge_3g_loc2
-    volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
-  camera_loc2_7:
-    cap_add:
-    - ALL
-    command:
-    - app
-    - --path
-    - wotemu_camera
-    - --enable-mqtt
-    depends_on:
-    - redis
-    - docker_api_proxy
-    - gw_edge_3g_loc2
     deploy:
       resources:
         limits:
@@ -457,9 +381,9 @@ services:
     - --enable-http
     depends_on:
     - redis
-    - docker_api_proxy
     - gw_cloud
     - gw_cloud_user
+    - docker_api_proxy
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       NODE_HOSTNAME: '{{.Node.Hostname}}'
@@ -494,15 +418,14 @@ services:
     - '[{"servient_host": "camera_loc1_0.edge_2g_loc1"}, {"servient_host": "camera_loc1_1.edge_2g_loc1"},
       {"servient_host": "camera_loc2_0.edge_3g_loc2"}, {"servient_host": "camera_loc2_1.edge_3g_loc2"},
       {"servient_host": "camera_loc2_2.edge_3g_loc2"}, {"servient_host": "camera_loc2_3.edge_3g_loc2"},
-      {"servient_host": "camera_loc2_4.edge_3g_loc2"}, {"servient_host": "camera_loc2_5.edge_3g_loc2"},
-      {"servient_host": "camera_loc2_6.edge_3g_loc2"}, {"servient_host": "camera_loc2_7.edge_3g_loc2"}]'
+      {"servient_host": "camera_loc2_4.edge_3g_loc2"}, {"servient_host": "camera_loc2_5.edge_3g_loc2"}]'
     - --enable-http
     depends_on:
-    - redis
-    - gw_edge_3g_loc2
-    - docker_api_proxy
-    - gw_cloud
     - gw_edge_2g_loc1
+    - gw_edge_3g_loc2
+    - redis
+    - gw_cloud
+    - docker_api_proxy
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       NODE_HOSTNAME: '{{.Node.Hostname}}'
@@ -521,8 +444,8 @@ services:
       org.fundacionctic.wotemu.node: ''
     networks:
     - edge_2g_loc1
-    - cloud
     - edge_3g_loc2
+    - cloud
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
   docker_api_proxy:
@@ -540,10 +463,10 @@ services:
       TASKS: '1'
     image: tecnativa/docker-socket-proxy
     networks:
-    - edge_3g_loc2
+    - edge_2g_loc1
     - cloud
     - cloud_user
-    - edge_2g_loc1
+    - edge_3g_loc2
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
   gw_cloud:
@@ -686,10 +609,10 @@ services:
     labels:
       org.fundacionctic.wotemu.redis: ''
     networks:
-    - edge_3g_loc2
+    - edge_2g_loc1
     - cloud
     - cloud_user
-    - edge_2g_loc1
+    - edge_3g_loc2
     ports:
     - '6379'
   user:
@@ -713,8 +636,8 @@ services:
     - '5'
     depends_on:
     - redis
-    - docker_api_proxy
     - gw_cloud_user
+    - docker_api_proxy
     deploy:
       replicas: 5
     environment:

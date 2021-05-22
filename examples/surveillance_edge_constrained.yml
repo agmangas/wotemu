@@ -76,9 +76,9 @@ services:
     - wotemu_camera
     - --enable-http
     depends_on:
+    - docker_api_proxy
     - gw_field_loc1
     - redis
-    - docker_api_proxy
     deploy:
       resources:
         limits:
@@ -113,9 +113,9 @@ services:
     - wotemu_camera
     - --enable-http
     depends_on:
+    - docker_api_proxy
     - gw_field_loc1
     - redis
-    - docker_api_proxy
     deploy:
       resources:
         limits:
@@ -150,9 +150,9 @@ services:
     - wotemu_camera
     - --enable-http
     depends_on:
-    - gw_field_loc2
-    - redis
     - docker_api_proxy
+    - redis
+    - gw_field_loc2
     deploy:
       resources:
         limits:
@@ -187,9 +187,9 @@ services:
     - wotemu_camera
     - --enable-http
     depends_on:
-    - gw_field_loc2
-    - redis
     - docker_api_proxy
+    - redis
+    - gw_field_loc2
     deploy:
       resources:
         limits:
@@ -224,9 +224,9 @@ services:
     - wotemu_camera
     - --enable-http
     depends_on:
-    - gw_field_loc2
-    - redis
     - docker_api_proxy
+    - redis
+    - gw_field_loc2
     deploy:
       resources:
         limits:
@@ -261,9 +261,9 @@ services:
     - wotemu_camera
     - --enable-http
     depends_on:
-    - gw_field_loc2
-    - redis
     - docker_api_proxy
+    - redis
+    - gw_field_loc2
     deploy:
       resources:
         limits:
@@ -298,9 +298,9 @@ services:
     - wotemu_camera
     - --enable-http
     depends_on:
-    - gw_field_loc2
-    - redis
     - docker_api_proxy
+    - redis
+    - gw_field_loc2
     deploy:
       resources:
         limits:
@@ -335,83 +335,9 @@ services:
     - wotemu_camera
     - --enable-http
     depends_on:
-    - gw_field_loc2
-    - redis
     - docker_api_proxy
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-    environment:
-      DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
-      NODE_HOSTNAME: '{{.Node.Hostname}}'
-      NODE_ID: '{{.Node.ID}}'
-      PORT_CATALOGUE: '9090'
-      PORT_COAP: '5683'
-      PORT_HTTP: '80'
-      PORT_MQTT: '1883'
-      PORT_WS: '81'
-      REDIS_URL: redis://redis
-      SERVICE_ID: '{{.Service.ID}}'
-      SERVICE_NAME: '{{.Service.Name}}'
-      TARGET_CPU_SPEED: 200
-    hostname: '{{.Task.Name}}'
-    image: agmangas/wotemu
-    labels:
-      org.fundacionctic.wotemu.node: ''
-    networks:
-    - field_loc2
-    volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
-  camera_loc2_6:
-    cap_add:
-    - ALL
-    command:
-    - app
-    - --path
-    - wotemu_camera
-    - --enable-http
-    depends_on:
-    - gw_field_loc2
     - redis
-    - docker_api_proxy
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-    environment:
-      DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
-      NODE_HOSTNAME: '{{.Node.Hostname}}'
-      NODE_ID: '{{.Node.ID}}'
-      PORT_CATALOGUE: '9090'
-      PORT_COAP: '5683'
-      PORT_HTTP: '80'
-      PORT_MQTT: '1883'
-      PORT_WS: '81'
-      REDIS_URL: redis://redis
-      SERVICE_ID: '{{.Service.ID}}'
-      SERVICE_NAME: '{{.Service.Name}}'
-      TARGET_CPU_SPEED: 200
-    hostname: '{{.Task.Name}}'
-    image: agmangas/wotemu
-    labels:
-      org.fundacionctic.wotemu.node: ''
-    networks:
-    - field_loc2
-    volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
-  camera_loc2_7:
-    cap_add:
-    - ALL
-    command:
-    - app
-    - --path
-    - wotemu_camera
-    - --enable-http
-    depends_on:
     - gw_field_loc2
-    - redis
-    - docker_api_proxy
     deploy:
       resources:
         limits:
@@ -453,11 +379,11 @@ services:
       {"servient_host": "detector_loc2.edge_3g_loc2", "thing_id": "urn:org:fundacionctic:thing:wotemu:detector"}]'
     - --enable-http
     depends_on:
-    - redis
-    - gw_edge_2g_loc1
     - gw_cloud_user
     - gw_edge_3g_loc2
+    - gw_edge_2g_loc1
     - docker_api_proxy
+    - redis
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       NODE_HOSTNAME: '{{.Node.Hostname}}'
@@ -475,10 +401,10 @@ services:
     labels:
       org.fundacionctic.wotemu.node: ''
     networks:
-    - cloud_user
-    - srvnet_mongo_cloud
-    - edge_2g_loc1
     - edge_3g_loc2
+    - edge_2g_loc1
+    - srvnet_mongo_cloud
+    - cloud_user
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
   detector_loc1:
@@ -493,9 +419,9 @@ services:
     - '[{"servient_host": "camera_loc1_0.field_loc1"}, {"servient_host": "camera_loc1_1.field_loc1"}]'
     - --enable-mqtt
     depends_on:
+    - redis
     - docker_api_proxy
     - gw_field_loc1
-    - redis
     - gw_edge_2g_loc1
     deploy:
       resources:
@@ -520,8 +446,8 @@ services:
     labels:
       org.fundacionctic.wotemu.node: ''
     networks:
-    - edge_2g_loc1
     - field_loc1
+    - edge_2g_loc1
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
   detector_loc2:
@@ -535,14 +461,13 @@ services:
     - cameras
     - '[{"servient_host": "camera_loc2_0.field_loc2"}, {"servient_host": "camera_loc2_1.field_loc2"},
       {"servient_host": "camera_loc2_2.field_loc2"}, {"servient_host": "camera_loc2_3.field_loc2"},
-      {"servient_host": "camera_loc2_4.field_loc2"}, {"servient_host": "camera_loc2_5.field_loc2"},
-      {"servient_host": "camera_loc2_6.field_loc2"}, {"servient_host": "camera_loc2_7.field_loc2"}]'
+      {"servient_host": "camera_loc2_4.field_loc2"}, {"servient_host": "camera_loc2_5.field_loc2"}]'
     - --enable-mqtt
     depends_on:
-    - gw_field_loc2
     - redis
     - docker_api_proxy
     - gw_edge_3g_loc2
+    - gw_field_loc2
     deploy:
       resources:
         limits:
@@ -585,11 +510,11 @@ services:
       TASKS: '1'
     image: tecnativa/docker-socket-proxy
     networks:
+    - field_loc1
+    - cloud_user
+    - edge_3g_loc2
     - field_loc2
     - edge_2g_loc1
-    - cloud_user
-    - field_loc1
-    - edge_3g_loc2
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
   gw_cloud_user:
@@ -762,11 +687,11 @@ services:
     labels:
       org.fundacionctic.wotemu.redis: ''
     networks:
+    - field_loc1
+    - cloud_user
+    - edge_3g_loc2
     - field_loc2
     - edge_2g_loc1
-    - cloud_user
-    - field_loc1
-    - edge_3g_loc2
     ports:
     - '6379'
   user:
@@ -789,8 +714,8 @@ services:
     - lambd
     - '5'
     depends_on:
-    - redis
     - docker_api_proxy
+    - redis
     - gw_cloud_user
     deploy:
       replicas: 5
