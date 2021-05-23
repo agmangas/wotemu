@@ -21,7 +21,7 @@ async def _read(consumed_thing, name):
 
 
 async def app(wot, conf, loop, servient_host, thing_id, interval=5):
-    await wait_node(conf=conf, name=servient_host)
+    await wait_node(conf=conf, name=servient_host, thing_ids=[thing_id])
 
     consumed_thing = await consume_from_catalogue(
         wot=wot,

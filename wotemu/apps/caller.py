@@ -50,7 +50,7 @@ async def app(wot, conf, loop, servient_host, thing_id, params=None, timeout=300
         "Starting caller app for remote %s :: %s (lambda=%s)",
         servient_host, thing_id, lambd)
 
-    await wait_node(conf=conf, name=servient_host)
+    await wait_node(conf=conf, name=servient_host, thing_ids=[thing_id])
 
     consumed_thing = await consume_from_catalogue(
         wot=wot,

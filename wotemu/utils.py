@@ -28,22 +28,30 @@ class NodeHTTPTimeout(Exception):
     pass
 
 
-async def _ping_http(url):
+async def _ping_catalogue(catalogue_url, thing_ids=None):
+    thing_ids = thing_ids or []
     http_client = tornado.httpclient.AsyncHTTPClient()
 
     try:
-        await http_client.fetch(url)
-        _logger.debug("HTTP ping OK: %s", url)
+        catalogue_res = await http_client.fetch(catalogue_url)
+        catalogue = json.loads(catalogue_res.body)
+        assert all(thing_id in catalogue for thing_id in thing_ids)
+        _logger.debug("Catalogue ping OK: %s", catalogue_url)
         return True
     except Exception as ex:
-        _logger.debug("HTTP ping Error (%s): %s", url, ex)
+        _logger.debug("Catalogue ping error (%s): %s", catalogue_url, repr(ex))
         return False
     finally:
         http_client.close()
 
 
-async def _ping_http_timeout(url, wait, timeout):
-    _logger.debug("HTTP ping (%s secs timeout): %s", timeout, url)
+async def _ping_catalogue_timeout(catalogue_url, wait, timeout, thing_ids=None):
+    _logger.debug("Waiting for catalogue:\n%s", pprint.pformat({
+        "catalogue_url": catalogue_url,
+        "wait": wait,
+        "timeout": timeout,
+        "thing_ids": thing_ids
+    }))
 
     ini = time.time()
 
@@ -55,19 +63,19 @@ async def _ping_http_timeout(url, wait, timeout):
 
         if diff >= timeout:
             raise NodeHTTPTimeout(
-                "HTTP timeout ({} s): {}".format(timeout, url))
+                f"HTTP timeout ({timeout} s): {catalogue_url}")
 
     while True:
         _raise_timeout()
 
-        if (await _ping_http(url)):
+        if (await _ping_catalogue(catalogue_url, thing_ids=thing_ids)):
             break
 
         _raise_timeout()
         await asyncio.sleep(wait)
 
 
-async def wait_node(conf, name, wait=2, timeout=120, find_replicas=True):
+async def wait_node(conf, name, wait=2, timeout=120, find_replicas=True, thing_ids=None):
     cont_hosts = [name]
 
     if find_replicas:
@@ -85,16 +93,20 @@ async def wait_node(conf, name, wait=2, timeout=120, find_replicas=True):
             _logger.warning("Error finding container hostnames: %s", ex)
             _logger.warning("Using untranslated service name: %s", cont_hosts)
 
-    urls = [
+    catalogue_urls = [
         "http://{}:{}".format(host, conf.port_catalogue)
         for host in cont_hosts
     ]
 
-    _logger.debug("Catalogue URLs: %s", urls)
+    _logger.debug("Catalogue URLs: %s", catalogue_urls)
 
     ping_awaitables = [
-        _ping_http_timeout(url=url, wait=wait, timeout=timeout)
-        for url in urls
+        _ping_catalogue_timeout(
+            catalogue_url=url,
+            wait=wait,
+            timeout=timeout,
+            thing_ids=thing_ids)
+        for url in catalogue_urls
     ]
 
     await asyncio.gather(*ping_awaitables)

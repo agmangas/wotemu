@@ -218,7 +218,7 @@ async def _subscribe_camera(wot, conf, camera, error_event, detection_queue):
     frame_event = camera.get("frame_event", _DEFAULT_FRAME_EVENT)
     cam_id = f"{servient_host} :: {thing_id}"
 
-    await wait_node(conf=conf, name=servient_host)
+    await wait_node(conf=conf, name=servient_host, thing_ids=[thing_id])
 
     camera_thing = await consume_from_catalogue(
         wot=wot,

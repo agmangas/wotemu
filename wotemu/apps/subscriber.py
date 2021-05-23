@@ -57,7 +57,7 @@ async def _cancel_subs(subs, cancel_sleep=3):
 
 
 async def _consume_and_subscribe(wot, conf, servient_host, thing_id, error_event):
-    await wait_node(conf=conf, name=servient_host)
+    await wait_node(conf=conf, name=servient_host, thing_ids=[thing_id])
 
     consumed_thing = await consume_from_catalogue(
         wot=wot,
