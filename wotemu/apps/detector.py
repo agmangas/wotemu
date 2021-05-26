@@ -18,7 +18,7 @@ from wotemu.monitor.utils import write_metric
 from wotemu.utils import consume_from_catalogue, wait_node
 from wotpy.wot.td import ThingDescription
 
-_QUEUE_MAXSIZE = 5
+_QUEUE_MAXSIZE = 50
 _QUEUE_MAX_SECONDS = 10
 _DEFAULT_CAMERA_ID = "urn:org:fundacionctic:thing:wotemu:camera"
 _DEFAULT_FRAME_EVENT = "jpgVideoFrame"
@@ -107,12 +107,12 @@ async def _control_camera_ptz(wot, conf, camera_id, lock, **kwargs):
         lock.release()
 
 
-async def _process_queue(wot, conf, detection_queue, store, timeout_get=3.0):
+async def _process_queue(wot, conf, detection_queue, store, counters, timeout_get=3.0):
     locks = {}
 
     while True:
         try:
-            queue_item = await asyncio.wait_for(detection_queue.get(), timeout_get)
+            _, queue_item = await asyncio.wait_for(detection_queue.get(), timeout_get)
         except asyncio.TimeoutError:
             _logger.debug("Timeout waiting for queue item")
             continue
@@ -156,6 +156,9 @@ async def _process_queue(wot, conf, detection_queue, store, timeout_get=3.0):
             "camera_id": cam_id
         })
 
+        counters[cam_id] = counters.get(cam_id, 0) + 1
+        _logger.debug("Current frame counters: %s", counters)
+
         if no_faces:
             continue
 
@@ -193,16 +196,27 @@ async def _process_queue(wot, conf, detection_queue, store, timeout_get=3.0):
             time_detect=time_detect))
 
 
-def _on_next(item, cam_id, detection_queue):
+def _frame_priority(cam_id, time_capture, counters):
+    age = float(time.time() - time_capture)
+    cam_count = counters.get(cam_id, 0)
+    return cam_count + (1.0 / age)
+
+
+def _on_next(item, cam_id, detection_queue, counters):
     try:
         _logger.debug("Putting new item in detection queue")
 
-        detection_queue.put_nowait({
+        time_capture = item.data["time_capture"]
+        item_prio = _frame_priority(cam_id, time_capture, counters)
+
+        item_data = {
             "b64_jpg": item.data["b64_jpg"],
-            "time_capture": item.data["time_capture"],
+            "time_capture": time_capture,
             "time_arrival": time.time(),
             "cam_id": cam_id
-        })
+        }
+
+        detection_queue.put_nowait((item_prio, item_data))
     except asyncio.QueueFull:
         _logger.info("Detection queue is full")
 
@@ -212,7 +226,7 @@ def _on_error(err, cam_id, error_event):
     error_event.set()
 
 
-async def _subscribe_camera(wot, conf, camera, error_event, detection_queue):
+async def _subscribe_camera(wot, conf, camera, error_event, detection_queue, counters):
     servient_host = camera["servient_host"]
     thing_id = camera.get("thing_id", _DEFAULT_CAMERA_ID)
     frame_event = camera.get("frame_event", _DEFAULT_FRAME_EVENT)
@@ -229,7 +243,8 @@ async def _subscribe_camera(wot, conf, camera, error_event, detection_queue):
     on_next = functools.partial(
         _on_next,
         cam_id=cam_id,
-        detection_queue=detection_queue)
+        detection_queue=detection_queue,
+        counters=counters)
 
     on_error = functools.partial(
         _on_error,
@@ -255,7 +270,7 @@ async def _cancel_subs(subs, cancel_sleep=3):
     await asyncio.sleep(cancel_sleep)
 
 
-async def _subscribe_task(wot, conf, cameras, detection_queue):
+async def _subscribe_task(wot, conf, cameras, detection_queue, counters):
     error_event = asyncio.Event()
 
     while True:
@@ -273,7 +288,8 @@ async def _subscribe_task(wot, conf, cameras, detection_queue):
                     conf=conf,
                     camera=camera,
                     error_event=error_event,
-                    detection_queue=detection_queue)
+                    detection_queue=detection_queue,
+                    counters=counters)
                 for camera in cameras
             ], return_exceptions=False)
 
@@ -290,10 +306,11 @@ async def _identity(val):
     return val
 
 
-async def app(wot, conf, loop, cameras):
+async def app(wot, conf, loop, cameras, queue_maxsize=_QUEUE_MAXSIZE):
     store = list()
     cameras = json.loads(cameras)
-    detection_queue = asyncio.LifoQueue(maxsize=_QUEUE_MAXSIZE)
+    counters = dict()
+    detection_queue = asyncio.PriorityQueue(maxsize=queue_maxsize)
 
     _logger.info(
         "Producing Thing:\n%s",
@@ -320,10 +337,12 @@ async def app(wot, conf, loop, cameras):
             wot=wot,
             conf=conf,
             detection_queue=detection_queue,
-            store=store),
+            store=store,
+            counters=counters),
         _subscribe_task(
             wot=wot,
             conf=conf,
             cameras=cameras,
-            detection_queue=detection_queue),
+            detection_queue=detection_queue,
+            counters=counters),
         return_exceptions=False)
