@@ -29,8 +29,7 @@ services:
     - ALL
     command:
     - gateway
-    - delay --time 300 --jitter 150 --distribution normal
-    - rate --rate 1500kbit
+    - '{"latency": 300, "jitter": 150, "rate": "1500kbit"}'
     depends_on:
     - docker_api_proxy
     - redis

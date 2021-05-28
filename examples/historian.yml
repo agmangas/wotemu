@@ -27,9 +27,9 @@ services:
     - wotemu_clock
     - --enable-ws
     depends_on:
+    - docker_api_proxy
     - redis
     - gw_wifi
-    - docker_api_proxy
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       NODE_HOSTNAME: '{{.Node.Hostname}}'
@@ -59,9 +59,9 @@ services:
     - wotemu_clock
     - --enable-ws
     depends_on:
+    - docker_api_proxy
     - redis
     - gw_wifi
-    - docker_api_proxy
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       NODE_HOSTNAME: '{{.Node.Hostname}}'
@@ -91,9 +91,9 @@ services:
     - wotemu_clock
     - --enable-ws
     depends_on:
+    - docker_api_proxy
     - redis
     - gw_wifi
-    - docker_api_proxy
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       NODE_HOSTNAME: '{{.Node.Hostname}}'
@@ -123,9 +123,9 @@ services:
     - wotemu_clock
     - --enable-ws
     depends_on:
+    - docker_api_proxy
     - redis
     - gw_wifi
-    - docker_api_proxy
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       NODE_HOSTNAME: '{{.Node.Hostname}}'
@@ -155,9 +155,9 @@ services:
     - wotemu_clock
     - --enable-ws
     depends_on:
+    - docker_api_proxy
     - redis
     - gw_wifi
-    - docker_api_proxy
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       NODE_HOSTNAME: '{{.Node.Hostname}}'
@@ -201,8 +201,7 @@ services:
     - ALL
     command:
     - gateway
-    - delay --time 25 --jitter 5 --distribution normal
-    - rate --rate 50mbit
+    - '{"latency": 25, "jitter": 5, "rate": "50mbit"}'
     depends_on:
     - docker_api_proxy
     - redis
@@ -245,9 +244,9 @@ services:
       {"servient_host": "clock_4.wifi", "thing_id": "urn:org:fundacionctic:thing:clock"}]'
     - --enable-http
     depends_on:
+    - docker_api_proxy
     - redis
     - gw_wifi
-    - docker_api_proxy
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       NODE_HOSTNAME: '{{.Node.Hostname}}'
@@ -293,9 +292,9 @@ services:
     - '60'
     - --enable-http
     depends_on:
+    - docker_api_proxy
     - redis
     - gw_wifi
-    - docker_api_proxy
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       NODE_HOSTNAME: '{{.Node.Hostname}}'
@@ -331,8 +330,8 @@ services:
     labels:
       org.fundacionctic.wotemu.service: ''
     networks:
-    - srvnet_mongo_historian
     - srvnet_mongo_historian_uplink
+    - srvnet_mongo_historian
   redis:
     image: redis:5
     labels:

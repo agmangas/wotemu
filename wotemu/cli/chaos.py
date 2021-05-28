@@ -1,19 +1,13 @@
+import json
 import logging
-import pprint
-import re
+import shlex
 import signal
+import subprocess
 import time
 
-import docker
 import netifaces
-import sh
-
-from wotemu.utils import (get_current_container_id, ping_docker,
-                          strip_ansi_codes)
 
 _IFACE_LO = "lo"
-_LEVEL_DEBUG = "DEBU["
-_LEVEL_INFO = "INFO["
 
 _logger = logging.getLogger(__name__)
 
@@ -40,73 +34,106 @@ def _find_chaos_interface():
         _logger.warning("More than 1 candidate interface: %s", candidates)
 
     if len(candidates) == 0:
-        raise Exception("Could not find chaos network interface")
+        raise RuntimeError("Could not find chaos network interface")
 
     return candidates[0]
 
 
-def _pumba_log_level(line):
-    if line.startswith(_LEVEL_DEBUG):
-        return logging.DEBUG
-    elif line.startswith(_LEVEL_INFO):
-        return logging.INFO
-    else:
-        return logging.WARNING
+def _call(command):
+    _logger.debug("call: %s", command)
+    subprocess.call(shlex.split(command))
 
 
-def _build_out(cmd_id):
-    def out(line):
-        line = strip_ansi_codes(line.strip())
-        _logger.log(_pumba_log_level(line), "[%s]\n\t%s", cmd_id, line.strip())
-
-    return out
+def _check_call(command):
+    _logger.debug("check_call: %s", command)
+    subprocess.check_call(shlex.split(command))
 
 
-def _done(cmd, success, exit_code):
-    _logger.log(
-        logging.INFO if success else logging.WARNING,
-        "[%s] Exit code: %s",
-        cmd.ran,
-        exit_code)
+def _clean_netem(nic):
+    _logger.info("Undoing netem configuration")
+    _call(f"tc qdisc del dev {nic} root")
 
 
-def create_chaos(conf, docker_url, netem, duration):
-    ping_docker(docker_url=docker_url)
+_DEFAULT_DELAY_CORR = 0
+_DEFAULT_RATE_BURST = "100kbit"
+_DEFAULT_RATE_LATENCY = 20
+_QDISC_PARENT = "root handle 1:"
+_QDISC_CHILD = "parent 1: handle 2:"
 
-    docker_client = docker.DockerClient(base_url=docker_url)
-    cid = get_current_container_id()
-    container = docker_client.containers.get(cid)
 
-    cmd_base = "--host {} --log-level debug netem --duration {} --interface {}".format(
-        docker_url,
-        duration,
-        _find_chaos_interface())
+def _set_delay(nic, latency, jitter, corr=None, root=True):
+    # See: https://man7.org/linux/man-pages/man8/tc-netem.8.html
+    # See: https://www.excentis.com/blog/use-linux-traffic-control-impairment-node-test-environment-part-1
 
-    cmds = [
-        "{} {} {}".format(cmd_base, netem_cmd, container.name)
-        for netem_cmd in netem
-    ]
+    corr = _DEFAULT_DELAY_CORR if corr is None else corr
+    qdiscs = _QDISC_PARENT if root else _QDISC_CHILD
 
-    _logger.info("Running Pumba commands:\n%s", pprint.pformat(cmds))
+    cmd = (
+        "tc qdisc add dev {} {} "
+        "netem delay {}ms {}ms {}% distribution normal"
+    ).format(nic, qdiscs, latency, jitter, corr)
 
-    sh_pumba = sh.Command("pumba")
+    _check_call(cmd)
 
-    procs = [
-        sh_pumba(
-            cmd.split(),
-            _err_to_out=True,
-            _out=_build_out(cmd_id=netem[idx]),
-            _bg=True,
-            _done=_done)
-        for idx, cmd in enumerate(cmds)
-    ]
 
-    def exit_handler(signum, frame):
-        _logger.info("Terminating Pumba processes")
-        [proc.terminate() for proc in procs]
+def _set_rate(nic, rate, burst=None, latency=None, root=False):
+    # See: https://man7.org/linux/man-pages/man8/tc-tbf.8.html
+
+    burst = _DEFAULT_RATE_BURST if burst is None else burst
+    latency = _DEFAULT_RATE_LATENCY if latency is None else latency
+    qdiscs = _QDISC_PARENT if root else _QDISC_CHILD
+
+    cmd = (
+        "tc qdisc add dev {} {} "
+        "tbf rate {} burst {} latency {}ms"
+    ).format(nic, qdiscs, rate, burst, latency)
+
+    _check_call(cmd)
+
+
+_ITER_SLEEP_SECS = 1.0
+
+
+def create_chaos(conf, netem):
+    nic = _find_chaos_interface()
+    _logger.info("Found chaos interface: %s", nic)
+
+    assert len(netem) == 1, "Unexpected number of netem argument items"
+    netem_args = json.loads(netem[0])
+    _logger.info("Imposing netem constraints: %s", netem_args)
+
+    def exit_handler(*_):
+        _clean_netem(nic=nic)
+        exit(0)
 
     signal.signal(signal.SIGINT, exit_handler)
     signal.signal(signal.SIGTERM, exit_handler)
 
-    _logger.debug("Waiting for Pumba processes")
-    [proc.wait() for proc in procs]
+    _clean_netem(nic=nic)
+
+    delay_defined = netem_args.get("latency") is not None \
+        and netem_args.get("jitter") is not None
+
+    if delay_defined:
+        _set_delay(
+            nic=nic,
+            latency=netem_args["latency"],
+            jitter=netem_args["jitter"],
+            corr=netem_args.get("correlation"),
+            root=True)
+
+    if netem_args.get("rate") is not None:
+        _set_rate(
+            nic=nic,
+            rate=netem_args["rate"],
+            burst=netem_args.get("rate_burst"),
+            latency=netem_args.get("rate_latency"),
+            root=not delay_defined)
+
+    try:
+        _logger.info("Sleeping indefinitely")
+
+        while True:
+            time.sleep(_ITER_SLEEP_SECS)
+    finally:
+        _clean_netem(nic=nic)

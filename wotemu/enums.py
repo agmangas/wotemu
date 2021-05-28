@@ -1,4 +1,5 @@
 import enum
+import json
 
 
 class Labels(enum.Enum):
@@ -40,37 +41,35 @@ class NodePlatforms(enum.Enum):
     UNCONSTRAINED = "UNCONSTRAINED"
 
 
-_DELAY = "delay --time {latency} --jitter {jitter} --distribution normal"
-_RATE = "rate --rate {rate}"
+def _netem(latency=None, jitter=None, rate=None):
+    return json.dumps({
+        "latency": latency,
+        "jitter": jitter,
+        "rate": rate
+    })
+
 
 NETEM_CONDITIONS = {
     NetworkConditions.GPRS: [
-        _DELAY.format(latency=700, jitter=100),
-        _RATE.format(rate="50kbit")
+        _netem(latency=700, jitter=100, rate="50kbit")
     ],
     NetworkConditions.EDGE: [
-        _DELAY.format(latency=700, jitter=100),
-        _RATE.format(rate="100kbit")
+        _netem(latency=700, jitter=100, rate="100kbit")
     ],
     NetworkConditions.REGULAR_3G: [
-        _DELAY.format(latency=300, jitter=150),
-        _RATE.format(rate="1500kbit")
+        _netem(latency=300, jitter=150, rate="1500kbit")
     ],
     NetworkConditions.FAST_3G: [
-        _DELAY.format(latency=150, jitter=50),
-        _RATE.format(rate="4000kbit")
+        _netem(latency=150, jitter=50, rate="4000kbit")
     ],
     NetworkConditions.LTE: [
-        _DELAY.format(latency=40, jitter=10),
-        _RATE.format(rate="15mbit")
+        _netem(latency=40, jitter=10, rate="15mbit")
     ],
     NetworkConditions.WIFI: [
-        _DELAY.format(latency=25, jitter=5),
-        _RATE.format(rate="50mbit")
+        _netem(latency=25, jitter=5, rate="50mbit")
     ],
     NetworkConditions.CABLE: [
-        _DELAY.format(latency=5, jitter=5),
-        _RATE.format(rate="100mbit")
+        _netem(latency=5, jitter=5, rate="100mbit")
     ]
 }
 

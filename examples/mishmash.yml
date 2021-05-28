@@ -62,8 +62,8 @@ services:
     - wotemu_clock
     - --enable-http
     depends_on:
-    - redis
     - gw_wifi
+    - redis
     - docker_api_proxy
     deploy:
       replicas: 2
@@ -97,8 +97,8 @@ services:
     - wotemu_clock
     - --enable-mqtt
     depends_on:
-    - redis
     - gw_wifi
+    - redis
     - gw_mobile_2g
     - docker_api_proxy
     deploy:
@@ -139,8 +139,8 @@ services:
     - thing_id
     - urn:org:fundacionctic:thing:clock
     depends_on:
-    - redis
     - gw_wifi
+    - redis
     - docker_api_proxy
     deploy:
       replicas: 2
@@ -178,8 +178,8 @@ services:
     - thing_id
     - urn:org:fundacionctic:thing:clock
     depends_on:
-    - redis
     - gw_wifi
+    - redis
     - docker_api_proxy
     deploy:
       replicas: 4
@@ -222,8 +222,8 @@ services:
     - thing_id
     - urn:org:fundacionctic:thing:clock
     depends_on:
-    - redis
     - gw_wifi
+    - redis
     - gw_mobile_2g
     - docker_api_proxy
     deploy:
@@ -280,8 +280,8 @@ services:
     - --path
     - wotemu_error
     depends_on:
-    - redis
     - gw_wifi
+    - redis
     - docker_api_proxy
     deploy:
       replicas: 1
@@ -310,8 +310,7 @@ services:
     - ALL
     command:
     - gateway
-    - delay --time 700 --jitter 100 --distribution normal
-    - rate --rate 100kbit
+    - '{"latency": 700, "jitter": 100, "rate": "100kbit"}'
     depends_on:
     - docker_api_proxy
     - redis
@@ -340,8 +339,7 @@ services:
     - ALL
     command:
     - gateway
-    - delay --time 25 --jitter 5 --distribution normal
-    - rate --rate 50mbit
+    - '{"latency": 25, "jitter": 5, "rate": "50mbit"}'
     depends_on:
     - docker_api_proxy
     - redis

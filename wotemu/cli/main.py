@@ -74,15 +74,13 @@ def route(conf, **kwargs):
 
 
 @cli.command(**_COMMAND_KWARGS)
-@click.option("--docker-url", default=_DEFAULT_DOCKER_SOCK)
 @click.option("--netem", type=str, multiple=True)
-@click.option("--duration", type=str, default="72h")
 @click.pass_obj
 @_catch
 def chaos(conf, **kwargs):
-    """This is the main command of network gateway containers. Runs and controls 
-    a set of Pumba subprocesses that degrade the network stack of this container 
-    to simulate real-life network conditions."""
+    """This is the main command of network gateway containers. 
+    Runs a set of netem commands that degrade the network stack 
+    of this container to simulate real-life network conditions."""
 
     wotemu.cli.chaos.create_chaos(conf, **kwargs)
 

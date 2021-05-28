@@ -6,7 +6,6 @@ ENV WAIT_GATEWAYS 20
 WORKDIR ${PATH_WOTEMU}
 COPY ./scripts ./scripts
 RUN ./scripts/install-image-deps.sh
-RUN ./scripts/install-pumba.sh
 COPY . .
 RUN pip3 install -U .
 

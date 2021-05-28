@@ -26,7 +26,6 @@ The following image shows a high-level view of a simple emulation stack. This se
 * Python 3.6+
 * Docker Engine 20.10.0+ ([swap limit capabilities should be enabled](https://docs.docker.com/engine/install/linux-postinstall/#your-kernel-does-not-support-cgroup-swap-limit-capabilities))
 * Docker Compose 1.27.0+
-* [Pumba](https://github.com/alexei-led/pumba) 0.7.0+
 * [WoTemu](https://pypi.org/project/wotemu/) (install with _pip_: `pip install wotemu`)
 
 > Such a recent version of the Docker Engine is required to ensure that `cap_add` is supported in Swarm Mode.

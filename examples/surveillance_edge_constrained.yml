@@ -76,9 +76,9 @@ services:
     - wotemu_camera
     - --enable-http
     depends_on:
+    - redis
     - docker_api_proxy
     - gw_field_loc1
-    - redis
     deploy:
       resources:
         limits:
@@ -113,9 +113,9 @@ services:
     - wotemu_camera
     - --enable-http
     depends_on:
+    - redis
     - docker_api_proxy
     - gw_field_loc1
-    - redis
     deploy:
       resources:
         limits:
@@ -150,9 +150,9 @@ services:
     - wotemu_camera
     - --enable-http
     depends_on:
-    - docker_api_proxy
-    - redis
     - gw_field_loc2
+    - redis
+    - docker_api_proxy
     deploy:
       resources:
         limits:
@@ -187,9 +187,9 @@ services:
     - wotemu_camera
     - --enable-http
     depends_on:
-    - docker_api_proxy
-    - redis
     - gw_field_loc2
+    - redis
+    - docker_api_proxy
     deploy:
       resources:
         limits:
@@ -224,9 +224,9 @@ services:
     - wotemu_camera
     - --enable-http
     depends_on:
-    - docker_api_proxy
-    - redis
     - gw_field_loc2
+    - redis
+    - docker_api_proxy
     deploy:
       resources:
         limits:
@@ -261,9 +261,9 @@ services:
     - wotemu_camera
     - --enable-http
     depends_on:
-    - docker_api_proxy
-    - redis
     - gw_field_loc2
+    - redis
+    - docker_api_proxy
     deploy:
       resources:
         limits:
@@ -298,9 +298,9 @@ services:
     - wotemu_camera
     - --enable-http
     depends_on:
-    - docker_api_proxy
-    - redis
     - gw_field_loc2
+    - redis
+    - docker_api_proxy
     deploy:
       resources:
         limits:
@@ -335,9 +335,9 @@ services:
     - wotemu_camera
     - --enable-http
     depends_on:
-    - docker_api_proxy
-    - redis
     - gw_field_loc2
+    - redis
+    - docker_api_proxy
     deploy:
       resources:
         limits:
@@ -379,11 +379,11 @@ services:
       {"servient_host": "detector_loc2.edge_3g_loc2", "thing_id": "urn:org:fundacionctic:thing:wotemu:detector"}]'
     - --enable-http
     depends_on:
-    - gw_cloud_user
     - gw_edge_3g_loc2
-    - gw_edge_2g_loc1
-    - docker_api_proxy
     - redis
+    - docker_api_proxy
+    - gw_edge_2g_loc1
+    - gw_cloud_user
     environment:
       DOCKER_PROXY_URL: tcp://docker_api_proxy:2375/
       NODE_HOSTNAME: '{{.Node.Hostname}}'
@@ -401,9 +401,9 @@ services:
     labels:
       org.fundacionctic.wotemu.node: ''
     networks:
-    - edge_3g_loc2
     - edge_2g_loc1
     - srvnet_mongo_cloud
+    - edge_3g_loc2
     - cloud_user
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
@@ -420,9 +420,9 @@ services:
     - --enable-mqtt
     depends_on:
     - redis
+    - gw_edge_2g_loc1
     - docker_api_proxy
     - gw_field_loc1
-    - gw_edge_2g_loc1
     deploy:
       resources:
         limits:
@@ -446,8 +446,8 @@ services:
     labels:
       org.fundacionctic.wotemu.node: ''
     networks:
-    - field_loc1
     - edge_2g_loc1
+    - field_loc1
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
   detector_loc2:
@@ -464,10 +464,10 @@ services:
       {"servient_host": "camera_loc2_4.field_loc2"}, {"servient_host": "camera_loc2_5.field_loc2"}]'
     - --enable-mqtt
     depends_on:
+    - gw_field_loc2
+    - gw_edge_3g_loc2
     - redis
     - docker_api_proxy
-    - gw_edge_3g_loc2
-    - gw_field_loc2
     deploy:
       resources:
         limits:
@@ -511,9 +511,9 @@ services:
     image: tecnativa/docker-socket-proxy
     networks:
     - field_loc1
+    - field_loc2
     - cloud_user
     - edge_3g_loc2
-    - field_loc2
     - edge_2g_loc1
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock
@@ -522,8 +522,7 @@ services:
     - ALL
     command:
     - gateway
-    - delay --time 5 --jitter 5 --distribution normal
-    - rate --rate 100mbit
+    - '{"latency": 5, "jitter": 5, "rate": "100mbit"}'
     depends_on:
     - docker_api_proxy
     - redis
@@ -552,8 +551,7 @@ services:
     - ALL
     command:
     - gateway
-    - delay --time 700 --jitter 100 --distribution normal
-    - rate --rate 50kbit
+    - '{"latency": 700, "jitter": 100, "rate": "50kbit"}'
     depends_on:
     - docker_api_proxy
     - redis
@@ -582,8 +580,7 @@ services:
     - ALL
     command:
     - gateway
-    - delay --time 300 --jitter 150 --distribution normal
-    - rate --rate 1500kbit
+    - '{"latency": 300, "jitter": 150, "rate": "1500kbit"}'
     depends_on:
     - docker_api_proxy
     - redis
@@ -612,8 +609,7 @@ services:
     - ALL
     command:
     - gateway
-    - delay --time 25 --jitter 5 --distribution normal
-    - rate --rate 50mbit
+    - '{"latency": 25, "jitter": 5, "rate": "50mbit"}'
     depends_on:
     - docker_api_proxy
     - redis
@@ -642,8 +638,7 @@ services:
     - ALL
     command:
     - gateway
-    - delay --time 25 --jitter 5 --distribution normal
-    - rate --rate 50mbit
+    - '{"latency": 25, "jitter": 5, "rate": "50mbit"}'
     depends_on:
     - docker_api_proxy
     - redis
@@ -688,9 +683,9 @@ services:
       org.fundacionctic.wotemu.redis: ''
     networks:
     - field_loc1
+    - field_loc2
     - cloud_user
     - edge_3g_loc2
-    - field_loc2
     - edge_2g_loc1
     ports:
     - '6379'
@@ -714,9 +709,9 @@ services:
     - lambd
     - '5'
     depends_on:
-    - docker_api_proxy
-    - redis
     - gw_cloud_user
+    - redis
+    - docker_api_proxy
     deploy:
       replicas: 5
     environment:
